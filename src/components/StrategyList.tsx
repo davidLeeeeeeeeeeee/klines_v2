@@ -1,0 +1,378 @@
+import { useState } from 'react';
+import { TrendingUp, TrendingDown, Activity, DollarSign, Users, ArrowRight, Plus, Play, Pause, Settings, X } from 'lucide-react';
+
+interface Strategy {
+  id: string;
+  name: string;
+  description: string;
+  returns: number;
+  totalReturn: string;
+  followers: number;
+  winRate: number;
+  maxDrawdown: number;
+  sharpeRatio: number;
+  createDate: string;
+  status: 'active' | 'paused';
+  tags: string[];
+  riskLevel: 'low' | 'medium' | 'high';
+  totalFollowingCapital: string;
+  systemPrompt?: string;
+  userPrompt?: string;
+  requestFrequency?: number;
+  requestFrequencyUnit?: 'seconds' | 'minutes' | 'hours';
+}
+
+interface StrategyListProps {
+  onViewDetail: (strategyId: string) => void;
+  onNavigateToConfig: (strategy: Strategy | null) => void;
+  strategies: Strategy[];
+  onUpdateStrategy: (strategyId: string, updates: Partial<Strategy>) => void;
+}
+
+export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onUpdateStrategy }: StrategyListProps) {
+  const [showFollowModal, setShowFollowModal] = useState(false);
+  const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
+
+  const handleToggleStatus = (strategyId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onUpdateStrategy(strategyId, { status: strategies.find(s => s.id === strategyId)?.status === 'active' ? 'paused' : 'active' });
+  };
+
+  const handleSettings = (strategyId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const strategy = strategies.find(s => s.id === strategyId);
+    if (strategy) {
+      onNavigateToConfig(strategy);
+    }
+  };
+
+  const handleCreateStrategy = () => {
+    onNavigateToConfig(null);
+  };
+
+  const handleSaveStrategy = (strategyData: Partial<Strategy>) => {
+    if (strategyData.id) {
+      // Update existing strategy
+      onUpdateStrategy(strategyData.id, strategyData);
+    } else {
+      // Create new strategy
+      const newStrategy: Strategy = {
+        id: `${strategies.length + 1}`,
+        name: strategyData.name || '',
+        description: strategyData.description || '',
+        returns: 0,
+        totalReturn: '+0',
+        followers: 0,
+        winRate: 0,
+        maxDrawdown: 0,
+        sharpeRatio: 0,
+        createDate: new Date().toISOString().split('T')[0],
+        status: 'active',
+        tags: strategyData.tags || [],
+        riskLevel: strategyData.riskLevel || 'medium',
+        totalFollowingCapital: '¥0',
+        systemPrompt: strategyData.systemPrompt,
+        userPrompt: strategyData.userPrompt,
+        requestFrequency: strategyData.requestFrequency,
+        requestFrequencyUnit: strategyData.requestFrequencyUnit
+      };
+      onUpdateStrategy(newStrategy.id, newStrategy);
+    }
+  };
+
+  const calculateRunningDays = (createDate: string) => {
+    const days = Math.floor((new Date().getTime() - new Date(createDate).getTime()) / (1000 * 60 * 60 * 24));
+    return `${days}天`;
+  };
+
+  const handleFollowStrategy = (accountId: string) => {
+    if (!accountId) {
+      alert('请选择要跟随的交易账户');
+      return;
+    }
+    const strategyName = strategies.find(s => s.id === selectedStrategy)?.name;
+    alert(`已成功使用账户跟随策略: ${strategyName}`);
+    setShowFollowModal(false);
+  };
+
+  // Mock trading accounts
+  const tradingAccounts = [
+    { id: '1', name: '主账户 - Binance', balance: '¥125,680', uid: 'BN001' },
+    { id: '2', name: '备用账户 - OKX', balance: '¥86,420', uid: 'OKX002' },
+    { id: '3', name: '测试账户 - Huobi', balance: '¥45,230', uid: 'HB003' }
+  ];
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">策略中心</h1>
+          <p className="text-sm text-gray-500">浏览和选择量化交易策略</p>
+        </div>
+        <button
+          onClick={handleCreateStrategy}
+          className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+        >
+          <Plus className="w-5 h-5" />
+          创建策略
+        </button>
+      </div>
+
+      {/* Statistics Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-gray-600">策略总数</span>
+            <Activity className="w-5 h-5 text-blue-600" />
+          </div>
+          <div className="text-gray-900">{strategies.length}</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-gray-600">活跃策略</span>
+            <TrendingUp className="w-5 h-5 text-green-600" />
+          </div>
+          <div className="text-gray-900">{strategies.filter(s => s.status === 'active').length}</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-gray-600">总跟随账户</span>
+            <Users className="w-5 h-5 text-purple-600" />
+          </div>
+          <div className="text-gray-900">{strategies.reduce((sum, s) => sum + s.followers, 0)}</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-gray-600">平均收益率</span>
+            <DollarSign className="w-5 h-5 text-orange-600" />
+          </div>
+          <div className="text-gray-900">
+            {(strategies.reduce((sum, s) => sum + s.returns, 0) / strategies.length).toFixed(1)}%
+          </div>
+        </div>
+      </div>
+
+      {/* Strategy Cards Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {strategies.map((strategy) => (
+          <div
+            key={strategy.id}
+            className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
+          >
+            {/* Card Header */}
+            <div className="p-6">
+              {/* Title and Actions */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-3">
+                    <h3 className="text-gray-900">
+                      {strategy.name}
+                    </h3>
+                    <span className={`px-2 py-1 text-xs rounded-2xl ${
+                      strategy.riskLevel === 'low' 
+                        ? 'bg-green-100 text-green-700'
+                        : strategy.riskLevel === 'medium'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}>
+                      {strategy.riskLevel === 'low' ? '低风险' : strategy.riskLevel === 'medium' ? '中等风险' : '高风险'}
+                    </span>
+                  </div>
+                  {/* Strategy Tags */}
+                  <div className="flex flex-wrap gap-2">
+                    {strategy.tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded border border-gray-200"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Right Actions */}
+                <div className="flex items-center gap-2 ml-3">
+                  <button
+                    onClick={(e) => handleToggleStatus(strategy.id, e)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      strategy.status === 'active'
+                        ? 'bg-gray-700 hover:bg-gray-800 text-white'
+                        : 'bg-green-600 hover:bg-green-700 text-white'
+                    }`}
+                    title={strategy.status === 'active' ? '停止' : '启动'}
+                  >
+                    {strategy.status === 'active' ? (
+                      <Pause className="w-4 h-4" />
+                    ) : (
+                      <Play className="w-4 h-4" />
+                    )}
+                  </button>
+                  <button
+                    onClick={(e) => handleSettings(strategy.id, e)}
+                    className="p-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg transition-colors"
+                    title="配置"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-gray-200 my-4"></div>
+
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div>
+                  <div className="text-gray-600 text-sm mb-1">
+                    投资回报率 <span className="text-gray-500">(30日)</span>
+                  </div>
+                  <div className={`${strategy.returns >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {strategy.returns >= 0 ? '+' : ''}{strategy.returns}%
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-600 text-sm mb-1">
+                    回撤率 <span className="text-gray-500">(30日)</span>
+                  </div>
+                  <div className="text-red-600">
+                    -{strategy.maxDrawdown}%
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-600 text-sm mb-1">
+                    夏普比率
+                  </div>
+                  <div className="text-blue-600">{strategy.sharpeRatio}</div>
+                </div>
+                <div>
+                  <div className="text-gray-600 text-sm mb-1">
+                    跟随账户数
+                  </div>
+                  <div className="text-gray-900">{strategy.followers}</div>
+                </div>
+                <div>
+                  <div className="text-gray-600 text-sm mb-1">
+                    跟随资金
+                  </div>
+                  <div className="text-gray-900">{strategy.totalFollowingCapital}</div>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-gray-200 my-4"></div>
+
+              {/* Description */}
+              <div className="mb-4 h-10">
+                <p className="text-gray-600 text-sm line-clamp-2">
+                  {strategy.description}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mb-4">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewDetail(strategy.id);
+                  }}
+                  className="flex-1 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                >
+                  查看详情
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowFollowModal(true);
+                    setSelectedStrategy(strategy.id);
+                  }}
+                  className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                >
+                  立即跟随
+                </button>
+              </div>
+
+              {/* Status Bar */}
+              <div className={`py-2 px-3 rounded-lg flex items-center justify-between text-sm ${
+                strategy.status === 'active'
+                  ? 'bg-green-50 text-green-700 border border-green-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+                  <span>运行 {calculateRunningDays(strategy.createDate)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>
+                    {strategy.status === 'active' ? '策略运行中' : '已暂停'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {/* Create New Strategy Card */}
+        <div
+          onClick={handleCreateStrategy}
+          className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer border-2 border-dashed border-gray-300 hover:border-blue-500 flex items-center justify-center min-h-[400px]"
+        >
+          <div className="text-center p-6">
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Plus className="w-8 h-8 text-blue-500" />
+            </div>
+            <h3 className="text-gray-900 mb-2">创建新策略</h3>
+            <p className="text-gray-600 text-sm">点击配置新的量化交易策略</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Follow Strategy Modal */}
+      {showFollowModal && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-gray-900">选择交易账户</h2>
+              <p className="text-gray-600 mt-2">请选择要跟随该策略的交易账户</p>
+            </div>
+
+            <div className="p-6">
+              <div className="space-y-3">
+                {tradingAccounts.map((account) => (
+                  <label
+                    key={account.id}
+                    className="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300"
+                  >
+                    <input
+                      type="radio"
+                      name="account"
+                      value={account.id}
+                      onChange={(e) => handleFollowStrategy(e.target.value)}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <div className="ml-3 flex-1">
+                      <div className="text-gray-900">{account.name}</div>
+                      <div className="text-gray-600 text-sm">UID: {account.uid} · 余额: {account.balance}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3 rounded-b-lg">
+              <button
+                onClick={() => setShowFollowModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
