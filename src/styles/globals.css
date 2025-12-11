@@ -1,7 +1,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --font-size: 16px;
+  --font-size: 14px;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
@@ -186,4 +186,11 @@
 
 html {
   font-size: var(--font-size);
+}
+
+/* 响应式字体大小 - 在较大屏幕上增加字体 */
+@media (min-width: 768px) {
+  :root {
+    --font-size: 16px;
+  }
 }

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { LogIn, TrendingUp, Loader2 } from 'lucide-react';
 import { login } from '../services/api';
 import { saveUserInfo } from '../utils/storage';
 
@@ -14,8 +13,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,11 +67,55 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       <div className="w-full max-w-md">
         {/* Logo and Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-4">
-            <TrendingUp className="w-8 h-8 text-white" />
+          <div className="flex justify-center items-center gap-3 mb-3">
+            {/* ALPHA NOW LOGO - Horizontal Layout */}
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Gradient background circle */}
+              <circle cx="30" cy="30" r="28" fill="url(#logoGradient)"/>
+              
+              {/* Simplified "A" with upward trend arrow */}
+              <path 
+                d="M30 16L40 44M20 44L30 16" 
+                stroke="white" 
+                strokeWidth="5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+              {/* Crossbar with upward arrow */}
+              <path 
+                d="M23 32L30 32L37 26M37 26L34 29M37 26L40 29" 
+                stroke="white" 
+                strokeWidth="4" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+              
+              <defs>
+                <linearGradient id="logoGradient" x1="2" y1="2" x2="58" y2="58" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#3b82f6"/>
+                  <stop offset="100%" stopColor="#8b5cf6"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            
+            {/* Text Part */}
+            <div className="flex flex-col items-start">
+              <span 
+                className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent" 
+                style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 800, 
+                  lineHeight: '1.2',
+                  letterSpacing: '0.02em',
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
+                }}
+              >
+                ALPHA
+              </span>
+              <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gradient-to-r from-blue-500 to-purple-500 text-white leading-tight">NOW</span>
+            </div>
           </div>
-          <h1 className="text-gray-900 mb-2">AI量化交易系统</h1>
-          <p className="text-gray-600">智能交易，精准决策</p>
+          <p className="text-gray-600">智能策略 · 实时监控 · 精准决策</p>
         </div>
 
         {/* Login/Register Form */}
@@ -81,13 +124,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             <h2 className="text-gray-900 mb-2">
               {showForgotPassword ? '重置密码' : isLogin ? '欢迎回来' : '创建账户'}
             </h2>
-            <p className="text-gray-600">
-              {showForgotPassword
-                ? '请输入您的邮箱地址'
-                : isLogin
-                ? '请登录您的账户'
-                : '注册新账户开始使用'}
-            </p>
+            {showForgotPassword && (
+              <p className="text-gray-600">请输入您的邮箱地址</p>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -129,7 +168,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                   placeholder="请输入邮箱地址"
                   required
-                  disabled={isLoading}
                 />
               </div>
             )}
@@ -165,7 +203,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                   placeholder="请再次输入密码"
                   required
-                  disabled={isLoading}
                 />
               </div>
             )}
@@ -194,19 +231,19 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
             <button
               type="submit"
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
                   登录中...
                 </>
               ) : (
-                <>
-                  <LogIn className="w-5 h-5" />
-                  {showForgotPassword ? '发送重置链接' : isLogin ? '登录' : '注册'}
-                </>
+                showForgotPassword ? '发送重置链接' : isLogin ? '登录' : '注册'
               )}
             </button>
           </form>
@@ -214,7 +251,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           {!showForgotPassword && (
             <div className="mt-6 text-center">
               <p className="text-gray-600">
-                {isLogin ? '还没有账户？' : '已有账户？'}
+                {isLogin ? '没有账户？' : '已有账户？'}
                 <button
                   onClick={() => {
                     setIsLogin(!isLogin);
@@ -244,7 +281,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         </div>
 
         <p className="text-center text-gray-500 mt-8">
-          © 2025 AI量化交易系统. 保留所有权利.
+          © 2025 ALPHA NOW. 保留所有权利.
         </p>
       </div>
     </div>

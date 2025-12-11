@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Building2, User, Key, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Building2, User, Key, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 interface CreateTradingAccountPageProps {
   onBack: () => void;
@@ -18,6 +18,7 @@ export function CreateTradingAccountPage({ onBack, onSave }: CreateTradingAccoun
 
   const [showApiSecret, setShowApiSecret] = useState(false);
   const [showApiPassphrase, setShowApiPassphrase] = useState(false);
+  const [showExchangeDropdown, setShowExchangeDropdown] = useState(false);
 
   const exchanges = [
     'Binance',
@@ -37,7 +38,7 @@ export function CreateTradingAccountPage({ onBack, onSave }: CreateTradingAccoun
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -56,188 +57,220 @@ export function CreateTradingAccountPage({ onBack, onSave }: CreateTradingAccoun
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <form onSubmit={handleSubmit}>
-          {/* Exchange Info */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
-              <Building2 className="w-5 h-5 text-blue-600" />
-              <h2 className="text-gray-900">交易所信息</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-500 mb-2">
-                  选择交易所 *
-                </label>
-                <select
-                  value={formData.exchange}
-                  onChange={(e) => setFormData({ ...formData, exchange: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                  required
-                >
-                  {exchanges.map(exchange => (
-                    <option key={exchange} value={exchange}>{exchange}</option>
-                  ))}
-                </select>
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <form onSubmit={handleSubmit}>
+            {/* Exchange Info */}
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                <h2 className="text-gray-900">交易所信息</h2>
               </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    选择交易所 *
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowExchangeDropdown(!showExchangeDropdown)}
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-left flex items-center justify-between hover:border-gray-400 transition-colors"
+                    >
+                      <span className="text-gray-900">{formData.exchange}</span>
+                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                    </button>
 
-              <div>
-                <label className="block text-sm text-gray-500 mb-2">
-                  UID *
-                </label>
-                <input
-                  type="text"
-                  value={formData.uid}
-                  onChange={(e) => setFormData({ ...formData, uid: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="请输入交易所UID"
-                  required
-                />
-              </div>
-            </div>
-          </div>
+                    {showExchangeDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20">
+                        {exchanges.map((exchange) => (
+                          <button
+                            type="button"
+                            key={exchange}
+                            onClick={() => {
+                              setFormData({ ...formData, exchange });
+                              setShowExchangeDropdown(false);
+                            }}
+                            className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
+                              formData.exchange === exchange ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                            }`}
+                          >
+                            {exchange}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-          {/* Account Info */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
-              <User className="w-5 h-5 text-blue-600" />
-              <h2 className="text-gray-900">账户信息</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-500 mb-2">
-                  账户名称 *
-                </label>
-                <input
-                  type="text"
-                  value={formData.accountName}
-                  onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="例如：主交易账户"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* API Configuration */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
-              <Key className="w-5 h-5 text-blue-600" />
-              <h2 className="text-gray-900">API配置</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-500 mb-2">
-                  API Key *
-                </label>
-                <input
-                  type="text"
-                  value={formData.apiKey}
-                  onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"
-                  placeholder="请输入API Key"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-500 mb-2">
-                  API Secret *
-                </label>
-                <div className="relative">
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    UID *
+                  </label>
                   <input
-                    type={showApiSecret ? 'text' : 'password'}
-                    value={formData.apiSecret}
-                    onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
-                    className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"
-                    placeholder="请输入API Secret"
+                    type="text"
+                    value={formData.uid}
+                    onChange={(e) => setFormData({ ...formData, uid: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="请输入交易所UID"
                     required
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiSecret(!showApiSecret)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showApiSecret ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
                 </div>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm text-gray-500 mb-2">
-                  API Passphrase
-                </label>
-                <div className="relative">
+            {/* Account Info */}
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
+                <User className="w-5 h-5 text-blue-600" />
+                <h2 className="text-gray-900">账户信息</h2>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    账户名称 *
+                  </label>
                   <input
-                    type={showApiPassphrase ? 'text' : 'password'}
-                    value={formData.apiPassphrase}
-                    onChange={(e) => setFormData({ ...formData, apiPassphrase: e.target.value })}
-                    className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"
-                    placeholder="请输入API Passphrase"
+                    type="text"
+                    value={formData.accountName}
+                    onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="例如：主交易账户"
+                    required
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiPassphrase(!showApiPassphrase)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showApiPassphrase ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Security Notice */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
-              <AlertCircle className="w-5 h-5 text-blue-600" />
-              <h2 className="text-gray-900">安全提示</h2>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <ul className="text-sm text-gray-600 space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600 mt-0.5">•</span>
-                  <span>请确保 API Key 具有必要的权限</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600 mt-0.5">•</span>
-                  <span>API Secret 和 Passphrase 将被安全存储</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600 mt-0.5">•</span>
-                  <span>不要将API Secret分享给他人</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600 mt-0.5">•</span>
-                  <span>定期更换API密钥以提高安全性</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+            {/* API Configuration */}
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
+                <Key className="w-5 h-5 text-blue-600" />
+                <h2 className="text-gray-900">API配置</h2>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    API Key *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.apiKey}
+                    onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"
+                    placeholder="请输入API Key"
+                    required
+                  />
+                </div>
 
-          {/* Submit Buttons */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                type="button"
-                onClick={onBack}
-                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                取消
-              </button>
-              <button
-                type="submit"
-                className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                添加账户
-              </button>
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    API Secret *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showApiSecret ? 'text' : 'password'}
+                      value={formData.apiSecret}
+                      onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
+                      className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"
+                      placeholder="请输入API Secret"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiSecret(!showApiSecret)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showApiSecret ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    API Passphrase
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showApiPassphrase ? 'text' : 'password'}
+                      value={formData.apiPassphrase}
+                      onChange={(e) => setFormData({ ...formData, apiPassphrase: e.target.value })}
+                      className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"
+                      placeholder="请输入API Passphrase"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiPassphrase(!showApiPassphrase)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showApiPassphrase ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Security Notice */}
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
+                <AlertCircle className="w-5 h-5 text-blue-600" />
+                <h2 className="text-gray-900">安全提示</h2>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <ul className="text-sm text-gray-600 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>请确保 API Key 具有必要的权限</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>API Secret 和 Passphrase 将被安全存储</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>不要将API Secret分享给他人</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>定期更换API密钥以提高安全性</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Footer Buttons */}
+      <div className="bg-white border-t border-gray-200 sticky bottom-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                const form = document.querySelector('form');
+                if (form && form.checkValidity()) {
+                  handleSubmit(e as any);
+                } else {
+                  form?.reportValidity();
+                }
+              }}
+              className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              添加账户
+            </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { LayoutDashboard, Target, Users, TrendingUp, Wallet, Monitor, Menu, X, User, ChevronDown, LogOut, Moon, Sun, KeyRound, Activity, Shield } from 'lucide-react';
+import { LayoutDashboard, Target, Users, TrendingUp, Wallet, Monitor, Menu, X, User, ChevronDown, LogOut, Moon, Sun, KeyRound, Activity, Shield, Settings, Sliders, Layers } from 'lucide-react';
 import { Dashboard } from './Dashboard';
 import { StrategyList } from './StrategyList';
+import { StrategyConfigList } from './StrategyConfigList';
 import { StrategyDetail } from './StrategyDetail';
 import { StrategyConfigPage } from './StrategyConfigPage';
 import { ProfilePage } from './ProfilePage';
@@ -33,6 +34,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
   const [selectedStrategy, setSelectedStrategy] = useState<any | null>(null);
+  const [strategyConfigSource, setStrategyConfigSource] = useState<'strategy-list' | 'strategy-config-list'>('strategy-list');
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['trading-monitor']);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -218,6 +220,11 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       id: 'risk-management',
       label: '风险管理',
       icon: <Shield className="w-5 h-5" />
+    },
+    {
+      id: 'strategy-config-list',
+      label: '策略配置',
+      icon: <Layers className="w-5 h-5" />
     }
   ];
 
@@ -248,15 +255,23 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
             isActive
               ? 'bg-blue-500 text-white'
               : 'text-gray-700 hover:bg-gray-100'
-          } ${level > 0 ? 'ml-4' : ''}`}
+          } ${level > 0 && isSidebarOpen ? 'ml-4' : ''}`}
         >
-          <div className="flex items-center gap-3">
-            {item.icon}
-            {isSidebarOpen && <span>{item.label}</span>}
-          </div>
-          {hasChildren && isSidebarOpen && (
-            <div className={`transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}>
-              <ChevronDown className="w-4 h-4" />
+          {isSidebarOpen ? (
+            <>
+              <div className="flex items-center gap-3">
+                {item.icon}
+                <span>{item.label}</span>
+              </div>
+              {hasChildren && (
+                <div className={`transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}>
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center justify-center">
+              {item.icon}
             </div>
           )}
         </button>
@@ -280,6 +295,12 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
     setSelectedStrategyId(null);
     setSelectedStrategy(null);
     setCurrentPage('strategy-list');
+  };
+
+  const handleBackToStrategyConfigList = () => {
+    setSelectedStrategyId(null);
+    setSelectedStrategy(null);
+    setCurrentPage('strategy-config-list');
   };
 
   const handleNavigateToStrategyConfig = (strategy: any) => {
@@ -316,7 +337,12 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       setStrategies([...strategies, newStrategy]);
       alert('策略已创建！');
     }
-    handleBackToStrategyList();
+    // Return to the source page
+    if (strategyConfigSource === 'strategy-config-list') {
+      handleBackToStrategyConfigList();
+    } else {
+      handleBackToStrategyList();
+    }
   };
 
   const renderContent = () => {
@@ -330,6 +356,20 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
             onNavigateToConfig={handleNavigateToStrategyConfig}
             strategies={strategies}
             onUpdateStrategy={handleUpdateStrategy}
+            onNavigateToAccounts={() => setCurrentPage('account-management')}
+          />
+        );
+      case 'strategy-config-list':
+        return (
+          <StrategyConfigList 
+            onViewDetail={handleViewStrategyDetail}
+            onNavigateToConfig={(strategy) => {
+              setStrategyConfigSource('strategy-config-list');
+              handleNavigateToStrategyConfig(strategy);
+            }}
+            strategies={strategies}
+            onUpdateStrategy={handleUpdateStrategy}
+            onNavigateToAccounts={() => setCurrentPage('account-management')}
           />
         );
       case 'strategy-detail':
@@ -338,7 +378,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
         return (
           <StrategyConfigPage
             strategy={selectedStrategy}
-            onBack={handleBackToStrategyList}
+            onBack={strategyConfigSource === 'strategy-config-list' ? handleBackToStrategyConfigList : handleBackToStrategyList}
             onSave={handleSaveStrategy}
           />
         );
@@ -397,18 +437,18 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
 
   if (isSecondaryPage) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="h-screen bg-gray-50 overflow-y-auto">
         {renderContent()}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="h-screen bg-gray-50 flex overflow-hidden">
       {/* Sidebar */}
       <aside
         className={`${
-          isSidebarOpen ? 'w-64' : 'w-20'
+          isSidebarOpen ? 'w-64' : 'w-16'
         } bg-white border-r border-gray-200 transition-all duration-300 flex-shrink-0`}
       >
         <div className="h-full flex flex-col">
@@ -416,16 +456,55 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
           <div className="h-16 border-b border-gray-200 flex items-center px-3 sticky top-0 bg-white z-10">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="w-[52px] h-10 flex items-center justify-center hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"
+              className="w-10 h-10 flex items-center justify-center hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"
             >
-              <Menu className="w-6 h-6 text-gray-600" strokeWidth={2.5} />
+              <Menu className="w-5 h-5 text-gray-600" />
             </button>
             {isSidebarOpen && (
-              <div className="ml-2 flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-white" />
+              <div className="ml-2 flex items-center gap-2.5">
+                {/* Mini ALPHA NOW LOGO - 缩放自登录页面 */}
+                <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Gradient background circle */}
+                  <circle cx="22" cy="22" r="20.53" fill="url(#miniLogoGradient)"/>
+                  
+                  {/* Simplified "A" with upward trend arrow */}
+                  <path 
+                    d="M22 11.73L29.33 32.27M14.67 32.27L22 11.73" 
+                    stroke="white" 
+                    strokeWidth="3.67" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  />
+                  {/* Crossbar with upward arrow */}
+                  <path 
+                    d="M16.87 24.2L22 24.2L27.13 19.07M27.13 19.07L25.4 20.8M27.13 19.07L29.33 20.8" 
+                    stroke="white" 
+                    strokeWidth="2.93" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  />
+                  
+                  <defs>
+                    <linearGradient id="miniLogoGradient" x1="1.47" y1="1.47" x2="42.53" y2="42.53" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#3b82f6"/>
+                      <stop offset="100%" stopColor="#8b5cf6"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div className="flex flex-col items-start">
+                  <span 
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent leading-tight" 
+                    style={{ 
+                      fontSize: '16px', 
+                      fontWeight: 800,
+                      letterSpacing: '0.02em',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
+                    }}
+                  >
+                    ALPHA
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gradient-to-r from-blue-500 to-purple-500 text-white leading-tight">NOW</span>
                 </div>
-                <span className="font-semibold text-gray-900">AI量化</span>
               </div>
             )}
           </div>
@@ -440,81 +519,141 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-end px-6 sticky top-0 z-10">
-          {/* User Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowUserDropdown(!showUserDropdown)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-10">
+          {/* Empty div for layout balance */}
+          <div></div>
+          
+          {/* Crypto Prices & Exchange Links */}
+          <div className="flex items-center gap-4">
+            {/* BTC Price */}
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600 text-sm font-semibold">BTC</span>
+              <span className="text-green-600">$43,250.00</span>
+            </div>
+            
+            {/* ETH Price */}
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600 text-sm font-semibold">ETH</span>
+              <span className="text-red-600">$2,280.50</span>
+            </div>
+            
+            {/* Divider */}
+            <div className="h-6 w-px bg-gray-300"></div>
+            
+            {/* Exchange Links */}
+            <a
+              href="https://www.bybit.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-1 py-2 text-sm font-semibold text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >
-              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-gray-400" />
-              </div>
-            </button>
-
-            {/* Dropdown Menu */}
-            {showUserDropdown && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
-                {/* User Info Header */}
-                <div className="px-4 py-3 border-b border-gray-200">
-                  <div className="text-gray-900">张三</div>
-                  <div className="text-gray-500 text-sm">user@example.com</div>
+              BYBIT
+            </a>
+            <a
+              href="https://www.binance.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-1 py-2 text-sm font-semibold text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              币安
+            </a>
+            <a
+              href="https://www.okx.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-1 py-2 text-sm font-semibold text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              欧易
+            </a>
+            <a
+              href="https://www.gate.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-1 py-2 text-sm font-semibold text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              GATE
+            </a>
+            
+            {/* Divider */}
+            <div className="h-6 w-px bg-gray-300"></div>
+            
+            {/* User Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowUserDropdown(!showUserDropdown)}>
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                  <User className="w-6 h-6 text-white" />
                 </div>
+              </button>
 
-                {/* Menu Items */}
-                <div className="py-2">
-                  <button
-                    onClick={() => {
-                      setShowUserDropdown(false);
-                      setIsDarkMode(!isDarkMode);
-                    }}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center justify-between text-gray-900"
-                  >
-                    <div className="flex items-center gap-3">
-                      {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                      切换主题
+              {/* Dropdown Menu */}
+              {showUserDropdown && (
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                  {/* User Info Header */}
+                  <div className="px-4 py-3 border-b border-gray-200">
+                    <div className="text-gray-900">张三</div>
+                    <div className="text-gray-500 text-sm">user@example.com</div>
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <div className="text-sm text-gray-500">总净值</div>
+                      <div className="text-green-600 font-semibold">¥15,000.00</div>
                     </div>
-                    <span className="text-gray-400 text-sm">灰色</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      setShowUserDropdown(false);
-                      setCurrentPage('profile');
-                    }}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900"
-                  >
-                    <User className="w-4 h-4" />
-                    个人资料
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      setShowUserDropdown(false);
-                      setCurrentPage('change-password');
-                    }}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900"
-                  >
-                    <KeyRound className="w-4 h-4" />
-                    修改密码
-                  </button>
-                </div>
+                  </div>
 
-                {/* Logout */}
-                <div className="border-t border-gray-200 pt-2">
-                  <button
-                    onClick={() => {
-                      setShowUserDropdown(false);
-                      onLogout();
-                    }}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    退出登录
-                  </button>
+                  {/* Menu Items */}
+                  <div className="py-2">
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        setIsDarkMode(!isDarkMode);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center justify-between text-gray-900"
+                    >
+                      <div className="flex items-center gap-3">
+                        {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                        切换主题
+                      </div>
+                      <span className="text-gray-400 text-sm">灰色</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        setCurrentPage('profile');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900"
+                    >
+                      <User className="w-4 h-4" />
+                      个人资料
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        setCurrentPage('change-password');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900"
+                    >
+                      <KeyRound className="w-4 h-4" />
+                      修改密码
+                    </button>
+                  </div>
+
+                  {/* Logout */}
+                  <div className="border-t border-gray-200 pt-2">
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        onLogout();
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      退出登录
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </header>
 

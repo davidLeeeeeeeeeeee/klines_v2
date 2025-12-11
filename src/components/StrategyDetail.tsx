@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, TrendingUp, TrendingDown, Activity, Users, Check, BarChart3, Target, Clock, Percent, ChevronDown } from 'lucide-react';
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie } from 'recharts';
 
 interface StrategyDetailProps {
   strategyId: string | null;
@@ -10,8 +10,12 @@ interface StrategyDetailProps {
 export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
   const [showFollowModal, setShowFollowModal] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState('');
-  const [chartType, setChartType] = useState<'rate' | 'amount'>('rate');
-  const [timeRange, setTimeRange] = useState<7 | 30 | 90 | 180>(90);
+  const [weeklyChartType, setWeeklyChartType] = useState<'rate' | 'amount'>('rate');
+  const [cumulativeChartType, setCumulativeChartType] = useState<'rate' | 'amount'>('rate');
+  const [timeRange, setTimeRange] = useState<'7' | '30' | '90' | '180'>('90');
+  const [showTimeRangeDropdown, setShowTimeRangeDropdown] = useState(false);
+  const [symbolTimeRange, setSymbolTimeRange] = useState<'7' | '30' | '90' | '180'>('90');
+  const [showSymbolTimeRangeDropdown, setShowSymbolTimeRangeDropdown] = useState(false);
 
   // Mock data - 实际应用中根据 strategyId 从 API 获取
   const strategy = {
@@ -52,21 +56,27 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
 
   // Mock weekly performance data for bar chart
   const weeklyData = [
-    { week: '11 周', rateChange: 8.5, amountChange: 12500 },
-    { week: '9 周', rateChange: 5.2, amountChange: 8200 },
-    { week: '7 周', rateChange: -3.5, amountChange: -5600 },
-    { week: '5 周', rateChange: 6.8, amountChange: 9800 },
-    { week: '3 周', rateChange: 12.3, amountChange: 18600 },
-    { week: '1 周', rateChange: -15.2, amountChange: -22400 }
+    { week: '12 周', dateRange: '2024/11/12-11/19', rateChange: 4.2, amountChange: 6200 },
+    { week: '11 周', dateRange: '2024/11/05-11/12', rateChange: 8.5, amountChange: 12500 },
+    { week: '10 周', dateRange: '2024/10/29-11/05', rateChange: -2.1, amountChange: -3100 },
+    { week: '9 周', dateRange: '2024/10/22-10/29', rateChange: 5.2, amountChange: 8200 },
+    { week: '8 周', dateRange: '2024/10/15-10/22', rateChange: 3.8, amountChange: 5800 },
+    { week: '7 周', dateRange: '2024/10/08-10/15', rateChange: -3.5, amountChange: -5600 },
+    { week: '6 周', dateRange: '2024/10/01-10/08', rateChange: 7.6, amountChange: 11200 },
+    { week: '5 周', dateRange: '2024/09/24-10/01', rateChange: 6.8, amountChange: 9800 },
+    { week: '4 周', dateRange: '2024/09/17-09/24', rateChange: -4.3, amountChange: -6400 },
+    { week: '3 周', dateRange: '2024/09/10-09/17', rateChange: 12.3, amountChange: 18600 },
+    { week: '2 周', dateRange: '2024/09/03-09/10', rateChange: 9.1, amountChange: 13500 },
+    { week: '1 周', dateRange: '2024/08/27-09/03', rateChange: -15.2, amountChange: -22400 }
   ];
 
   // Filter data based on selected time range
   const getFilteredData = () => {
     const dataPoints = {
-      7: 7,
-      30: 10,
-      90: 12,
-      180: 12 // 用全部数据代表180天
+      '7': 7,
+      '30': 10,
+      '90': 12,
+      '180': 12 // 用全部数据代表180天
     };
     const count = dataPoints[timeRange];
     return performanceDataFull.slice(-count);
@@ -101,6 +111,64 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
     { id: '3', name: '测试账户 - Huobi', balance: '¥45,230', uid: 'HB003' }
   ];
 
+  const topSymbols = [
+    { 
+      id: 1, 
+      name: 'BTCUSDT', 
+      returns: 18.5, 
+      amount: 28450,
+      volume: '2.4B',
+      price: 96850.23
+    },
+    { 
+      id: 2, 
+      name: 'ETHUSDT', 
+      returns: 12.3, 
+      amount: 15680,
+      volume: '1.8B',
+      price: 3542.18
+    },
+    { 
+      id: 3, 
+      name: 'SOLUSDT', 
+      returns: -5.6, 
+      amount: -8920,
+      volume: '856M',
+      price: 238.45
+    },
+    { 
+      id: 4, 
+      name: 'BNBUSDT', 
+      returns: 9.8, 
+      amount: 12340,
+      volume: '645M',
+      price: 692.34
+    },
+  ];
+
+  // Symbol preference data for pie chart
+  const symbolPreferenceData = [
+    { name: 'BTCUSDT', value: 35.5, color: '#3b82f6' },
+    { name: 'ETHUSDT', value: 28.2, color: '#8b5cf6' },
+    { name: 'SOLUSDT', value: 18.3, color: '#10b981' },
+    { name: 'BNBUSDT', value: 12.8, color: '#f59e0b' },
+    { name: '其他', value: 5.2, color: '#6b7280' }
+  ];
+
+  // Trading statistics data
+  const tradingStats = {
+    totalPositions: 1248,
+    profitTrades: 850,
+    profitTradesRate: 68.5,
+    lossTrades: 398,
+    lossTradesRate: 31.5,
+    profitLossRatio: 2.4,
+    maxDrawdown: 12.3,
+    totalVolume: '$12,450,000',
+    totalFees: '$12,450',
+    totalFundingFees: '$12,450'
+  };
+
   const handleFollowStrategy = () => {
     if (!selectedAccount) {
       alert('请选择要跟随的交易账户');
@@ -108,6 +176,62 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
     }
     alert(`已成功使用账户 ${selectedAccount} 跟随策略`);
     setShowFollowModal(false);
+  };
+
+  // Custom Tooltip for Weekly Chart
+  const CustomWeeklyTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const value = weeklyChartType === 'rate' ? data.rateChange : data.amountChange;
+      const isPositive = value >= 0;
+      
+      return (
+        <div className="bg-white border border-gray-200 rounded-lg p-2.5 shadow-lg">
+          <div className="text-xs text-gray-900 mb-1">{data.dateRange}</div>
+          <div className="text-xs">
+            <span className="text-gray-900">
+              {weeklyChartType === 'rate' ? '周收益率' : '周收益额'}:
+            </span>
+            {' '}
+            <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
+              {weeklyChartType === 'rate' 
+                ? `${isPositive ? '+' : ''}${value.toFixed(2)}%`
+                : `${isPositive ? '+' : ''}$${Math.abs(value).toLocaleString()}`
+              }
+            </span>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Custom Tooltip for Cumulative Chart
+  const CustomCumulativeTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const value = cumulativeChartType === 'rate' ? data.rate : data.amount;
+      const isPositive = value >= 0;
+      
+      return (
+        <div className="bg-white border border-gray-200 rounded-lg p-2.5 shadow-lg">
+          <div className="text-xs text-gray-900 mb-1">{data.date}</div>
+          <div className="text-xs">
+            <span className="text-gray-900">
+              {cumulativeChartType === 'rate' ? '收益率' : '收益额'}:
+            </span>
+            {' '}
+            <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
+              {cumulativeChartType === 'rate' 
+                ? `${isPositive ? '+' : ''}${value.toFixed(2)}%`
+                : `${isPositive ? '+' : ''}$${Math.abs(value).toLocaleString()}`
+              }
+            </span>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -124,19 +248,12 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
             </button>
             <div className="flex-1">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold text-gray-900">{strategy.name}</h1>
-                <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
+                <h1 className="text-2xl font-semibold text-gray-900">策略表现</h1>
+                <span className="px-3 py-1 rounded-2xl text-sm bg-green-100 text-green-600">
                   运行 {strategy.runningDays} 天
                 </span>
               </div>
             </div>
-            <button
-              onClick={() => setShowFollowModal(true)}
-              className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 flex-shrink-0"
-            >
-              <Check className="w-5 h-5" />
-              跟随策略
-            </button>
           </div>
         </div>
       </div>
@@ -177,13 +294,13 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900">
-              {chartType === 'rate' ? '收益率周表现' : '收益额周表现'}
+              {weeklyChartType === 'rate' ? '收益率周表现' : '收益额周表现'}
             </h2>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setChartType('rate')}
+                onClick={() => setWeeklyChartType('rate')}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  chartType === 'rate'
+                  weeklyChartType === 'rate'
                     ? 'bg-gray-100 text-gray-700'
                     : 'text-gray-500 hover:bg-gray-50'
                 }`}
@@ -191,9 +308,9 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
                 收益率
               </button>
               <button
-                onClick={() => setChartType('amount')}
+                onClick={() => setWeeklyChartType('amount')}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  chartType === 'amount'
+                  weeklyChartType === 'amount'
                     ? 'bg-gray-100 text-gray-700'
                     : 'text-gray-500 hover:bg-gray-50'
                 }`}
@@ -211,11 +328,21 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
                 stroke="#9ca3af" 
                 tick={{ fill: '#6b7280', fontSize: 12 }}
                 axisLine={false}
+                interval={0}
+                tickFormatter={(value) => {
+                  // Only show odd weeks
+                  const weekNum = parseInt(value.split(' ')[0]);
+                  return weekNum % 2 === 1 ? value : '';
+                }}
               />
               <YAxis 
                 stroke="#9ca3af" 
                 tick={{ fill: '#6b7280', fontSize: 12 }}
                 axisLine={false}
+                tickFormatter={(value) => 
+                  weeklyChartType === 'rate' ? `${value}%` : `$${Math.abs(value / 1000).toFixed(0)}k`
+                }
+                width={60}
               />
               <Tooltip 
                 contentStyle={{ 
@@ -225,19 +352,20 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
                   padding: '8px 12px'
                 }}
                 formatter={(value: number) => 
-                  chartType === 'rate' 
+                  weeklyChartType === 'rate' 
                     ? `${value > 0 ? '+' : ''}${value.toFixed(2)}%` 
                     : `${value > 0 ? '+' : ''}$${Math.abs(value).toLocaleString()}`
                 }
-                cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                cursor={false}
+                content={<CustomWeeklyTooltip />}
               />
               <Bar 
-                dataKey={chartType === 'rate' ? 'rateChange' : 'amountChange'}
+                dataKey={weeklyChartType === 'rate' ? 'rateChange' : 'amountChange'}
                 radius={[0, 0, 0, 0]}
                 maxBarSize={40}
               >
                 {weeklyData.map((entry, index) => {
-                  const value = chartType === 'rate' ? entry.rateChange : entry.amountChange;
+                  const value = weeklyChartType === 'rate' ? entry.rateChange : entry.amountChange;
                   return (
                     <Cell
                       key={`cell-${index}`}
@@ -254,13 +382,13 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold text-gray-900">
-              {chartType === 'rate' ? '收益率' : '收益额'}
+              {cumulativeChartType === 'rate' ? '收益率' : '收益额'}
             </h2>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setChartType('rate')}
+                onClick={() => setCumulativeChartType('rate')}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  chartType === 'rate'
+                  cumulativeChartType === 'rate'
                     ? 'bg-gray-100 text-gray-700'
                     : 'text-gray-500 hover:bg-gray-50'
                 }`}
@@ -268,9 +396,9 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
                 收益率
               </button>
               <button
-                onClick={() => setChartType('amount')}
+                onClick={() => setCumulativeChartType('amount')}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  chartType === 'amount'
+                  cumulativeChartType === 'amount'
                     ? 'bg-gray-100 text-gray-700'
                     : 'text-gray-500 hover:bg-gray-50'
                 }`}
@@ -283,7 +411,7 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
           <div className="flex items-start justify-between mb-4">
             <div>
               <div className="text-green-600 mb-1">
-                {chartType === 'rate' ? (
+                {cumulativeChartType === 'rate' ? (
                   <span className="text-3xl font-semibold">+{currentRate.toFixed(2)}%</span>
                 ) : (
                   <span className="text-3xl font-semibold">+${currentAmount.toLocaleString()}</span>
@@ -291,10 +419,41 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
               </div>
             </div>
             <div className="relative">
-              <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors">
+              <button
+                onClick={() => setShowTimeRangeDropdown(!showTimeRangeDropdown)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+              >
                 近 {timeRange} 日
                 <ChevronDown className="w-4 h-4" />
               </button>
+              {showTimeRangeDropdown && (
+                <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  <button
+                    onClick={() => { setTimeRange('7'); setShowTimeRangeDropdown(false); }}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    近 7 日
+                  </button>
+                  <button
+                    onClick={() => { setTimeRange('30'); setShowTimeRangeDropdown(false); }}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    近 30 日
+                  </button>
+                  <button
+                    onClick={() => { setTimeRange('90'); setShowTimeRangeDropdown(false); }}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    近 90 日
+                  </button>
+                  <button
+                    onClick={() => { setTimeRange('180'); setShowTimeRangeDropdown(false); }}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    近 180 日
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -326,13 +485,14 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
                   padding: '8px 12px'
                 }}
                 formatter={(value: number) => 
-                  chartType === 'rate' ? `+${value.toFixed(2)}%` : `+$${value.toLocaleString()}`
+                  cumulativeChartType === 'rate' ? `+${value.toFixed(2)}%` : `+$${value.toLocaleString()}`
                 }
                 labelFormatter={(label) => label}
+                content={<CustomCumulativeTooltip />}
               />
               <Area 
                 type="monotone" 
-                dataKey={chartType === 'rate' ? 'rate' : 'amount'}
+                dataKey={cumulativeChartType === 'rate' ? 'rate' : 'amount'}
                 stroke="#10b981" 
                 fillOpacity={1} 
                 fill="url(#colorGreenGradient)"
@@ -345,49 +505,207 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
         </div>
 
         {/* Detailed Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-gray-900 mb-4">交易统计</h2>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">总交易次数</span>
-                <span className="text-gray-900">{strategy.totalTrades}</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Top Symbols */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-6">
+              <div className="flex items-start justify-between mb-6">
+                <h2 className="text-lg text-gray-900 font-semibold">商品排名</h2>
+                <div className="relative">
+                  <button
+                    className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 transition-colors"
+                    onClick={() => setShowSymbolTimeRangeDropdown(!showSymbolTimeRangeDropdown)}
+                  >
+                    近 {symbolTimeRange === '180' ? '半年' : `${symbolTimeRange} 日`}
+                    <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-600">
+                      <path d="M5 6L0 0h10L5 6z" />
+                    </svg>
+                  </button>
+                  {showSymbolTimeRangeDropdown && (
+                    <div className="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[100px] z-10">
+                      <button
+                        className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                          symbolTimeRange === '7' ? 'bg-gray-100' : ''
+                        }`}
+                        onClick={() => {
+                          setSymbolTimeRange('7');
+                          setShowSymbolTimeRangeDropdown(false);
+                        }}
+                      >
+                        近 7 日
+                      </button>
+                      <button
+                        className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                          symbolTimeRange === '30' ? 'bg-gray-100' : ''
+                        }`}
+                        onClick={() => {
+                          setSymbolTimeRange('30');
+                          setShowSymbolTimeRangeDropdown(false);
+                        }}
+                      >
+                        近 30 日
+                      </button>
+                      <button
+                        className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                          symbolTimeRange === '90' ? 'bg-gray-100' : ''
+                        }`}
+                        onClick={() => {
+                          setSymbolTimeRange('90');
+                          setShowSymbolTimeRangeDropdown(false);
+                        }}
+                      >
+                        近 90 日
+                      </button>
+                      <button
+                        className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                          symbolTimeRange === '180' ? 'bg-gray-100' : ''
+                        }`}
+                        onClick={() => {
+                          setSymbolTimeRange('180');
+                          setShowSymbolTimeRangeDropdown(false);
+                        }}
+                      >
+                        近半年
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">胜率</span>
-                <span className="text-gray-900">{strategy.winRate}%</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">盈利因子</span>
-                <span className="text-gray-900">{strategy.profitFactor}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">平均持仓时间</span>
-                <span className="text-gray-900">{strategy.avgHoldingTime}</span>
+              <div className="space-y-1.5">
+                {topSymbols.map((symbol, index) => {
+                  // Calculate bar width percentage based on max value
+                  const maxAmount = Math.max(...topSymbols.map(s => Math.abs(s.amount)));
+                  const barWidth = (Math.abs(symbol.amount) / maxAmount) * 100;
+                  const isPositive = symbol.amount >= 0;
+                  
+                  return (
+                    <div key={symbol.id} className="flex items-center gap-3 p-2">
+                      {/* Symbol Name */}
+                      <div className="w-24 text-gray-900 flex-shrink-0">
+                        {symbol.name}
+                      </div>
+                      
+                      {/* Bar Chart */}
+                      <div className="flex-1 h-7 overflow-hidden relative">
+                        <div 
+                          className={`h-full ${isPositive ? 'bg-green-500' : 'bg-red-500'} transition-all duration-500`}
+                          style={{ width: `${barWidth}%` }}
+                        />
+                      </div>
+                      
+                      {/* Amount */}
+                      <div className={`w-28 text-right flex-shrink-0 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                        <div className="flex items-center gap-1 justify-end">
+                          {isPositive ? (
+                            <TrendingUp className="w-4 h-4" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4" />
+                          )}
+                          <span>${Math.abs(symbol.amount).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-gray-900 mb-4">风险指标</h2>
+          {/* Symbol Preference Pie Chart */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg text-gray-900 font-semibold mb-6">商品偏好</h2>
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-16">
+              {/* Pie Chart */}
+              <div className="flex-shrink-0">
+                <div className="w-[200px] h-[200px] md:w-[240px] md:h-[240px]">
+                  <PieChart width={200} height={200} className="md:hidden">
+                    <Pie
+                      data={symbolPreferenceData}
+                      cx={100}
+                      cy={100}
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {symbolPreferenceData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                  <PieChart width={240} height={240} className="hidden md:block">
+                    <Pie
+                      data={symbolPreferenceData}
+                      cx={120}
+                      cy={120}
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {symbolPreferenceData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </div>
+              </div>
+
+              {/* Legend */}
+              <div className="flex-1 w-full">
+                <div className="space-y-2 md:space-y-3">
+                  {symbolPreferenceData.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2 md:gap-3">
+                      <div 
+                        className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-sm flex-shrink-0" 
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-gray-700 min-w-[70px] md:min-w-[80px] text-sm md:text-base">{item.name}</span>
+                      <span className="text-gray-900 text-sm md:text-base flex-shrink-0">{item.value}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Trading Statistics */}
+        <div className="mt-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg text-gray-900 font-semibold mb-6">交易统计</h2>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
+                <span className="text-gray-600">仓位总数</span>
+                <span className="text-gray-900">{tradingStats.totalPositions}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">盈利交易</span>
+                <span className="text-green-600">{tradingStats.profitTrades} / {tradingStats.profitTradesRate}%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">亏损交易</span>
+                <span className="text-red-600">{tradingStats.lossTrades} / {tradingStats.lossTradesRate}%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">盈亏比</span>
+                <span className="text-gray-900">{tradingStats.profitLossRatio}</span>
+              </div>
+              <div className="flex justify-between items-center">
                 <span className="text-gray-600">最大回撤</span>
-                <span className="text-red-600">{strategy.maxDrawdown}%</span>
+                <span className="text-red-600">{tradingStats.maxDrawdown}%</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">夏普比率</span>
-                <span className="text-gray-900">{strategy.sharpeRatio}</span>
+                <span className="text-gray-600">总交易量</span>
+                <span className="text-gray-900">{tradingStats.totalVolume}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">创建日期</span>
-                <span className="text-gray-900">{strategy.createDate}</span>
+                <span className="text-gray-600">总手续费</span>
+                <span className="text-gray-900">{tradingStats.totalFees}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">运行天数</span>
-                <span className="text-gray-900">
-                  {Math.floor((new Date().getTime() - new Date(strategy.createDate).getTime()) / (1000 * 60 * 60 * 24))}天
-                </span>
+                <span className="text-gray-600">总资金费</span>
+                <span className="text-gray-900">{tradingStats.totalFundingFees}</span>
               </div>
             </div>
           </div>

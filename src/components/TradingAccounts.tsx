@@ -1,7 +1,29 @@
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, EyeOff, X, AlertCircle, Search, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, X, AlertCircle, Search, ChevronDown, RefreshCw } from 'lucide-react';
 
 type InitStatus = '已初始化' | '未初始化' | '初始化失败';
+
+// 交易所图标映射
+const ExchangeIcon = ({ exchange }: { exchange: string }) => {
+  const iconClass = "w-6 h-6 rounded-full flex items-center justify-center text-white text-xs";
+  
+  const exchangeStyles: { [key: string]: { bg: string; text: string } } = {
+    'Binance': { bg: 'bg-yellow-500', text: 'BN' },
+    'Bybit': { bg: 'bg-orange-500', text: 'BY' },
+    'OKX': { bg: 'bg-gray-800', text: 'OK' },
+    'Gate': { bg: 'bg-blue-600', text: 'GT' },
+    'MEXC': { bg: 'bg-green-600', text: 'MX' },
+    'Bitget': { bg: 'bg-cyan-500', text: 'BG' }
+  };
+  
+  const style = exchangeStyles[exchange] || { bg: 'bg-gray-500', text: '??' };
+  
+  return (
+    <div className={`${iconClass} ${style.bg}`}>
+      {style.text}
+    </div>
+  );
+};
 
 export interface TradingAccount {
   id: string;
@@ -14,6 +36,7 @@ export interface TradingAccount {
   netValue: string;
   createdAt: string;
   username: string;
+  strategyName?: string;
 }
 
 interface TradingAccountsProps {
@@ -33,7 +56,8 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
       initStatus: '已初始化',
       netValue: '10000.00',
       createdAt: '2024-01-15 10:30:25',
-      username: 'admin'
+      username: 'admin',
+      strategyName: '趋势追踪策略'
     },
     {
       id: '2',
@@ -45,7 +69,8 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
       initStatus: '已初始化',
       netValue: '5000.00',
       createdAt: '2024-02-20 14:22:10',
-      username: 'user1'
+      username: 'user1',
+      strategyName: '网格交易策略'
     },
     {
       id: '3',
@@ -61,15 +86,28 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
     },
     {
       id: '4',
-      exchange: 'Bitget',
-      uid: 'BG55667788',
-      accountName: '策略账户',
-      apiKey: 'BiTgEt1234567890aBcDeFgHiJkLmNoPq',
-      apiSecret: 'BiTgEt0987654321ZyXwVuTsRqPoNmLk',
-      initStatus: '初始化失败',
-      netValue: '0.00',
+      exchange: 'Gate',
+      uid: 'GT55667788',
+      accountName: '策略账户A',
+      apiKey: 'GaTe1234567890aBcDeFgHiJkLmNoPq',
+      apiSecret: 'GaTe0987654321ZyXwVuTsRqPoNmLk',
+      initStatus: '已初始化',
+      netValue: '8000.00',
       createdAt: '2024-03-15 16:45:50',
       username: 'strategy'
+    },
+    {
+      id: '5',
+      exchange: 'MEXC',
+      uid: 'MX11223344',
+      accountName: '备用账户B',
+      apiKey: 'MeXc1234567890aBcDeFgHiJkLmNoPqRsT',
+      apiSecret: 'MeXc0987654321ZyXwVuTsRqPoNmLkJiH',
+      initStatus: '已初始化',
+      netValue: '3500.00',
+      createdAt: '2024-04-01 11:20:15',
+      username: 'user2',
+      strategyName: '套利策略'
     }
   ]);
 
@@ -79,6 +117,57 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
   const [searchTerm, setSearchTerm] = useState('');
   const [filterExchange, setFilterExchange] = useState<string>('all');
   const [showExchangeDropdown, setShowExchangeDropdown] = useState(false);
+  const [showStrategyModal, setShowStrategyModal] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 500);
+  };
+
+  // Mock strategies data
+  const strategies = [
+    {
+      id: '1',
+      name: '趋势追踪策略',
+      profitRate: '+25.8%',
+      winRate: '68%'
+    },
+    {
+      id: '2',
+      name: '网格交易策略',
+      profitRate: '+18.3%',
+      winRate: '72%'
+    },
+    {
+      id: '3',
+      name: '套利策略',
+      profitRate: '+12.5%',
+      winRate: '85%'
+    },
+    {
+      id: '4',
+      name: '高频交易策略',
+      profitRate: '+32.1%',
+      winRate: '61%'
+    },
+    {
+      id: '5',
+      name: '波段交易策略',
+      profitRate: '+15.7%',
+      winRate: '65%'
+    },
+    {
+      id: '6',
+      name: '动量交易策略',
+      profitRate: '+22.4%',
+      winRate: '70%'
+    }
+  ];
 
   const handleCreateAccount = () => {
     if (onNavigateToCreate) {
@@ -148,7 +237,16 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">账户管理</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-2xl font-semibold text-gray-900">账户管理</h1>
+            <button
+              onClick={handleRefresh}
+              className={`p-2 text-gray-400 hover:text-gray-600 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
+              title="刷新"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+          </div>
           <p className="text-sm text-gray-500">管理交易所账户和API密钥</p>
         </div>
         <button
@@ -161,7 +259,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow mb-6 p-4">
+      <div className="mb-6">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -170,7 +268,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
             placeholder="搜索用户名、账户UID、账户名称..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
           />
         </div>
       </div>
@@ -214,6 +312,17 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
               </button>
               <button
                 onClick={() => {
+                  setFilterExchange('Bybit');
+                  setShowExchangeDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterExchange === 'Bybit' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                Bybit
+              </button>
+              <button
+                onClick={() => {
                   setFilterExchange('OKX');
                   setShowExchangeDropdown(false);
                 }}
@@ -225,14 +334,25 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
               </button>
               <button
                 onClick={() => {
-                  setFilterExchange('Huobi');
+                  setFilterExchange('Gate');
                   setShowExchangeDropdown(false);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  filterExchange === 'Huobi' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  filterExchange === 'Gate' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
                 }`}
               >
-                Huobi
+                Gate
+              </button>
+              <button
+                onClick={() => {
+                  setFilterExchange('MEXC');
+                  setShowExchangeDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterExchange === 'MEXC' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                MEXC
               </button>
             </div>
           )}
@@ -242,37 +362,43 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
       {/* Accounts List */}
       <div className="space-y-4">
         {filteredAccounts.map((account) => (
-          <div key={account.id} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-4">
-            {/* Account Name with Status and Net Value */}
-            <div className="flex items-center justify-between mb-4">
+          <div key={account.id} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-4 relative">
+            {/* Strategy Name - Top Right Corner */}
+            <div className="absolute top-4 right-4 text-sm">
+              {account.strategyName ? (
+                <span className="text-gray-500">{account.strategyName}</span>
+              ) : (
+                <span className="text-red-500">未跟随</span>
+              )}
+            </div>
+
+            {/* Account Name with Status */}
+            <div className="flex items-center justify-between mb-4 pr-24">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
+                  <ExchangeIcon exchange={account.exchange} />
                   <h3 className="text-lg text-gray-900">{account.accountName}</h3>
-                  <span className={`px-3 py-1 rounded-full text-sm ${getStatusBadgeColor(account.initStatus)}`}>
+                  <span className={`px-3 py-1 rounded-2xl text-sm ${getStatusBadgeColor(account.initStatus)}`}>
                     {account.initStatus}
                   </span>
                 </div>
-                <div className="text-sm text-gray-500 mt-0.5">{account.exchange}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm text-gray-500 mb-1">净值</div>
-                <div className="text-lg text-green-600 font-semibold">¥{account.netValue}</div>
+                <div className="text-sm text-gray-500 mt-0.5">{account.uid}</div>
               </div>
             </div>
             
             {/* Account Info Grid - Label above value */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
               <div>
-                <div className="text-sm text-gray-500 mb-1">UID</div>
-                <div className="text-gray-900">{account.uid}</div>
+                <div className="text-sm text-gray-500 mb-1">净值</div>
+                <div className="text-green-600">¥{account.netValue}</div>
               </div>
               <div>
                 <div className="text-sm text-gray-500 mb-1">API Key</div>
                 <div className="text-gray-900">{account.apiKey.substring(0, 3)}......{account.apiKey.substring(account.apiKey.length - 3)}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-500 mb-1 text-right">创建时间</div>
-                <div className="text-gray-900 text-right">{account.createdAt}</div>
+                <div className="text-sm text-gray-500 mb-1">创建时间</div>
+                <div className="text-gray-900">{account.createdAt}</div>
               </div>
             </div>
 
@@ -289,6 +415,15 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
 
             {/* Actions */}
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+              <button
+                onClick={() => {
+                  setSelectedAccountId(account.id);
+                  setShowStrategyModal(true);
+                }}
+                className="px-4 py-1.5 text-sm border border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
+              >
+                跟随策略
+              </button>
               <button
                 onClick={() => handleEditAccount(account)}
                 className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
@@ -321,39 +456,178 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
 
       {/* Delete Confirm Modal */}
       {showDeleteConfirmModal && deletingAccountId && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-gray-900">确认删除</h2>
-              <button
-                onClick={() => setShowDeleteConfirmModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-end justify-center z-50">
+          <div 
+            className="bg-white rounded-t-3xl shadow-xl p-6 w-full max-w-4xl h-[85vh] flex flex-col animate-slide-up"
+            style={{
+              animation: 'slideUp 0.3s ease-out'
+            }}
+          >
+            {/* Modal Header */}
+            <div className="mb-6 flex-shrink-0">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">确认删除</h2>
+                <button
+                  onClick={() => setShowDeleteConfirmModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              {/* Divider */}
+              <div className="border-t border-gray-200"></div>
             </div>
 
-            <div className="p-6 text-gray-600">
-              确定要删除交易账户 "{accounts.find(acc => acc.id === deletingAccountId)?.accountName}" 吗？此操作不可撤销。
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto mb-6">
+              <div className="text-gray-600">
+                确定要删除交易账户 "{accounts.find(acc => acc.id === deletingAccountId)?.accountName}" 吗？此操作不可撤销。
+              </div>
             </div>
 
-            <div className="flex gap-3 px-6 pb-6">
+            {/* Buttons */}
+            <div className="flex gap-3 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirmModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 取消
               </button>
               <button
                 type="button"
                 onClick={handleDeleteConfirm}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
                 删除
               </button>
             </div>
           </div>
+          
+          <style>{`
+            @keyframes slideUp {
+              from {
+                transform: translateY(100%);
+                opacity: 0;
+              }
+              to {
+                transform: translateY(0);
+                opacity: 1;
+              }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Strategy Selection Modal */}
+      {showStrategyModal && selectedAccountId && (
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-end justify-center z-50">
+          <div 
+            className="bg-white rounded-t-3xl shadow-xl p-6 w-full max-w-4xl h-[85vh] flex flex-col animate-slide-up"
+            style={{
+              animation: 'slideUp 0.3s ease-out'
+            }}
+          >
+            {/* Modal Header */}
+            <div className="mb-6 flex-shrink-0">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">选择策��</h2>
+                <button
+                  onClick={() => {
+                    setShowStrategyModal(false);
+                    setSelectedStrategyId(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              {/* Divider */}
+              <div className="border-t border-gray-200"></div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {strategies.map((strategy) => (
+                  <div
+                    key={strategy.id}
+                    onClick={() => setSelectedStrategyId(strategy.id)}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      selectedStrategyId === strategy.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">{strategy.name}</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">收益率(30日)</span>
+                        <span className="text-sm font-semibold text-green-600">{strategy.profitRate}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">胜率(30日)</span>
+                        <span className="text-sm font-semibold text-gray-900">{strategy.winRate}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowStrategyModal(false);
+                  setSelectedStrategyId(null);
+                }}
+                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedStrategyId) {
+                    const strategy = strategies.find(s => s.id === selectedStrategyId);
+                    if (strategy) {
+                      setAccounts(accounts.map(acc => 
+                        acc.id === selectedAccountId 
+                          ? { ...acc, strategyName: strategy.name }
+                          : acc
+                      ));
+                      alert(`已设置跟随策略: ${strategy.name}`);
+                    }
+                  }
+                  setShowStrategyModal(false);
+                  setSelectedStrategyId(null);
+                }}
+                disabled={!selectedStrategyId}
+                className={`flex-1 px-6 py-3 rounded-lg transition-colors ${
+                  selectedStrategyId
+                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                立即跟随
+              </button>
+            </div>
+          </div>
+          
+          <style>{`
+            @keyframes slideUp {
+              from {
+                transform: translateY(100%);
+                opacity: 0;
+              }
+              to {
+                transform: translateY(0);
+                opacity: 1;
+              }
+            }
+          `}</style>
         </div>
       )}
     </div>

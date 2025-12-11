@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, AlertTriangle, TrendingDown, TrendingUp, Activity } from 'lucide-react';
+import { Shield, AlertTriangle, TrendingDown, TrendingUp, Activity, RefreshCw } from 'lucide-react';
 
 interface RiskManagementProps {
   onBack: () => void;
@@ -7,6 +7,14 @@ interface RiskManagementProps {
 
 export function RiskManagement({ onBack }: RiskManagementProps) {
   const [selectedTab, setSelectedTab] = useState<'overview' | 'rules' | 'alerts'>('overview');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 500);
+  };
 
   // Mock risk overview data
   const riskOverview = {
@@ -142,7 +150,17 @@ export function RiskManagement({ onBack }: RiskManagementProps) {
     <div>
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">风险管理</h1>
+        <div className="flex items-center gap-3 mb-2">
+          <h1 className="text-2xl font-semibold text-gray-900">风险管理</h1>
+          <button
+            onClick={handleRefresh}
+            className={`p-2 text-gray-400 hover:text-gray-600 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
+            title="刷新"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
+        </div>
+        <p className="text-sm text-gray-500">监控和管理交易风险</p>
       </div>
 
       {/* Risk Overview Cards */}

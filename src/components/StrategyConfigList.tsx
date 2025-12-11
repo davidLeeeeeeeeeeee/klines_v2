@@ -22,7 +22,7 @@ interface Strategy {
   requestFrequencyUnit?: 'seconds' | 'minutes' | 'hours';
 }
 
-interface StrategyListProps {
+interface StrategyConfigListProps {
   onViewDetail: (strategyId: string) => void;
   onNavigateToConfig: (strategy: Strategy | null) => void;
   strategies: Strategy[];
@@ -30,7 +30,7 @@ interface StrategyListProps {
   onNavigateToAccounts?: () => void;
 }
 
-export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onUpdateStrategy, onNavigateToAccounts }: StrategyListProps) {
+export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategies, onUpdateStrategy, onNavigateToAccounts }: StrategyConfigListProps) {
   const [showFollowModal, setShowFollowModal] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -113,18 +113,27 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
 
   return (
     <div>
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-2xl font-semibold text-gray-900">策略中心</h1>
-          <button
-            onClick={handleRefresh}
-            className={`p-2 text-gray-400 hover:text-gray-600 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
-            title="刷新"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-2xl font-semibold text-gray-900">策略配置</h1>
+            <button
+              onClick={handleRefresh}
+              className={`p-2 text-gray-400 hover:text-gray-600 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
+              title="刷新"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+          </div>
+          <p className="text-sm text-gray-500">浏览和选择AI交易策略</p>
         </div>
-        <p className="text-sm text-gray-500">浏览和选择AI交易策略</p>
+        <button
+          onClick={handleCreateStrategy}
+          className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+        >
+          <Plus className="w-5 h-5" />
+          创建策略
+        </button>
       </div>
 
       {/* Strategy Cards Grid */}
@@ -164,6 +173,32 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
                       </span>
                     ))}
                   </div>
+                </div>
+                
+                {/* Right Actions */}
+                <div className="flex items-center gap-2 ml-3">
+                  <button
+                    onClick={(e) => handleToggleStatus(strategy.id, e)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      strategy.status === 'active'
+                        ? 'bg-gray-700 hover:bg-gray-800 text-white'
+                        : 'bg-green-600 hover:bg-green-700 text-white'
+                    }`}
+                    title={strategy.status === 'active' ? '停止' : '启动'}
+                  >
+                    {strategy.status === 'active' ? (
+                      <Pause className="w-4 h-4" />
+                    ) : (
+                      <Play className="w-4 h-4" />
+                    )}
+                  </button>
+                  <button
+                    onClick={(e) => handleSettings(strategy.id, e)}
+                    className="p-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg transition-colors"
+                    title="配置"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
@@ -226,27 +261,6 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
                 </p>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 mb-4">
-                <button
-                  onClick={() => onViewDetail(strategy.id)}
-                  className="flex-1 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                >
-                  策略表现
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onNavigateToAccounts) {
-                      onNavigateToAccounts();
-                    }
-                  }}
-                  className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                >
-                  前往跟随
-                </button>
-              </div>
-
               {/* Status Bar */}
               <div className={`py-2 px-3 rounded-lg flex items-center justify-between text-sm ${
                 strategy.status === 'active'
@@ -267,6 +281,19 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
             </div>
           </div>
         ))}
+        {/* Create New Strategy Card */}
+        <div
+          onClick={handleCreateStrategy}
+          className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer border-2 border-dashed border-gray-300 hover:border-blue-500 flex items-center justify-center min-h-[400px]"
+        >
+          <div className="text-center p-6">
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Plus className="w-8 h-8 text-blue-500" />
+            </div>
+            <h3 className="text-gray-900 mb-2">创建新策略</h3>
+            <p className="text-gray-600 text-sm">点击配置新的量化交易策略</p>
+          </div>
+        </div>
       </div>
 
       {/* Follow Strategy Modal */}

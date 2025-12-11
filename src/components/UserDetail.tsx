@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Key, Search, X, Edit, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Key, Search, X, Edit, ChevronDown, RefreshCw } from 'lucide-react';
 
 type UserRole = 'admin' | 'trader' | 'viewer';
 type UserStatus = '启用' | '禁用';
@@ -72,10 +72,18 @@ export function UserDetail({ onNavigateToCreate, onNavigateToEdit, onNavigateToR
   const [filterStatus, setFilterStatus] = useState<UserStatus | 'all'>('all');
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 500);
+  };
 
   const handleCreateUser = () => {
     if (onNavigateToCreate) {
@@ -140,7 +148,16 @@ export function UserDetail({ onNavigateToCreate, onNavigateToEdit, onNavigateToR
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">用户管理</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-2xl font-semibold text-gray-900">用户管理</h1>
+            <button
+              onClick={handleRefresh}
+              className={`p-2 text-gray-400 hover:text-gray-600 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
+              title="刷新"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+          </div>
           <p className="text-sm text-gray-500">管理系统用户账户和权限</p>
         </div>
         <button
@@ -153,7 +170,7 @@ export function UserDetail({ onNavigateToCreate, onNavigateToEdit, onNavigateToR
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow mb-6 p-4">
+      <div className="mb-6">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -162,7 +179,7 @@ export function UserDetail({ onNavigateToCreate, onNavigateToEdit, onNavigateToR
             placeholder="搜索用户名、邮箱..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
           />
         </div>
       </div>
@@ -315,8 +332,8 @@ export function UserDetail({ onNavigateToCreate, onNavigateToEdit, onNavigateToR
                 <div className="text-gray-900">{user.phone}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-500 mb-1 text-right">创建时间</div>
-                <div className="text-gray-900 text-right">{user.createdAt}</div>
+                <div className="text-sm text-gray-500 mb-1">创建时间</div>
+                <div className="text-gray-900">{user.createdAt}</div>
               </div>
             </div>
 
@@ -353,41 +370,68 @@ export function UserDetail({ onNavigateToCreate, onNavigateToEdit, onNavigateToR
 
       {/* Delete Confirm Modal */}
       {showDeleteConfirmModal && deletingUserId && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-gray-900">
-                确认删除
-              </h2>
-              <button
-                onClick={() => setShowDeleteConfirmModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-end justify-center z-50">
+          <div 
+            className="bg-white rounded-t-3xl shadow-xl p-6 w-full max-w-4xl h-[85vh] flex flex-col animate-slide-up"
+            style={{
+              animation: 'slideUp 0.3s ease-out'
+            }}
+          >
+            {/* Modal Header */}
+            <div className="mb-6 flex-shrink-0">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  确认删除
+                </h2>
+                <button
+                  onClick={() => setShowDeleteConfirmModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              {/* Divider */}
+              <div className="border-t border-gray-200"></div>
             </div>
 
-            <div className="p-6 text-gray-600">
-              确定要删除用户 "{users.find(u => u.id === deletingUserId)?.username}" 吗？此操作不可撤销。
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto mb-6">
+              <div className="text-gray-600">
+                确定要删除用户 "{users.find(u => u.id === deletingUserId)?.username}" 吗？此操作不可撤销。
+              </div>
             </div>
 
-            <div className="flex gap-3 px-6 pb-6">
+            {/* Buttons */}
+            <div className="flex gap-3 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirmModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 取消
               </button>
               <button
                 type="button"
                 onClick={handleDeleteConfirm}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
                 删除
               </button>
             </div>
           </div>
+          
+          <style>{`
+            @keyframes slideUp {
+              from {
+                transform: translateY(100%);
+                opacity: 0;
+              }
+              to {
+                transform: translateY(0);
+                opacity: 1;
+              }
+            }
+          `}</style>
         </div>
       )}
     </div>

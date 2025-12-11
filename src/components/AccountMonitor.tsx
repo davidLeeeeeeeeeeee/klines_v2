@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, X, Play, XCircle, Loader2 } from 'lucide-react';
+import { ChevronDown, X, Play, XCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { getPositionList, getPositionChat, PositionResponse, ChatResponse } from '../services/api';
 import { getToken } from '../utils/storage';
 import { JsonViewer } from './JsonViewer';
@@ -57,24 +57,21 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [showAIChatModal, setShowAIChatModal] = useState(false);
   const [selectedAIChat, setSelectedAIChat] = useState<ChatResponse | null>(null);
-  const [expandedPrompt, setExpandedPrompt] = useState(true);
+  const [expandedPrompt, setExpandedPrompt] = useState(false); // 默认收起
   const [expandedReasoning, setExpandedReasoning] = useState(true);
   const [expandedOutput, setExpandedOutput] = useState(true);
   const [showBatchCloseModal, setShowBatchCloseModal] = useState(false);
   const [batchCloseSymbol, setBatchCloseSymbol] = useState('BTCUSDT');
   const [batchCloseAction, setBatchCloseAction] = useState<'long' | 'short' | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // API数据状态
+  // API相关状态
   const [positions, setPositions] = useState<PositionResponse[]>([]);
   const [isLoadingPositions, setIsLoadingPositions] = useState(false);
-  const [isLoadingChat, setIsLoadingChat] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [loadingChatId, setLoadingChatId] = useState<string | null>(null); // 记录正在加载的position ID
+  const [error, setError] = useState('');
 
   // 获取持仓列表
-  useEffect(() => {
-    fetchPositions();
-  }, [selectedSymbol]);
-
   const fetchPositions = async () => {
     setIsLoadingPositions(true);
     setError('');
@@ -96,8 +93,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   };
 
   // 获取AI Chat
-  const fetchAIChat = async (accountId: number, symbol: string, side: string) => {
-    setIsLoadingChat(true);
+  const fetchAIChat = async (positionId: string, accountId: number, symbol: string, side: string) => {
+    setLoadingChatId(positionId);
     try {
       const token = getToken();
       if (!token) {
@@ -116,40 +113,42 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       alert(err.message || '获取AI Chat失败');
       console.error('获取AI Chat失败:', err);
     } finally {
-      setIsLoadingChat(false);
+      setLoadingChatId(null);
     }
   };
 
-  // 将API数据转换为组件使用的Position格式
-  const convertToPosition = (apiPosition: PositionResponse): Position => {
+  // 数据转换函数
+  const convertToPosition = (apiPos: PositionResponse): Position => {
     return {
-      id: `${apiPosition.accountId}-${apiPosition.symbol}-${apiPosition.side}`,
-      accountUid: String(apiPosition.accountId),
-      accountName: apiPosition.accountName,
-      type: apiPosition.side === 'Buy' ? 'long' : 'short',
-      symbol: apiPosition.symbol,
-      unrealizedPnL: apiPosition.unrealisedPnl,
-      unrealizedPnLPercent: apiPosition.entryPrice > 0
-        ? (apiPosition.unrealisedPnl / (apiPosition.entryPrice * apiPosition.qty)) * 100
-        : 0,
-      quantity: apiPosition.qty,
-      entryPrice: apiPosition.entryPrice,
-      currentPrice: apiPosition.lastPrice,
-      leverage: apiPosition.leverage,
-      takeProfit: apiPosition.takeProfit || null,
-      stopLoss: apiPosition.stopLoss || null,
-      createdAt: new Date().toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).replace(/\//g, '-'),
+      id: `${apiPos.accountId}-${apiPos.symbol}-${apiPos.side}`,
+      accountUid: apiPos.accountId.toString(),
+      accountName: apiPos.accountName,
+      type: apiPos.side === 'Buy' ? 'long' : 'short',
+      symbol: apiPos.symbol,
+      unrealizedPnL: apiPos.unrealisedPnl,
+      unrealizedPnLPercent: ((apiPos.unrealisedPnl / (apiPos.entryPrice * apiPos.qty)) * 100),
+      quantity: apiPos.qty,
+      entryPrice: apiPos.entryPrice,
+      currentPrice: apiPos.lastPrice,
+      leverage: apiPos.leverage,
+      takeProfit: apiPos.takeProfit || null,
+      stopLoss: apiPos.stopLoss || null,
+      createdAt: new Date().toLocaleString('zh-CN'),
     };
   };
 
-  // 获取转换后的持仓列表
-  const currentPositions: Position[] = positions.map(convertToPosition);
+  // 加载持仓数据
+  useEffect(() => {
+    fetchPositions();
+  }, [selectedSymbol]);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchPositions();
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 500);
+  };
 
   // Function to calculate holding duration
   const calculateDuration = (openTime: string, closeTime: string) => {
@@ -159,13 +158,37 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
     
     if (diffDays > 0) {
-      return `${diffDays}天${diffHours}小时${diffMinutes}分`;
+      return `${diffDays}天${diffHours}小时${diffMinutes}分${diffSeconds}秒`;
     } else if (diffHours > 0) {
-      return `${diffHours}小时${diffMinutes}分钟`;
+      return `${diffHours}小时${diffMinutes}分${diffSeconds}秒`;
+    } else if (diffMinutes > 0) {
+      return `${diffMinutes}分${diffSeconds}秒`;
     } else {
-      return `${diffMinutes}分钟`;
+      return `${diffSeconds}秒`;
+    }
+  };
+
+  // Function to calculate duration from a past time to now
+  const calculateDurationToNow = (startTime: string) => {
+    const start = new Date(startTime);
+    const now = new Date();
+    const diffMs = now.getTime() - start.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    
+    if (diffDays > 0) {
+      return `${diffDays}天${diffHours}小时${diffMinutes}分${diffSeconds}秒`;
+    } else if (diffHours > 0) {
+      return `${diffHours}小时${diffMinutes}分${diffSeconds}秒`;
+    } else if (diffMinutes > 0) {
+      return `${diffMinutes}分${diffSeconds}秒`;
+    } else {
+      return `${diffSeconds}秒`;
     }
   };
 
@@ -224,6 +247,9 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     { id: '4', name: '高频交易策略' }
   ];
 
+  // 从API数据转换为组件需要的格式
+  const currentPositions: Position[] = positions.map(convertToPosition);
+
   // Mock historical trades data
   const historicalTrades: HistoricalTrade[] = [
     {
@@ -249,7 +275,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     {
       id: '2',
       accountUid: 'OKX002',
-      accountName: '备用账户 - OKX',
+      accountName: '备用账 - OKX',
       type: 'short',
       symbol: 'ETH/USDT',
       realizedPnL: -420.30,
@@ -295,7 +321,16 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       {/* Page Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">交易监控</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-2xl font-semibold text-gray-900">交易监控</h1>
+            <button
+              onClick={handleRefresh}
+              className={`p-2 text-gray-400 hover:text-gray-600 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
+              title="刷新"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+          </div>
           <p className="text-sm text-gray-500">管理交易所账户持仓</p>
         </div>
         <button
@@ -307,7 +342,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       </div>
 
       {/* Filters - Strategy and Search */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Strategy Selector */}
           <div className="relative">
@@ -345,7 +380,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
             placeholder="输入用户名、交易账户UID"
-            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
           />
         </div>
       </div>
@@ -370,7 +405,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
           className={`pb-3 text-base transition-colors relative ${
             activeTab === 'history'
               ? 'text-gray-900 font-semibold'
-              : 'text-gray-500 hover:text-gray-700'
+              : 'text-gray-700 hover:text-gray-900'
           }`}
         >
           历史仓位
@@ -508,24 +543,30 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 {/* Actions */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div className="text-sm text-gray-500">
-                    创建时间: <span className="text-gray-900">{position.createdAt}</span>
+                    时长: <span className="text-gray-900">{formatTime(position.createdAt)}    {calculateDurationToNow(position.createdAt)}</span>
                   </div>
                   <div className="flex gap-2">
                     <button
                       className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                       onClick={() => {
+                        // 调用真实API
                         const apiPosition = positions.find(p =>
                           `${p.accountId}-${p.symbol}-${p.side}` === position.id
                         );
                         if (apiPosition) {
-                          fetchAIChat(apiPosition.accountId, apiPosition.symbol, apiPosition.side);
+                          fetchAIChat(
+                            position.id,
+                            apiPosition.accountId,
+                            apiPosition.symbol,
+                            apiPosition.side
+                          );
                         }
                       }}
-                      disabled={isLoadingChat}
+                      disabled={loadingChatId === position.id}
                     >
-                      {isLoadingChat ? (
+                      {loadingChatId === position.id ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="w-3 h-3 animate-spin" />
                           加载中...
                         </>
                       ) : (
@@ -533,7 +574,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       )}
                     </button>
                     <button
-                      className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="px-3 py-1.5 text-sm border border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
                       onClick={() => handleClosePosition(position)}
                     >
                       平仓
@@ -630,34 +671,64 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     <span className="text-sm text-gray-900">{trade.closeFee} USDT</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">资金费用</span>
+                    <span className="text-sm text-gray-500">资金费</span>
                     <span className="text-sm text-gray-900">{trade.fundingFee} USDT</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">跟随策略</span>
+                    <span className="text-sm text-gray-900">趋势追踪策略</span>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div className="text-sm text-gray-500">
-                    持仓时长: <span className="text-gray-900">{formatTime(trade.openTime)}-{formatTime(trade.closeTime)} {calculateDuration(trade.openTime, trade.closeTime)}</span>
+                    时长: <span className="text-gray-900">{formatTime(trade.openTime)} - {formatTime(trade.closeTime)}    {calculateDuration(trade.openTime, trade.closeTime)}</span>
                   </div>
-                  <button
-                    className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                    onClick={() => {
-                      setSelectedAIChat({
-                        strategyName: '趋势追踪策略',
-                        symbol: trade.symbol,
-                        action: '交易复盘',
-                        timestamp: new Date().toISOString(),
-                        summary: '分析已完成的交易，评估交易决策是否正确，并总结经验教训。',
-                        prompt: `分析已完成的 ${trade.symbol} 交易，评估交易决策是否正确，并总结经验教训。考虑以下因素：1) 入场时机是否合理；2) 出场时机是否及时；3) 风险控制是否得当；4) 是否达到预期目标。`,
-                        reasoning: `交易回顾：本次${trade.type === 'long' ? '多' : '空'}仓交易${trade.symbol}，入场价格$${trade.entryPrice.toLocaleString()}，出场价格$${trade.exitPrice.toLocaleString()}。持仓时长：${calculateDuration(trade.openTime, trade.closeTime)}。市场环境分析：入场时市场趋势${trade.type === 'long' ? '向上' : '向下'}，符合策略要求。风险管理：使用${trade.leverage}x杠杆，在可控范围内。出场原因：${trade.tradeType}触发，执行了预设的风险管理规则。盈亏分析：最终实现盈亏${trade.realizedPnL >= 0 ? '+' : ''}$${trade.realizedPnL.toFixed(2)}（${trade.realizedPnLPercent >= 0 ? '+' : ''}${trade.realizedPnLPercent}%）。成本分析：开仓手续费$${trade.openFee}，平仓手续费$${trade.closeFee}，资金费用$${trade.fundingFee}，总成本$${trade.openFee + trade.closeFee + trade.fundingFee}。综合评估：${trade.realizedPnL >= 0 ? '交易决策正确，风险控制得当，值得复制' : '交易出现亏损，需要反思入场时机和风险管理'}。`,
-                        output: `📊 交易复盘报告\n\n交易概况：\n商品：${trade.symbol}\n类型：${trade.type === 'long' ? '多仓' : '空仓'}\n杠杆：${trade.leverage}x\n持仓时长：${calculateDuration(trade.openTime, trade.closeTime)}\n\n价格表现：\n入场价格：$${trade.entryPrice.toLocaleString()}\n出场价格：$${trade.exitPrice.toLocaleString()}\n价格变动：${trade.type === 'long' ? '+' : '-'}${Math.abs(((trade.exitPrice - trade.entryPrice) / trade.entryPrice) * 100).toFixed(2)}%\n\n盈亏分析：\n已结盈亏：${trade.realizedPnL >= 0 ? '+' : ''}$${trade.realizedPnL.toFixed(2)} (${trade.realizedPnLPercent >= 0 ? '+' : ''}${trade.realizedPnLPercent}%)\n手续费成本：$${trade.openFee + trade.closeFee + trade.fundingFee}\n\n出场方式：${trade.tradeType}\n\n${trade.realizedPnL >= 0 ? '✅ 成功案例\n• 入场时机把握准确\n• 风险控制执行到位\n• 值得作为成功模板' : '⚠️ 需要改进\n• 反思入场时机选择\n• 优化风险控制策略\n• 总结经验教训'}\n\n综合评分：${trade.realizedPnL >= 0 ? '85/100' : '65/100'}`
-                      });
-                      setShowAIChatModal(true);
-                    }}
-                  >
-                    AI CHAT
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      onClick={() => {
+                        setSelectedAIChat({
+                          strategyName: '趋势追踪策略',
+                          symbol: trade.symbol,
+                          action: trade.type === 'long' ? '开多' : '开空',
+                          timestamp: new Date().toISOString(),
+                          summary: '分析开仓决策，评估入场时机是否合理。',
+                          prompt: `分析${trade.symbol}的开仓决策，评估入场时机是否合理。考虑以下因素：1) 市场趋势是否明确；2) 技术指标是否支持入场；3) 风险收益比是否合理；4) 市场情绪如何。`,
+                          reasoning: `开仓分析：本次${trade.type === 'long' ? '多' : '空'}仓交易${trade.symbol}，入场价格$${trade.entryPrice.toLocaleString()}。市场境分析：入场时市场趋势${trade.type === 'long' ? '向上' : '向下'}，符合策略要求。技术指标：入场时各项技术指标显示${trade.type === 'long' ? '多头' : '空头'}信号。风险管理：使用${trade.leverage}x杠杆，在可控范围内。综合评估：${trade.realizedPnL >= 0 ? '开仓时机把握准确，入场点位合理' : '开仓时机有待改进，需优化入场策略'}。`,
+                          output: `📊 开仓决策分析\\n\\n交易概况：\\n商品：${trade.symbol}\\n类型：${trade.type === 'long' ? '多仓' : '空仓'}\\n入场价格：$${trade.entryPrice.toLocaleString()}\\n杠杆：${trade.leverage}x\\n\\n入场信号评估：\\n市场趋势：${trade.type === 'long' ? '上涨' : '下跌'}\\n技术指标：支持入场\\n风险收益比：合理\\n\\n开仓决策评分：${trade.realizedPnL >= 0 ? '85/100' : '65/100'}`,
+                          model: 'DEEPSEEK-LOCAL',
+                          id: '17334572801',
+                          duration: '30秒'
+                        });
+                        setShowAIChatModal(true);
+                      }}
+                    >
+                      开仓CHAT
+                    </button>
+                    <button
+                      className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      onClick={() => {
+                        setSelectedAIChat({
+                          strategyName: '趋势追踪策略',
+                          symbol: trade.symbol,
+                          action: trade.type === 'long' ? '平多' : '平空',
+                          timestamp: new Date().toISOString(),
+                          summary: '分析平仓决策，评估出场时机是否合理。',
+                          prompt: `分析${trade.symbol}的平仓决策，评估出场时机是否合理。考虑以下因素：1) 出场时机是否及时；2) 是否达到止盈止损目标；3) 市场环境变化；4) 盈亏情况分析。`,
+                          reasoning: `平仓分析：本次${trade.type === 'long' ? '多' : '空'}仓交易${trade.symbol}，出场价格$${trade.exitPrice.toLocaleString()}。持仓时长：${calculateDuration(trade.openTime, trade.closeTime)}。出场原因：${trade.tradeType}触发，执行了预设的风险管理规则。盈亏分析：最终实现盈亏${trade.realizedPnL >= 0 ? '+' : ''}$${trade.realizedPnL.toFixed(2)}（${trade.realizedPnLPercent >= 0 ? '+' : ''}${trade.realizedPnLPercent}%）。成本分析：开仓手续费$${trade.openFee}，平仓手续费$${trade.closeFee}，资金费用$${trade.fundingFee}，总成本$${trade.openFee + trade.closeFee + trade.fundingFee}。综合评估：${trade.realizedPnL >= 0 ? '平仓决策正确，风险控制得当' : '平仓时机需要改进，优化出场策略'}。`,
+                          output: `📊 平仓决策分析\\\\n\\\\n交易概况：\\\\n商品：${trade.symbol}\\\\n类型：${trade.type === 'long' ? '多仓' : '空仓'}\\\\n出场价格：$${trade.exitPrice.toLocaleString()}\\\\n持仓时长：${calculateDuration(trade.openTime, trade.closeTime)}\\\\n\\\\n盈亏分析：\\\\n已结盈亏：${trade.realizedPnL >= 0 ? '+' : ''}$${trade.realizedPnL.toFixed(2)} (${trade.realizedPnLPercent >= 0 ? '+' : ''}${trade.realizedPnLPercent}%)\\\\n手续费成本：$${trade.openFee + trade.closeFee + trade.fundingFee}\\\\n\\\\n出场方式：${trade.tradeType}\\\\n\\\\n${trade.realizedPnL >= 0 ? '✅ 成功案例\\\\n• 出场时机把握准确\\\\n• 风险控���执行到位' : '⚠️ 需要改进\\\\n• 优化出场时机选择\\\\n• 改进风险控制策略'}\\\\n\\\\n平仓决策评分：${trade.realizedPnL >= 0 ? '85/100' : '65/100'}`,
+                          model: 'GPT-5.1',
+                          id: '17334572801',
+                          duration: '30秒'
+                        });
+                        setShowAIChatModal(true);
+                      }}
+                    >
+                      平仓CHAT
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
@@ -741,10 +812,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 取消
               </button>
               <button
-                className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                 onClick={confirmClosePosition}
               >
-                确认
+                平仓
               </button>
             </div>
           </div>
@@ -776,7 +847,9 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             {/* Modal Header */}
             <div className="mb-4 flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">AI CHAT</h2>
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-xl font-semibold text-gray-900">{selectedAIChat.model || 'AI CHAT'}</h2>
+                </div>
                 <button
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                   onClick={() => setShowAIChatModal(false)}
@@ -790,101 +863,168 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
             {/* AI Chat Content - Scrollable */}
             <div className="flex-1 overflow-y-auto pr-2">
-              {/* Card Header */}
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-700">{selectedAIChat.strategyType || '策略'}</span>
-                  <span className="text-gray-400">｜</span>
-                  <span className="text-gray-900">ID: {selectedAIChat.id}</span>
-                </div>
-                <div className="text-sm text-gray-500 ml-4 whitespace-nowrap">
-                  {selectedAIChat.createTime ? new Date(selectedAIChat.createTime).toLocaleString('zh-CN', {
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                  }) : ''}
-                </div>
-              </div>
+              {(() => {
+                // 解析response字段
+                let parsedResponse: any = null;
+                let simpleThought = '';
+                let invalidationCondition = '';
+                let tradeSignalArgs: any = null;
 
-              {/* Divider */}
-              <div className="border-t border-gray-200 mb-4"></div>
+                try {
+                  parsedResponse = JSON.parse(selectedAIChat.response);
+                  // 获取第一个symbol的数据
+                  const firstSymbol = Object.keys(parsedResponse)[0];
+                  if (firstSymbol && parsedResponse[firstSymbol]?.tradeSignalArgs) {
+                    tradeSignalArgs = parsedResponse[firstSymbol].tradeSignalArgs;
+                    simpleThought = tradeSignalArgs.simpleThought || '';
+                    invalidationCondition = tradeSignalArgs.invalidationCondition || '';
+                  }
+                } catch (e) {
+                  console.error('解析response失败:', e);
+                }
 
-              {/* Model Info */}
-              {selectedAIChat.model && (
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
-                  <div className="text-sm text-gray-500 mb-1">模型</div>
-                  <div className="text-gray-900">{selectedAIChat.model}</div>
-                </div>
-              )}
-
-              {/* Prompt - Collapsible with JSON Viewer */}
-              <div className="mb-4">
-                <button
-                  onClick={() => setExpandedPrompt(!expandedPrompt)}
-                  className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {expandedPrompt ? (
-                    <Play className="w-3 h-3 rotate-90 fill-current" />
-                  ) : (
-                    <Play className="w-3 h-3 fill-current" />
-                  )}
-                  <span>USER_PROMPT</span>
-                </button>
-
-                {expandedPrompt && (
-                  <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <div className="text-gray-700 text-sm font-mono">
-                      {(() => {
-                        try {
-                          const promptData = JSON.parse(selectedAIChat.prompt);
-                          return <JsonViewer data={promptData} defaultExpanded={true} />;
-                        } catch {
-                          return <div className="whitespace-pre-wrap">{selectedAIChat.prompt}</div>;
-                        }
-                      })()}
+                return (
+                  <>
+                    {/* Strategy Type and Time */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <span className="text-gray-900 font-semibold">{selectedAIChat.strategyType || '策略分析'}</span>
+                      </div>
+                      <div className="text-sm text-gray-500 ml-4 whitespace-nowrap">
+                        {new Date(selectedAIChat.createTime).toLocaleString('zh-CN', {
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: false
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
 
-              {/* Response - Collapsible with JSON Viewer */}
-              <div className="mb-4">
-                <button
-                  onClick={() => setExpandedReasoning(!expandedReasoning)}
-                  className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {expandedReasoning ? (
-                    <Play className="w-3 h-3 rotate-90 fill-current" />
-                  ) : (
-                    <Play className="w-3 h-3 fill-current" />
-                  )}
-                  <span>CHAIN_OF_THOUGHT</span>
-                </button>
+                    {/* Symbol and Action */}
+                    {tradeSignalArgs && (
+                      <div className="mb-3">
+                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                          <span>{tradeSignalArgs.coin}</span>
+                          <span className={`px-2 py-0.5 rounded-2xl ${
+                            tradeSignalArgs.side === 'Buy'
+                              ? 'bg-green-100 text-green-600'
+                              : 'bg-red-100 text-red-600'
+                          }`}>
+                            {tradeSignalArgs.side === 'Buy' ? '开多' : '开空'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
-                {expandedReasoning && (
-                  <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <div className="text-gray-700 text-sm font-mono">
-                      {(() => {
-                        try {
-                          const responseData = JSON.parse(selectedAIChat.response);
-                          return <JsonViewer data={responseData} defaultExpanded={true} />;
-                        } catch {
-                          return <div className="whitespace-pre-wrap">{selectedAIChat.response}</div>;
-                        }
-                      })()}
+                    {/* Divider */}
+                    <div className="border-t border-gray-200 mb-4"></div>
+
+                    {/* Summary - Trade Signal Info */}
+                    {tradeSignalArgs && (
+                      <div className="bg-gray-50 rounded-lg p-4 pb-8 border border-gray-200 mb-4 relative">
+                        <div className="text-gray-900 text-sm space-y-1">
+                          <div>入场价格: <span className="font-semibold">${tradeSignalArgs.entryPrice}</span></div>
+                          <div>止盈: <span className="font-semibold text-green-600">${tradeSignalArgs.takeProfit}</span></div>
+                          <div>止损: <span className="font-semibold text-red-600">${tradeSignalArgs.stopLoss}</span></div>
+                          <div>信心度: <span className="font-semibold">{(tradeSignalArgs.confidence * 100).toFixed(0)}%</span></div>
+                          <div>风险金额: <span className="font-semibold">${tradeSignalArgs.riskUsd}</span></div>
+                        </div>
+                        {/* ID in bottom-right corner */}
+                        {selectedAIChat.id && (
+                          <div className="absolute bottom-2 right-3 text-xs text-gray-400">
+                            {selectedAIChat.id}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* USER_PROMPT - Collapsible (默认收起) */}
+                    <div className="mb-4">
+                      <button
+                        onClick={() => setExpandedPrompt(!expandedPrompt)}
+                        className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                      >
+                        {expandedPrompt ? (
+                          <Play className="w-3 h-3 rotate-90 fill-current" />
+                        ) : (
+                          <Play className="w-3 h-3 fill-current" />
+                        )}
+                        <span>USER_PROMPT</span>
+                      </button>
+
+                      {expandedPrompt && (
+                        <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
+                          <JsonViewer data={(() => {
+                            try {
+                              return JSON.parse(selectedAIChat.prompt);
+                            } catch {
+                              return selectedAIChat.prompt;
+                            }
+                          })()} />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
+
+                    {/* CHAIN_OF_THOUGHTS - simpleThought */}
+                    {simpleThought && (
+                      <div className="mb-4">
+                        <button
+                          onClick={() => setExpandedReasoning(!expandedReasoning)}
+                          className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                          {expandedReasoning ? (
+                            <Play className="w-3 h-3 rotate-90 fill-current" />
+                          ) : (
+                            <Play className="w-3 h-3 fill-current" />
+                          )}
+                          <span>CHAIN_OF_THOUGHTS</span>
+                        </button>
+
+                        {expandedReasoning && (
+                          <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
+                            <div className="text-gray-700 text-sm whitespace-pre-wrap">
+                              {simpleThought}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* TRADING_DECISIONS - invalidationCondition */}
+                    {invalidationCondition && (
+                      <div>
+                        <button
+                          onClick={() => setExpandedOutput(!expandedOutput)}
+                          className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                          {expandedOutput ? (
+                            <Play className="w-3 h-3 rotate-90 fill-current" />
+                          ) : (
+                            <Play className="w-3 h-3 fill-current" />
+                          )}
+                          <span>TRADING_DECISIONS</span>
+                        </button>
+
+                        {expandedOutput && (
+                          <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
+                            <div className="text-gray-700 text-sm whitespace-pre-wrap">
+                              {invalidationCondition}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {/* Bottom Close Button */}
             <div className="mt-4 flex-shrink-0">
               <button
-                className="w-full px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 onClick={() => setShowAIChatModal(false)}
               >
                 关闭
@@ -907,9 +1047,9 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
         </div>
       )}
       
-      {/* Batch Close Modal */}
+      {/* Batch Close Position Modal */}
       {showBatchCloseModal && (
-        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 backdrop-blur-sm flex items-end justify-center z-50">
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-end justify-center z-50">
           <div 
             className="bg-white rounded-t-3xl shadow-xl p-6 w-full max-w-4xl h-[85vh] flex flex-col animate-slide-up"
             style={{
@@ -968,56 +1108,75 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
               {/* Position Summary */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="text-sm text-gray-600 mb-2">将要平仓的持仓数量</div>
-                <div className="text-2xl text-gray-900">
-                  {currentPositions.filter(p => 
-                    p.symbol.replace('/', '') === batchCloseSymbol && (!batchCloseAction || p.type === batchCloseAction)
-                  ).length} 个仓位
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm text-gray-600">将要平仓的持仓数量</div>
+                  <div className="text-sm text-gray-600">浮动盈亏</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-2xl text-gray-900">
+                    {currentPositions.filter(p => 
+                      p.symbol.replace('/', '') === batchCloseSymbol && (!batchCloseAction || p.type === batchCloseAction)
+                    ).length} 个仓位
+                  </div>
+                  <div className={`text-2xl ${
+                    currentPositions.filter(p => 
+                      p.symbol.replace('/', '') === batchCloseSymbol && (!batchCloseAction || p.type === batchCloseAction)
+                    ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0 
+                      ? 'text-green-600' 
+                      : 'text-red-600'
+                  }`}>
+                    {currentPositions.filter(p => 
+                      p.symbol.replace('/', '') === batchCloseSymbol && (!batchCloseAction || p.type === batchCloseAction)
+                    ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0 ? '+' : ''}
+                    ${currentPositions.filter(p => 
+                      p.symbol.replace('/', '') === batchCloseSymbol && (!batchCloseAction || p.type === batchCloseAction)
+                    ).reduce((sum, p) => sum + p.unrealizedPnL, 0).toFixed(2)}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => {
-                    setBatchCloseAction('long');
-                    console.log('平多操作:', { symbol: batchCloseSymbol, action: 'long' });
-                    alert(`已执行平多操作\n商品: ${batchCloseSymbol}`);
-                    setShowBatchCloseModal(false);
-                    setBatchCloseSymbol('BTCUSDT');
-                    setBatchCloseAction(null);
-                  }}
-                  className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                >
-                  平多
-                </button>
-                <button
-                  onClick={() => {
-                    setBatchCloseAction('short');
-                    console.log('平空操作:', { symbol: batchCloseSymbol, action: 'short' });
-                    alert(`已执行平空操作\n商品: ${batchCloseSymbol}`);
-                    setShowBatchCloseModal(false);
-                    setBatchCloseSymbol('BTCUSDT');
-                    setBatchCloseAction(null);
-                  }}
-                  className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                >
-                  平空
-                </button>
-              </div>
+            <div className="flex items-center gap-3 mb-3">
               <button
                 onClick={() => {
+                  setBatchCloseAction('long');
+                  console.log('平多操作:', { symbol: batchCloseSymbol, action: 'long' });
+                  alert(`已执行平多操作\n商品: ${batchCloseSymbol}`);
                   setShowBatchCloseModal(false);
                   setBatchCloseSymbol('BTCUSDT');
                   setBatchCloseAction(null);
                 }}
-                className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
               >
-                取消
+                平多
+              </button>
+              <button
+                onClick={() => {
+                  setBatchCloseAction('short');
+                  console.log('平空操作:', { symbol: batchCloseSymbol, action: 'short' });
+                  alert(`已执行平空操作\n商品: ${batchCloseSymbol}`);
+                  setShowBatchCloseModal(false);
+                  setBatchCloseSymbol('BTCUSDT');
+                  setBatchCloseAction(null);
+                }}
+                className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                平空
               </button>
             </div>
+
+            {/* Cancel Button */}
+            <button
+              onClick={() => {
+                setShowBatchCloseModal(false);
+                setBatchCloseSymbol('BTCUSDT');
+                setBatchCloseAction(null);
+              }}
+              className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              取消
+            </button>
           </div>
           
           <style>{`

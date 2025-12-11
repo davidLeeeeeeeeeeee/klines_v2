@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Play, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Play, X, RefreshCw } from 'lucide-react';
 
 interface StrategyMonitorProps {
   onBack: () => void;
@@ -15,6 +15,9 @@ interface AIChatMessage {
   prompt: string;
   reasoning: string;
   output: string;
+  duration?: string;
+  symbols?: Array<{ symbol: string; action: '开多' | '开空' | '平多' | '平空' | '观望' }>;
+  model?: string;
 }
 
 export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
@@ -30,6 +33,16 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
   const [expandedOutput, setExpandedOutput] = useState<{ [key: string]: boolean }>({});
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [selectedModel, setSelectedModel] = useState('all');
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 500);
+  };
 
   // Symbols list
   const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT'];
@@ -54,7 +67,14 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
       summary: '分析当前BTC/USDT市场趋势，判断是否符合趋势追踪策略的入场条件。考虑以下因素：1) 价格是否突破20日均线；2) 成交量是否放大；3) RSI指标是否在合理区间；4) 市场整体情绪如何。',
       prompt: '分析当前BTC/USDT市场趋势，判断是否符合趋势追踪策略的入场条件。考虑以下因素：1) 价格是否突破20日均线；2) 成交量是否放大；3) RSI指标是否在合理区间；4) 市场整体情绪如何。',
       reasoning: '首先检查价格走势：BTC当前价格47,500 USDT，已成功突破20日均线（45,200 USDT），涨幅约5.1%。成交量分析：过去4小时成交量较前一日同期增长23%，显示市场参与度提升。技术指标：RSI当前为62，处于健康的上升趋势区间（未超买）。MACD柱状图由负转正，显示动能转换。市场情绪：恐慌与贪婪指数从35上升至48，市场情绪从恐慌转向中性偏乐观。资金流向：大额钱包（持币>1000 BTC）净流入增加15%，显示机构资金进场。综合判断：当前市场符合趋势追踪策略的入场条件，建议开仓。',
-      output: '✅ 符合入场条件\n\n建议操作：开多仓 BTC/USDT\n入场价格：47,500 USDT\n建议仓位：30%（中等风险）\n止损价格：45,000 USDT（-5.3%）\n止盈目标：52,000 USDT（+9.5%）\n杠杆倍数：3x\n\n风险评估：中等\n预期盈亏比：1:1.8\n信号强度：85/100'
+      output: '✅ 符合入场条件\n\n建议操作：开多仓 BTC/USDT\n入场价格：47,500 USDT\n建议仓位：30%（中等风险）\n止损价格：45,000 USDT（-5.3%）\n止盈目标：52,000 USDT（+9.5%）\n杠杆倍数：3x\n\n风险评估：中等\n预期盈亏比：1:1.8\n信号强度：85/100',
+      duration: '30秒',
+      symbols: [
+        { symbol: 'BTCUSDT', action: '开多' },
+        { symbol: 'ETHUSDT', action: '开空' },
+        { symbol: 'XRPUSDT', action: '观望' }
+      ],
+      model: 'DEEPSEEK-LOCAL'
     },
     {
       id: '17334572501',
@@ -86,7 +106,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
       action: '观望',
       summary: '分析SOL/USDT是否适合进行网格交易。评估价格波动率、交易量、以及合理的网格区间设置。',
       prompt: '分析SOL/USDT是否适合进行网格交易。评估价格波动率、交易量、以及合理的网格区间设置。',
-      reasoning: '波动率分析：SOL近7日平均波动率4.2%，近30日平均波动率5.8%，波动性适中，符合网格交易要求。价格区间：过去30天价格在95-108 USDT之间震荡，当前价格103 USDT，处于区间中上部。交易量：日均交易量稳定在2.5亿USDT，流动性充足。趋势判断：无明显趋势，呈箱体震荡形态，非常适合网格交易。支撑阻力：强支撑位95，强阻力位108。深度分析：买卖盘深度良好，±2%价格范围内订单深度超过500万USDT。历史回测：使用相同参数在过去30天进行回测，收益率约12.3%，胜率76%。建议网格设置：区间96-107，分20格，每格间距约0.55%，预期年化收益35-45%。',
+      reasoning: '波动率分析：SOL近7日平均波动率4.2%，近30日平均波动率5.8%，波动性适中，符合网格交易要求。价格区间：过去30天价格在95-108 USDT之间震荡，当前价格103 USDT，处于区间中上部。交易量：日均交易量稳定在2.5亿USDT，流动性充足。趋势判断：无明显趋势，呈箱体震荡形态，非常适合网格交易。支撑阻力：强支撑位95，强阻力位108。深度分：买卖盘深度良好，±2%价格范围内订单深度超过500万USDT。历史回测：使用相同参数在过去30天进行回测，收益率约12.3%，胜率76%。建议网格设置：区间96-107，分20格，每格间距约0.55%，预期年化收益35-45%。',
       output: '✅ 适合网格交易\n\n推荐网格参数：\n交易对：SOL/USDT\n价格区间：96 - 107 USDT\n网格数量：20格\n每格间距：0.55 USDT（约0.5%）\n入资金：建议5,000 - 10,000 USDT\n\n预期收益：\n日均收益：0.8% - 1.2%\n月收益：12% - 18%\n年化收益：35% - 45%\n\n提示：\n如果价格突破区间（向上或向下），建议暂停网格并重新评估。\n建设置区间外止损：低于92 USDT停止策略。'
     },
     {
@@ -97,7 +117,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
       action: '观望',
       summary: '全市场扫描，寻找符合高频做市策略的交易机会。重点关注价差、深、波动性。',
       prompt: '全市场扫描，寻找符合高频做市策略的交易机会。重点关注价差、深度、波动性。',
-      reasoning: '市场扫描结果：共扫描156个交易对，筛选出8个潜在机会。买卖价差分析：ADA/USDT价差0.15%，ATOM/USDT价差0.18%，MATIC/USDT价差0.12%，均满足>0.1%的最低要求。订单深度：MATIC/USDT在±0.5%价格范围内深度最佳，买卖双向各有超过100万USDT挂单。波动率：MATIC小时波动率0.3%，适合高频做市（理想范围0.2-0.5%）。成交频率：平均每分钟成交42笔，频率高。滑点测试：10,000 USDT订单滑点<0.08%，可���受。竞争分析：做市商数量适中，不会过度拥挤。资金费率：当前费率接近0，持仓成本低。综合评分：MATIC/USDT 得分92/100，为当前最优标的。',
+      reasoning: '市场描结果：共扫描156个交易对，筛选出8个潜在机会。买卖价差分析：ADA/USDT价差0.15%，ATOM/USDT价差0.18%，MATIC/USDT价差0.12%，均满足>0.1%的最低要求。订单深度：MATIC/USDT在±0.5%价格范围内深度最佳，买卖双向各有超过100万USDT挂单。波动率：MATIC小时波动率0.3%，适合高频做市（理想范围0.2-0.5%）。成交频率：平均每分钟成交42笔，频率高。滑点测试：10,000 USDT订单滑点<0.08%，可受。竞争分析：做市商数量适中，不会过度拥挤。资金费率：当前费率接近0，持仓成本低。综合评分：MATIC/USDT 得分92/100，为当前最优标的。',
       output: '🎯 发现做市机会\n\n最优标的：MATIC/USDT\n\n关键指标：\n✓ 买卖价差：0.12%（良好）\n✓ 订单深度：优秀（双向各>100万USDT）\n✓ 小时波动率：0.3%（理想）\n✓ 成交频率：42笔/分钟（活跃）\n✓ 滑点：<0.08%（可接受）\n✓ 综合评分：92/100\n\n建议策略参数：\n做市价差：0.10%（买卖单间距）\n单笔订单：5,000 USDT\n刷新频率：每3秒\n库存管理：中性（不偏向多空）\n\n预期收益：日均0.8-1.5%\n风险等级：低'
     },
     {
@@ -210,12 +230,21 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
     <div>
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">策略监控</h1>
+        <div className="flex items-center gap-3 mb-2">
+          <h1 className="text-2xl font-semibold text-gray-900">策略监控</h1>
+          <button
+            onClick={handleRefresh}
+            className={`p-2 text-gray-400 hover:text-gray-600 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
+            title="刷新"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
+        </div>
         <p className="text-sm text-gray-500">仅展示过去 1 天的AI交互信息</p>
       </div>
 
       {/* Filters - All in One Box */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div className="mb-6">
         {/* Strategy Selector */}
         <div className="relative">
           <button
@@ -248,14 +277,57 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
       </div>
 
       {/* Action Type Tabs with Symbol Filter */}
-      <div className="mb-6 flex items-center gap-4">
+      <div className="mb-6 flex items-center gap-8">
+        {/* Symbol Filter */}
+        <div className="relative">
+          <button
+            onClick={() => setShowSymbolDropdown(!showSymbolDropdown)}
+            className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
+          >
+            <span>{selectedSymbol === 'all' ? '商品' : selectedSymbol}</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+              <path d="M5 6L0 0h10L5 6z" />
+            </svg>
+          </button>
+
+          {showSymbolDropdown && (
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
+              <button
+                onClick={() => {
+                  setSelectedSymbol('all');
+                  setShowSymbolDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  selectedSymbol === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                全部
+              </button>
+              {symbols.map((symbol) => (
+                <button
+                  key={symbol}
+                  onClick={() => {
+                    setSelectedSymbol(symbol);
+                    setShowSymbolDropdown(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                    selectedSymbol === symbol ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  }`}
+                >
+                  {symbol}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Action Type Dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowActionDropdown(!showActionDropdown)}
             className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
           >
-            <span>{selectedAction === 'all' ? '全部类型' : selectedAction}</span>
+            <span>{selectedAction === 'all' ? '类型' : selectedAction}</span>
             <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
               <path d="M5 6L0 0h10L5 6z" />
             </svg>
@@ -333,59 +405,89 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
           )}
         </div>
 
-        {/* Symbol Filter */}
-        <div className="relative">
-          <button
-            onClick={() => setShowSymbolDropdown(!showSymbolDropdown)}
-            className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
-          >
-            <span>{selectedSymbol === 'all' ? '全部商品' : selectedSymbol}</span>
-            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
-              <path d="M5 6L0 0h10L5 6z" />
-            </svg>
-          </button>
-
-          {showSymbolDropdown && (
-            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
-              <button
-                onClick={() => {
-                  setSelectedSymbol('all');
-                  setShowSymbolDropdown(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedSymbol === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                全部
-              </button>
-              {symbols.map((symbol) => (
-                <button
-                  key={symbol}
-                  onClick={() => {
-                    setSelectedSymbol(symbol);
-                    setShowSymbolDropdown(false);
-                  }}
-                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                    selectedSymbol === symbol ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                  }`}
-                >
-                  {symbol}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Time Range Button */}
         <button
           onClick={() => setShowTimeRangeModal(true)}
           className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
         >
-          <span>{startTime || endTime ? '已设时间' : '时间范围'}</span>
+          <span>{startTime || endTime ? '已设时间' : '时间'}</span>
           <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
             <path d="M5 6L0 0h10L5 6z" />
           </svg>
         </button>
+
+        {/* AI Model Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowModelDropdown(!showModelDropdown)}
+            className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
+          >
+            <span>{selectedModel === 'all' ? 'MODELS' : selectedModel}</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+              <path d="M5 6L0 0h10L5 6z" />
+            </svg>
+          </button>
+
+          {showModelDropdown && (
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[180px]">
+              <button
+                onClick={() => {
+                  setSelectedModel('all');
+                  setShowModelDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  selectedModel === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                全部
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedModel('DEEPSEEK-LOCAL');
+                  setShowModelDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  selectedModel === 'DEEPSEEK-LOCAL' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                DEEPSEEK-LOCAL
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedModel('DEEPSEEK');
+                  setShowModelDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  selectedModel === 'DEEPSEEK' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                DEEPSEEK
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedModel('GPT-5.1');
+                  setShowModelDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  selectedModel === 'GPT-5.1' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                GPT-5.1
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedModel('GROK-4');
+                  setShowModelDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  selectedModel === 'GROK-4' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                GROK-4
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* AI Chat Messages */}
@@ -398,30 +500,58 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
         ) : (
           filteredMessages.map((message) => (
           <div key={message.id} className="bg-white rounded-lg shadow-sm p-6">
-            {/* Header: Strategy Name | Symbol + Action Badge on left, Timestamp on right */}
+            {/* Header: Strategy Name with Model and Timestamp */}
             <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-700">{message.strategyName}</span>
-                <span className="text-gray-400">｜</span>
-                <span className="text-gray-900">{message.symbol}</span>
-                <span className={`px-3 py-1 rounded-2xl text-sm ${getActionColor(message.action)}`}>
-                  {message.action}
-                </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-gray-900 font-semibold">{message.strategyName}</span>
+                {message.model && (
+                  <span className="text-sm text-gray-400 font-normal">{message.model}</span>
+                )}
               </div>
               <div className="text-sm text-gray-500 ml-4 whitespace-nowrap">{formatTime(message.timestamp)}</div>
             </div>
 
             {/* Divider */}
-            <div className="border-t border-gray-200 mb-4"></div>
+            <div className="border-t border-gray-200 mb-3"></div>
+
+            {/* Symbols and Actions Row */}
+            <div className="mb-4">
+              {message.symbols && message.symbols.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5 text-sm text-gray-600">
+                  {message.symbols.map((item, index) => (
+                    <span key={index} className="flex items-center gap-1.5">
+                      <span>{item.symbol}</span>
+                      <span className={`px-2 py-0.5 rounded-2xl ${getActionColor(item.action)}`}>
+                        {item.action}
+                      </span>
+                      {index < message.symbols.length - 1 && (
+                        <span className="text-gray-400">|</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                  <span>{message.symbol}</span>
+                  <span className={`px-2 py-0.5 rounded-2xl ${getActionColor(message.action)}`}>
+                    {message.action}
+                  </span>
+                </div>
+              )}
+            </div>
 
             {/* Summary - Always visible */}
             <div className="bg-gray-50 rounded-lg p-4 pb-8 border border-gray-200 mb-4 relative">
               <div className="text-gray-900 text-sm pr-12">
                 {message.summary}
               </div>
-              <div className="absolute bottom-2 right-3 text-xs text-gray-400">
-                {message.id}  30秒
-              </div>
+              {/* ID and Duration in bottom-right corner */}
+              {(message.id || message.duration) && (
+                <div className="absolute bottom-2 right-3 flex items-center gap-2 text-xs text-gray-400">
+                  {message.id && <span>{message.id}</span>}
+                  {message.duration && <span>{message.duration}</span>}
+                </div>
+              )}
             </div>
 
             {/* Prompt - Collapsible */}
