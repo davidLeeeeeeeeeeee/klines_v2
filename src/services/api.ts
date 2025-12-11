@@ -169,6 +169,51 @@ export interface ChatResponse {
   updateTime: string;
 }
 
+// 平仓订单记录相关类型
+export interface ClosePnlListReq {
+  accountId?: number;
+  exchange?: string;
+  side?: string;
+  symbol?: string;
+}
+
+export interface PageRequest<T> {
+  page: number;
+  pageSize: number;
+  param: T;
+}
+
+export interface ClosePnlVO {
+  accountId: number;
+  avgEntryPrice: number;
+  avgExitPrice: number;
+  closeChatId: number;
+  closeFee: number;
+  closeTime: string;
+  closedPnl: number;
+  closedQty: number;
+  createTime: string;
+  exchange: string;
+  id: number;
+  leverage: number;
+  openChatId: number;
+  openFee: number;
+  openTime: string;
+  orderCreateTime: number;
+  orderId: string;
+  qty: number;
+  side: string;
+  strategyType: string;
+  symbol: string;
+  updateTime: string;
+  userId: number;
+}
+
+export interface PageResponse<T> {
+  records: T[];
+  total: number;
+}
+
 /**
  * 获取用户持仓列表
  * @param token 用户token
@@ -289,3 +334,113 @@ export async function getPositionChat(
   }
 }
 
+/**
+ * 获取平仓订单记录（分页）
+ * @param token 用户token
+ * @param request 分页请求参数
+ * @returns 分页响应数据
+ */
+export async function getClosedPositionList(
+  token: string,
+  request: PageRequest<ClosePnlListReq>
+): Promise<PageResponse<ClosePnlVO>> {
+  try {
+    console.log('获取平仓订单列表 - Token:', token);
+    console.log('获取平仓订单列表 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/trade/position/close/list`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new ApiError(
+        errorData.description || `HTTP错误: ${response.status}`,
+        response.status,
+        errorData
+      );
+    }
+
+    const apiResponse: ApiResponse<PageResponse<ClosePnlVO>> = await response.json();
+    console.log('平仓订单列表完整响应:', apiResponse);
+
+    // 检查业务状态码
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      throw new ApiError(
+        apiResponse.description || '获取平仓订单列表失败',
+        apiResponse.code,
+        apiResponse
+      );
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '获取平仓订单列表失败'
+    );
+  }
+}
+
+/**
+ * 获取对话记录详情
+ * @param token 用户token
+ * @param chatId 对话ID
+ * @returns Chat响应数据
+ */
+export async function getChatDetail(
+  token: string,
+  chatId: number
+): Promise<ChatResponse> {
+  try {
+    console.log('获取对话详情 - Token:', token);
+    console.log('获取对话详情 - ChatID:', chatId);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/chat/detail?chatId=${chatId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new ApiError(
+        errorData.description || `HTTP错误: ${response.status}`,
+        response.status,
+        errorData
+      );
+    }
+
+    const apiResponse: ApiResponse<ChatResponse> = await response.json();
+    console.log('对话详情完整响应:', apiResponse);
+
+    // 检查业务状态码
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      throw new ApiError(
+        apiResponse.description || '获取对话详情失败',
+        apiResponse.code,
+        apiResponse
+      );
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '获取对话详情失败'
+    );
+  }
+}

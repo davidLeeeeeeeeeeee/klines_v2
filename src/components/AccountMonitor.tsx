@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, X, Play, XCircle, RefreshCw, Loader2 } from 'lucide-react';
-import { getPositionList, getPositionChat, PositionResponse, ChatResponse } from '../services/api';
+import {
+  getPositionList,
+  getPositionChat,
+  getClosedPositionList,
+  getChatDetail,
+  PositionResponse,
+  ChatResponse,
+  ClosePnlVO,
+  PageRequest,
+  ClosePnlListReq
+} from '../services/api';
 import { getToken } from '../utils/storage';
 import { JsonViewer } from './JsonViewer';
 
@@ -71,6 +81,14 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [loadingChatId, setLoadingChatId] = useState<string | null>(null); // 记录正在加载的position ID
   const [error, setError] = useState('');
 
+  // 历史仓位相关状态
+  const [closedPositions, setClosedPositions] = useState<ClosePnlVO[]>([]);
+  const [isLoadingClosedPositions, setIsLoadingClosedPositions] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [loadingHistoryChatId, setLoadingHistoryChatId] = useState<number | null>(null);
+
   // 获取持仓列表
   const fetchPositions = async () => {
     setIsLoadingPositions(true);
@@ -92,7 +110,36 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     }
   };
 
-  // 获取AI Chat
+  // 获取历史仓位列表
+  const fetchClosedPositions = async (page: number = currentPage) => {
+    setIsLoadingClosedPositions(true);
+    setError('');
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('未登录，请先登录');
+      }
+
+      const request: PageRequest<ClosePnlListReq> = {
+        page: page - 1, // API从0开始
+        pageSize: pageSize,
+        param: {
+          symbol: selectedSymbol === 'all' ? undefined : selectedSymbol,
+        }
+      };
+
+      const data = await getClosedPositionList(token, request);
+      setClosedPositions(data.records);
+      setTotalRecords(data.total);
+    } catch (err: any) {
+      setError(err.message || '获取历史仓位失败');
+      console.error('获取历史仓位失败:', err);
+    } finally {
+      setIsLoadingClosedPositions(false);
+    }
+  };
+
+  // 获取AI Chat（当前仓位）
   const fetchAIChat = async (positionId: string, accountId: number, symbol: string, side: string) => {
     setLoadingChatId(positionId);
     try {
@@ -114,6 +161,26 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       console.error('获取AI Chat失败:', err);
     } finally {
       setLoadingChatId(null);
+    }
+  };
+
+  // 获取历史Chat详情
+  const fetchHistoryChat = async (chatId: number) => {
+    setLoadingHistoryChatId(chatId);
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('未登录，请先登录');
+      }
+
+      const chatData = await getChatDetail(token, chatId);
+      setSelectedAIChat(chatData);
+      setShowAIChatModal(true);
+    } catch (err: any) {
+      alert(err.message || '获取Chat详情失败');
+      console.error('获取Chat详情失败:', err);
+    } finally {
+      setLoadingHistoryChatId(null);
     }
   };
 
@@ -142,9 +209,20 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     fetchPositions();
   }, [selectedSymbol]);
 
+  // 加载历史仓位数据
+  useEffect(() => {
+    if (activeTab === 'history') {
+      fetchClosedPositions(currentPage);
+    }
+  }, [activeTab, selectedSymbol, currentPage]);
+
   const handleRefresh = () => {
     setIsRefreshing(true);
-    fetchPositions();
+    if (activeTab === 'positions') {
+      fetchPositions();
+    } else {
+      fetchClosedPositions(currentPage);
+    }
     setTimeout(() => {
       setIsRefreshing(false);
     }, 500);
@@ -590,148 +668,169 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       {/* Historical Trades */}
       {activeTab === 'history' && (
         <div className="space-y-4">
-          {historicalTrades.length === 0 ? (
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {isLoadingClosedPositions ? (
+            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
+              <div className="text-gray-600">加载历史仓位数据中...</div>
+            </div>
+          ) : closedPositions.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm p-12 text-center">
               <div className="text-gray-400 mb-2">暂无历史交易</div>
               <div className="text-sm text-gray-500">当前策略没有已完成的交易记录</div>
             </div>
           ) : (
-            historicalTrades.map((trade) => (
-              <div key={trade.id} className="bg-white rounded-lg shadow-sm p-6 pb-4">
-                {/* Header Row */}
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-gray-900 font-semibold">{trade.symbol}</span>
-                      <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-2xl text-sm">
-                        {trade.leverage}x
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded-2xl text-sm ${
-                          trade.tradeAction === '平仓卖出'
-                            ? 'bg-red-100 text-red-600'
-                            : trade.tradeAction === '平仓买入'
-                            ? 'bg-green-100 text-green-600'
-                            : trade.tradeAction.includes('买入')
-                            ? 'bg-green-100 text-green-600'
-                            : 'bg-red-100 text-red-600'
-                        }`}
-                      >
-                        {trade.tradeAction === '平仓卖出' ? '平空' : trade.tradeAction === '平仓买入' ? '平多' : trade.tradeAction}
-                      </span>
+            <>
+              {closedPositions.map((trade) => {
+                // 计算盈亏百分比
+                const pnlPercent = ((trade.closedPnl / (trade.avgEntryPrice * trade.qty)) * 100).toFixed(2);
+
+                return (
+                  <div key={trade.id} className="bg-white rounded-lg shadow-sm p-6 pb-4">
+                    {/* Header Row */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-gray-900 font-semibold">{trade.symbol}</span>
+                          <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-2xl text-sm">
+                            {trade.leverage}x
+                          </span>
+                          <span
+                            className={`px-3 py-1 rounded-2xl text-sm ${
+                              trade.side === 'Buy'
+                                ? 'bg-green-100 text-green-600'
+                                : 'bg-red-100 text-red-600'
+                            }`}
+                          >
+                            {trade.side === 'Buy' ? '平多' : '平空'}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          UID: {trade.accountId}
+                        </div>
+                      </div>
+
+                      <div className={`text-right ${trade.closedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <div className="text-sm text-gray-500 mb-1">已结盈亏</div>
+                        <div>
+                          <span className="text-lg">{trade.closedPnl >= 0 ? '+' : ''}${trade.closedPnl.toFixed(2)}</span>
+                          <span className="text-sm ml-1">({parseFloat(pnlPercent) >= 0 ? '+' : ''}{pnlPercent}%)</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600">
-                      UID: {trade.accountUid}
+
+                    {/* Trade Details Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div>
+                        <div className="text-sm text-gray-500 mb-1">订单数量</div>
+                        <div className="text-gray-900">{trade.closedQty}</div>
+                      </div>
+
+                      <div>
+                        <div className="text-sm text-gray-500 mb-1">入场价格</div>
+                        <div className="text-gray-900">${trade.avgEntryPrice.toLocaleString()}</div>
+                      </div>
+
+                      <div>
+                        <div className="text-sm text-gray-500 mb-1">出场价格</div>
+                        <div className="text-gray-900">${trade.avgExitPrice.toLocaleString()}</div>
+                      </div>
+
+                      <div>
+                        <div className="text-sm text-gray-500 mb-1">交易所</div>
+                        <div className="text-gray-900">{trade.exchange}</div>
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-gray-100 mb-4"></div>
+
+                    {/* Fee Information */}
+                    <div className="grid grid-cols-1 gap-3 mb-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">开仓手续费</span>
+                        <span className="text-sm text-gray-900">{trade.openFee} USDT</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">平仓手续费</span>
+                        <span className="text-sm text-gray-900">{trade.closeFee} USDT</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">跟随策略</span>
+                        <span className="text-sm text-gray-900">{trade.strategyType || '-'}</span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                      <div className="text-sm text-gray-500">
+                        时长: <span className="text-gray-900">{formatTime(trade.openTime)} - {formatTime(trade.closeTime)}    {calculateDuration(trade.openTime, trade.closeTime)}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                          onClick={() => fetchHistoryChat(trade.openChatId)}
+                          disabled={loadingHistoryChatId === trade.openChatId || !trade.openChatId}
+                        >
+                          {loadingHistoryChatId === trade.openChatId ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              加载中...
+                            </>
+                          ) : (
+                            '开仓CHAT'
+                          )}
+                        </button>
+                        <button
+                          className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                          onClick={() => fetchHistoryChat(trade.closeChatId)}
+                          disabled={loadingHistoryChatId === trade.closeChatId || !trade.closeChatId}
+                        >
+                          {loadingHistoryChatId === trade.closeChatId ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              加载中...
+                            </>
+                          ) : (
+                            '平仓CHAT'
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className={`text-right ${trade.realizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    <div className="text-sm text-gray-500 mb-1">已结盈亏</div>
-                    <div>
-                      <span className="text-lg">{trade.realizedPnL >= 0 ? '+' : ''}${trade.realizedPnL.toFixed(2)}</span>
-                      <span className="text-sm ml-1">({trade.realizedPnLPercent >= 0 ? '+' : ''}{trade.realizedPnLPercent}%)</span>
-                    </div>
-                  </div>
-                </div>
+                );
+              })}
 
-                {/* Trade Details Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">订单数量</div>
-                    <div className="text-gray-900">{trade.quantity}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">入场价格</div>
-                    <div className="text-gray-900">${trade.entryPrice.toLocaleString()}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">出场价格</div>
-                    <div className="text-gray-900">${trade.exitPrice.toLocaleString()}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">成交类型</div>
-                    <div className="text-gray-900">{trade.tradeType}</div>
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-gray-100 mb-4"></div>
-
-                {/* Fee Information */}
-                <div className="grid grid-cols-1 gap-3 mb-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">开仓手续费</span>
-                    <span className="text-sm text-gray-900">{trade.openFee} USDT</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">平仓手续费</span>
-                    <span className="text-sm text-gray-900">{trade.closeFee} USDT</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">资金费</span>
-                    <span className="text-sm text-gray-900">{trade.fundingFee} USDT</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">跟随策略</span>
-                    <span className="text-sm text-gray-900">趋势追踪策略</span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <div className="text-sm text-gray-500">
-                    时长: <span className="text-gray-900">{formatTime(trade.openTime)} - {formatTime(trade.closeTime)}    {calculateDuration(trade.openTime, trade.closeTime)}</span>
+              {/* Pagination */}
+              {totalRecords > pageSize && (
+                <div className="flex items-center justify-between bg-white rounded-lg shadow-sm p-4">
+                  <div className="text-sm text-gray-600">
+                    共 {totalRecords} 条记录，第 {currentPage} / {Math.ceil(totalRecords / pageSize)} 页
                   </div>
                   <div className="flex gap-2">
                     <button
-                      className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                      onClick={() => {
-                        setSelectedAIChat({
-                          strategyName: '趋势追踪策略',
-                          symbol: trade.symbol,
-                          action: trade.type === 'long' ? '开多' : '开空',
-                          timestamp: new Date().toISOString(),
-                          summary: '分析开仓决策，评估入场时机是否合理。',
-                          prompt: `分析${trade.symbol}的开仓决策，评估入场时机是否合理。考虑以下因素：1) 市场趋势是否明确；2) 技术指标是否支持入场；3) 风险收益比是否合理；4) 市场情绪如何。`,
-                          reasoning: `开仓分析：本次${trade.type === 'long' ? '多' : '空'}仓交易${trade.symbol}，入场价格$${trade.entryPrice.toLocaleString()}。市场境分析：入场时市场趋势${trade.type === 'long' ? '向上' : '向下'}，符合策略要求。技术指标：入场时各项技术指标显示${trade.type === 'long' ? '多头' : '空头'}信号。风险管理：使用${trade.leverage}x杠杆，在可控范围内。综合评估：${trade.realizedPnL >= 0 ? '开仓时机把握准确，入场点位合理' : '开仓时机有待改进，需优化入场策略'}。`,
-                          output: `📊 开仓决策分析\\n\\n交易概况：\\n商品：${trade.symbol}\\n类型：${trade.type === 'long' ? '多仓' : '空仓'}\\n入场价格：$${trade.entryPrice.toLocaleString()}\\n杠杆：${trade.leverage}x\\n\\n入场信号评估：\\n市场趋势：${trade.type === 'long' ? '上涨' : '下跌'}\\n技术指标：支持入场\\n风险收益比：合理\\n\\n开仓决策评分：${trade.realizedPnL >= 0 ? '85/100' : '65/100'}`,
-                          model: 'DEEPSEEK-LOCAL',
-                          id: '17334572801',
-                          duration: '30秒'
-                        });
-                        setShowAIChatModal(true);
-                      }}
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      开仓CHAT
+                      上一页
                     </button>
                     <button
-                      className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                      onClick={() => {
-                        setSelectedAIChat({
-                          strategyName: '趋势追踪策略',
-                          symbol: trade.symbol,
-                          action: trade.type === 'long' ? '平多' : '平空',
-                          timestamp: new Date().toISOString(),
-                          summary: '分析平仓决策，评估出场时机是否合理。',
-                          prompt: `分析${trade.symbol}的平仓决策，评估出场时机是否合理。考虑以下因素：1) 出场时机是否及时；2) 是否达到止盈止损目标；3) 市场环境变化；4) 盈亏情况分析。`,
-                          reasoning: `平仓分析：本次${trade.type === 'long' ? '多' : '空'}仓交易${trade.symbol}，出场价格$${trade.exitPrice.toLocaleString()}。持仓时长：${calculateDuration(trade.openTime, trade.closeTime)}。出场原因：${trade.tradeType}触发，执行了预设的风险管理规则。盈亏分析：最终实现盈亏${trade.realizedPnL >= 0 ? '+' : ''}$${trade.realizedPnL.toFixed(2)}（${trade.realizedPnLPercent >= 0 ? '+' : ''}${trade.realizedPnLPercent}%）。成本分析：开仓手续费$${trade.openFee}，平仓手续费$${trade.closeFee}，资金费用$${trade.fundingFee}，总成本$${trade.openFee + trade.closeFee + trade.fundingFee}。综合评估：${trade.realizedPnL >= 0 ? '平仓决策正确，风险控制得当' : '平仓时机需要改进，优化出场策略'}。`,
-                          output: `📊 平仓决策分析\\\\n\\\\n交易概况：\\\\n商品：${trade.symbol}\\\\n类型：${trade.type === 'long' ? '多仓' : '空仓'}\\\\n出场价格：$${trade.exitPrice.toLocaleString()}\\\\n持仓时长：${calculateDuration(trade.openTime, trade.closeTime)}\\\\n\\\\n盈亏分析：\\\\n已结盈亏：${trade.realizedPnL >= 0 ? '+' : ''}$${trade.realizedPnL.toFixed(2)} (${trade.realizedPnLPercent >= 0 ? '+' : ''}${trade.realizedPnLPercent}%)\\\\n手续费成本：$${trade.openFee + trade.closeFee + trade.fundingFee}\\\\n\\\\n出场方式：${trade.tradeType}\\\\n\\\\n${trade.realizedPnL >= 0 ? '✅ 成功案例\\\\n• 出场时机把握准确\\\\n• 风险控���执行到位' : '⚠️ 需要改进\\\\n• 优化出场时机选择\\\\n• 改进风险控制策略'}\\\\n\\\\n平仓决策评分：${trade.realizedPnL >= 0 ? '85/100' : '65/100'}`,
-                          model: 'GPT-5.1',
-                          id: '17334572801',
-                          duration: '30秒'
-                        });
-                        setShowAIChatModal(true);
-                      }}
+                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalRecords / pageSize), p + 1))}
+                      disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                      className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      平仓CHAT
+                      下一页
                     </button>
                   </div>
                 </div>
-              </div>
-            ))
+              )}
+            </>
           )}
         </div>
       )}
@@ -867,7 +966,6 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 // 解析response字段
                 let parsedResponse: any = null;
                 let simpleThought = '';
-                let invalidationCondition = '';
                 let tradeSignalArgs: any = null;
 
                 try {
@@ -877,7 +975,6 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                   if (firstSymbol && parsedResponse[firstSymbol]?.tradeSignalArgs) {
                     tradeSignalArgs = parsedResponse[firstSymbol].tradeSignalArgs;
                     simpleThought = tradeSignalArgs.simpleThought || '';
-                    invalidationCondition = tradeSignalArgs.invalidationCondition || '';
                   }
                 } catch (e) {
                   console.error('解析response失败:', e);
@@ -992,8 +1089,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       </div>
                     )}
 
-                    {/* TRADING_DECISIONS - invalidationCondition */}
-                    {invalidationCondition && (
+                    {/* TRADING_DECISIONS - tradeSignalArgs */}
+                    {tradeSignalArgs && (
                       <div>
                         <button
                           onClick={() => setExpandedOutput(!expandedOutput)}
@@ -1009,9 +1106,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
                         {expandedOutput && (
                           <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
-                            <div className="text-gray-700 text-sm whitespace-pre-wrap">
-                              {invalidationCondition}
-                            </div>
+                            <JsonViewer data={tradeSignalArgs} defaultExpanded={true} />
                           </div>
                         )}
                       </div>
