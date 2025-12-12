@@ -5,10 +5,11 @@ interface JsonViewerProps {
   data: any;
   defaultExpanded?: boolean;
   level?: number;
+  expandAll?: boolean; // 新增：是否展开所有层级
 }
 
-export function JsonViewer({ data, defaultExpanded = false, level = 0 }: JsonViewerProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+export function JsonViewer({ data, defaultExpanded = false, level = 0, expandAll = false }: JsonViewerProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded || expandAll);
 
   // 判断数据类型
   const getType = (value: any): string => {
@@ -91,7 +92,7 @@ export function JsonViewer({ data, defaultExpanded = false, level = 0 }: JsonVie
                   {!isComplex && renderPrimitiveValue(value)}
                 </div>
                 {isComplex && (
-                  <JsonViewer data={value} defaultExpanded={false} level={level + 1} />
+                  <JsonViewer data={value} defaultExpanded={expandAll} level={level + 1} expandAll={expandAll} />
                 )}
               </div>
             );

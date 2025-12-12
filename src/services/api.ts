@@ -169,6 +169,29 @@ export interface ChatResponse {
   updateTime: string;
 }
 
+// 对话列表请求参数
+export interface ChatListReq {
+  endTime?: string;
+  model?: string;
+  side?: string;
+  startTime?: string;
+  strategyType?: string;
+  symbol?: string;
+}
+
+// 对话列表响应数据
+export interface ChatResVO {
+  createTime: string;
+  id: number;
+  model: string;
+  prompt: string;
+  response: string;
+  side: string;
+  strategyType: string;
+  symbol: string;
+  updateTime: string;
+}
+
 // 平仓订单记录相关类型
 export interface ClosePnlListReq {
   accountId?: number;
@@ -441,6 +464,122 @@ export async function getChatDetail(
     }
     throw new ApiError(
       error instanceof Error ? error.message : '获取对话详情失败'
+    );
+  }
+}
+
+/**
+ * 获取对话列表（分页）
+ * @param token 用户token
+ * @param request 分页请求参数
+ * @returns 分页响应数据
+ */
+export async function getChatList(
+  token: string,
+  request: PageRequest<ChatListReq>
+): Promise<PageResponse<ChatResVO>> {
+  try {
+    console.log('获取对话列表 - Token:', token);
+    console.log('获取对话列表 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/chat/list`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new ApiError(
+        errorData.description || `HTTP错误: ${response.status}`,
+        response.status,
+        errorData
+      );
+    }
+
+    const apiResponse: ApiResponse<PageResponse<ChatResVO>> = await response.json();
+    console.log('对话列表完整响应:', apiResponse);
+
+    // 检查业务状态码
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      throw new ApiError(
+        apiResponse.description || '获取对话列表失败',
+        apiResponse.code,
+        apiResponse
+      );
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '获取对话列表失败'
+    );
+  }
+}
+
+// 币安价格接口类型
+export interface BinanceTickerPrice {
+  symbol: string;
+  price: string;
+}
+
+/**
+ * 从币安获取单个交易对的实时价格
+ * @param symbol 交易对，例如 'BTCUSDT'
+ * @returns 价格数据
+ */
+export async function getBinancePrice(symbol: string): Promise<BinanceTickerPrice> {
+  try {
+    const response = await fetch(
+      `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`,
+      {
+        method: 'GET',
+      }
+    );
+
+    if (!response.ok) {
+      throw new ApiError(
+        `获取币安价格失败: ${response.status} ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '获取币安价格失败'
+    );
+  }
+}
+
+/**
+ * 从币安获取多个交易对的实时价格
+ * @param symbols 交易对数组，例如 ['BTCUSDT', 'ETHUSDT']
+ * @returns 价格数据数组
+ */
+export async function getBinancePrices(symbols: string[]): Promise<BinanceTickerPrice[]> {
+  try {
+    // 并发请求所有交易对的价格
+    const promises = symbols.map(symbol => getBinancePrice(symbol));
+    const results = await Promise.all(promises);
+    return results;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '获取币安价格失败'
     );
   }
 }

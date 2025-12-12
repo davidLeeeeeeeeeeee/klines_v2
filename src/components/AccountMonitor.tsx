@@ -67,6 +67,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [showAIChatModal, setShowAIChatModal] = useState(false);
   const [selectedAIChat, setSelectedAIChat] = useState<ChatResponse | null>(null);
+  const [isChatForClosing, setIsChatForClosing] = useState(false); // 标识是否为平仓CHAT
   const [expandedPrompt, setExpandedPrompt] = useState(false); // 默认收起
   const [expandedReasoning, setExpandedReasoning] = useState(true);
   const [expandedOutput, setExpandedOutput] = useState(true);
@@ -87,7 +88,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [loadingHistoryChatId, setLoadingHistoryChatId] = useState<number | null>(null);
+  const [loadingHistoryChatId, setLoadingHistoryChatId] = useState<string | null>(null);
 
   // 获取持仓列表
   const fetchPositions = async () => {
@@ -155,6 +156,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       });
 
       setSelectedAIChat(chatData);
+      setIsChatForClosing(false); // 当前仓位的Chat是开仓CHAT
       setShowAIChatModal(true);
     } catch (err: any) {
       alert(err.message || '获取AI Chat失败');
@@ -165,8 +167,9 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   };
 
   // 获取历史Chat详情
-  const fetchHistoryChat = async (chatId: number) => {
-    setLoadingHistoryChatId(chatId);
+  const fetchHistoryChat = async (tradeId: string, chatId: number, isClosing: boolean = false) => {
+    const loadingKey = `${tradeId}-${chatId}`;
+    setLoadingHistoryChatId(loadingKey);
     try {
       const token = getToken();
       if (!token) {
@@ -175,6 +178,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
       const chatData = await getChatDetail(token, chatId);
       setSelectedAIChat(chatData);
+      setIsChatForClosing(isClosing); // 设置是否为平仓CHAT
       setShowAIChatModal(true);
     } catch (err: any) {
       alert(err.message || '获取Chat详情失败');
@@ -587,7 +591,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     <div className="text-sm text-gray-500 mb-1">未结盈亏</div>
                     <div>
                       <span className="text-lg">{position.unrealizedPnL >= 0 ? '+' : ''}${position.unrealizedPnL.toFixed(2)}</span>
-                      <span className="text-sm ml-1">({position.unrealizedPnLPercent >= 0 ? '+' : ''}{position.unrealizedPnLPercent}%)</span>
+                      <span className="text-sm ml-1">({position.unrealizedPnLPercent >= 0 ? '+' : ''}{position.unrealizedPnLPercent.toFixed(2)}%)</span>
                     </div>
                   </div>
                 </div>
@@ -702,12 +706,12 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                           </span>
                           <span
                             className={`px-3 py-1 rounded-2xl text-sm ${
-                              trade.side === 'Buy'
+                              trade.side === 'Sell'
                                 ? 'bg-green-100 text-green-600'
                                 : 'bg-red-100 text-red-600'
                             }`}
                           >
-                            {trade.side === 'Buy' ? '平多' : '平空'}
+                            {trade.side === 'Sell' ? '平多' : '平空'}
                           </span>
                         </div>
                         <div className="text-sm text-gray-600">
@@ -761,45 +765,49 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         <span className="text-sm text-gray-900">{trade.closeFee} USDT</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">跟随策略</span>
-                        <span className="text-sm text-gray-900">{trade.strategyType || '-'}</span>
+                        <span className="text-sm text-gray-500">时长</span>
+                        <span className="text-sm text-gray-900">{formatTime(trade.openTime)} - {formatTime(trade.closeTime)}    {calculateDuration(trade.openTime, trade.closeTime)}</span>
                       </div>
                     </div>
 
                     {/* Actions */}
                     <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                       <div className="text-sm text-gray-500">
-                        时长: <span className="text-gray-900">{formatTime(trade.openTime)} - {formatTime(trade.closeTime)}    {calculateDuration(trade.openTime, trade.closeTime)}</span>
+                        跟随策略: <span className="text-gray-900">{trade.strategyType || '-'}</span>
                       </div>
                       <div className="flex gap-2">
-                        <button
-                          className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                          onClick={() => fetchHistoryChat(trade.openChatId)}
-                          disabled={loadingHistoryChatId === trade.openChatId || !trade.openChatId}
-                        >
-                          {loadingHistoryChatId === trade.openChatId ? (
-                            <>
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              加载中...
-                            </>
-                          ) : (
-                            '开仓CHAT'
-                          )}
-                        </button>
-                        <button
-                          className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                          onClick={() => fetchHistoryChat(trade.closeChatId)}
-                          disabled={loadingHistoryChatId === trade.closeChatId || !trade.closeChatId}
-                        >
-                          {loadingHistoryChatId === trade.closeChatId ? (
-                            <>
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              加载中...
-                            </>
-                          ) : (
-                            '平仓CHAT'
-                          )}
-                        </button>
+                        {trade.openChatId && (
+                          <button
+                            className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                            onClick={() => fetchHistoryChat(trade.id, trade.openChatId, false)}
+                            disabled={loadingHistoryChatId === `${trade.id}-${trade.openChatId}`}
+                          >
+                            {loadingHistoryChatId === `${trade.id}-${trade.openChatId}` ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                加载中...
+                              </>
+                            ) : (
+                              '开仓CHAT'
+                            )}
+                          </button>
+                        )}
+                        {trade.closeChatId && (
+                          <button
+                            className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                            onClick={() => fetchHistoryChat(trade.id, trade.closeChatId, true)}
+                            disabled={loadingHistoryChatId === `${trade.id}-${trade.closeChatId}`}
+                          >
+                            {loadingHistoryChatId === `${trade.id}-${trade.closeChatId}` ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                加载中...
+                              </>
+                            ) : (
+                              '平仓CHAT'
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1005,11 +1013,14 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         <div className="flex items-center gap-1.5 text-sm text-gray-600">
                           <span>{tradeSignalArgs.coin}</span>
                           <span className={`px-2 py-0.5 rounded-2xl ${
-                            tradeSignalArgs.side === 'Buy'
-                              ? 'bg-green-100 text-green-600'
-                              : 'bg-red-100 text-red-600'
+                            isChatForClosing
+                              ? (tradeSignalArgs.side === 'Sell' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600')
+                              : (tradeSignalArgs.side === 'Buy' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600')
                           }`}>
-                            {tradeSignalArgs.side === 'Buy' ? '开多' : '开空'}
+                            {isChatForClosing
+                              ? (tradeSignalArgs.side === 'Sell' ? '平多' : '平空')
+                              : (tradeSignalArgs.side === 'Buy' ? '开多' : '开空')
+                            }
                           </span>
                         </div>
                       </div>
@@ -1059,7 +1070,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                             } catch {
                               return selectedAIChat.prompt;
                             }
-                          })()} />
+                          })()} expandAll={true} />
                         </div>
                       )}
                     </div>
