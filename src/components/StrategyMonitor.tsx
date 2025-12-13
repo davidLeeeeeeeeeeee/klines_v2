@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronRight, Play, X, RefreshCw, Loader2 } from 'lucide-react';
 import { getChatList, ChatResVO, PageRequest, ChatListReq } from '../services/api';
 import { getToken } from '../utils/storage';
 import { JsonViewer } from './JsonViewer';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 interface StrategyMonitorProps {
   onBack: () => void;
@@ -13,17 +14,56 @@ interface AIChatMessage {
   timestamp: string;
   strategyName: string;
   symbol: string;
-  action: '开多' | '开空' | '平多' | '平空' | '观望';
+  action: '开多' | '开空' | '观望';
   summary: string;
   prompt: string;
   reasoning: string;
   output: string;
   duration?: string;
-  symbols?: Array<{ symbol: string; action: '开多' | '开空' | '平多' | '平空' | '观望' }>;
+  symbols?: Array<{ symbol: string; action: '开多' | '开空' | '观望' }>;
   model?: string;
 }
 
 export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
+  // 格式化日期为 YYYY-MM-DD HH:mm:ss 格式
+  const formatDateTime = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  };
+
+  // 将 datetime-local 格式转换为 YYYY-MM-DD HH:mm:ss 格式
+  const convertToApiFormat = (datetimeLocal: string): string => {
+    if (!datetimeLocal) return '';
+    // datetime-local 格式: 2025-12-12T12:00
+    // 转换为: 2025-12-12 12:00:00
+    return datetimeLocal.replace('T', ' ') + ':00';
+  };
+
+  // 将 YYYY-MM-DD HH:mm:ss 格式转换为 datetime-local 格式
+  const convertToInputFormat = (apiFormat: string): string => {
+    if (!apiFormat) return '';
+    // API 格式: 2025-12-12 12:00:00
+    // 转换为: 2025-12-12T12:00
+    return apiFormat.substring(0, 16).replace(' ', 'T');
+  };
+
+  // 设置默认时间为最近1天
+  const getDefaultStartTime = () => {
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    return formatDateTime(yesterday);
+  };
+
+  const getDefaultEndTime = () => {
+    const now = new Date();
+    return formatDateTime(now);
+  };
+
   const [selectedStrategy, setSelectedStrategy] = useState('all');
   const [showStrategyDropdown, setShowStrategyDropdown] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState('all');
@@ -34,10 +74,24 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
   const [expandedPrompt, setExpandedPrompt] = useState<{ [key: string]: boolean }>({});
   const [expandedReasoning, setExpandedReasoning] = useState<{ [key: string]: boolean }>({});
   const [expandedOutput, setExpandedOutput] = useState<{ [key: string]: boolean }>({});
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startTime, setStartTime] = useState(getDefaultStartTime());
+  const [endTime, setEndTime] = useState(getDefaultEndTime());
+
+  // Refs for click outside detection
+  const strategyDropdownRef = useRef<HTMLDivElement>(null);
+  const symbolDropdownRef = useRef<HTMLDivElement>(null);
+  const actionDropdownRef = useRef<HTMLDivElement>(null);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Click outside handlers
+  useClickOutside(strategyDropdownRef, () => setShowStrategyDropdown(false));
+  useClickOutside(symbolDropdownRef, () => setShowSymbolDropdown(false));
+  useClickOutside(actionDropdownRef, () => setShowActionDropdown(false));
+
   const [selectedModel, setSelectedModel] = useState('all');
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+
+  useClickOutside(modelDropdownRef, () => setShowModelDropdown(false));
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // 新增状态：API数据
@@ -58,14 +112,22 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
         throw new Error('未登录，请先登录');
       }
 
+      // 将前端显示的类型转换为API需要的格式
+      let apiSide: string | undefined;
+      if (selectedAction !== 'all') {
+        if (selectedAction === '开多') apiSide = 'Buy';
+        else if (selectedAction === '开空') apiSide = 'Sell';
+        else if (selectedAction === '观望') apiSide = 'Wait';
+      }
+
       const request: PageRequest<ChatListReq> = {
         page: currentPage,
         pageSize: pageSize,
         param: {
-          startTime: startTime || undefined,
-          endTime: endTime || undefined,
+          startTime: startTime || undefined, // 已经是 YYYY-MM-DD HH:mm:ss 格式
+          endTime: endTime || undefined, // 已经是 YYYY-MM-DD HH:mm:ss 格式
           symbol: selectedSymbol === 'all' ? undefined : selectedSymbol,
-          side: selectedAction === 'all' ? undefined : selectedAction,
+          side: apiSide,
           strategyType: selectedStrategy === 'all' ? undefined : selectedStrategy,
           model: selectedModel === 'all' ? undefined : selectedModel,
         }
@@ -126,12 +188,18 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
       console.error('解析response失败:', e);
     }
 
+    // 将API返回的side转换为前端显示的action
+    let action: '开多' | '开空' | '观望' = '观望';
+    if (chat.side === 'Buy') action = '开多';
+    else if (chat.side === 'Sell') action = '开空';
+    else if (chat.side === 'Wait') action = '观望';
+
     return {
       id: chat.id.toString(),
       timestamp: chat.createTime,
       strategyName: chat.strategyType || '未知策略',
       symbol: chat.symbol || '',
-      action: chat.side as '开多' | '开空' | '平多' | '平空' | '观望',
+      action: action,
       summary: chat.prompt || '',
       prompt: chat.prompt || '',
       reasoning: simpleThought, // 从response中解析出的simpleThought
@@ -181,10 +249,6 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
         return 'bg-green-100 text-green-600';
       case '开空':
         return 'bg-red-100 text-red-600';
-      case '平多':
-        return 'bg-green-100 text-green-600';
-      case '平空':
-        return 'bg-red-100 text-red-600';
       case '观望':
         return 'bg-gray-100 text-gray-600';
       default:
@@ -215,7 +279,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
       {/* Filters - All in One Box */}
       <div className="mb-6">
         {/* Strategy Selector */}
-        <div className="relative">
+        <div className="relative" ref={strategyDropdownRef}>
           <button
             onClick={() => setShowStrategyDropdown(!showStrategyDropdown)}
             className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-left flex items-center justify-between hover:border-gray-400 transition-colors"
@@ -250,7 +314,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
       {/* Action Type Tabs with Symbol Filter */}
       <div className="mb-6 flex items-center gap-8">
         {/* Symbol Filter */}
-        <div className="relative">
+        <div className="relative" ref={symbolDropdownRef}>
           <button
             onClick={() => setShowSymbolDropdown(!showSymbolDropdown)}
             className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
@@ -293,7 +357,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
         </div>
 
         {/* Action Type Dropdown */}
-        <div className="relative">
+        <div className="relative" ref={actionDropdownRef}>
           <button
             onClick={() => setShowActionDropdown(!showActionDropdown)}
             className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
@@ -341,28 +405,6 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
               </button>
               <button
                 onClick={() => {
-                  setSelectedAction('平多');
-                  setShowActionDropdown(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedAction === '平多' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                平多
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedAction('平空');
-                  setShowActionDropdown(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedAction === '平空' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                平空
-              </button>
-              <button
-                onClick={() => {
                   setSelectedAction('观望');
                   setShowActionDropdown(false);
                 }}
@@ -388,7 +430,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
         </button>
 
         {/* AI Model Dropdown */}
-        <div className="relative">
+        <div className="relative" ref={modelDropdownRef}>
           <button
             onClick={() => setShowModelDropdown(!showModelDropdown)}
             className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
@@ -414,47 +456,25 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
               </button>
               <button
                 onClick={() => {
-                  setSelectedModel('DEEPSEEK-LOCAL');
+                  setSelectedModel('DEEPSEEK_R1');
                   setShowModelDropdown(false);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedModel === 'DEEPSEEK-LOCAL' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  selectedModel === 'DEEPSEEK_R1' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
                 }`}
               >
-                DEEPSEEK-LOCAL
+                DEEPSEEK_R1
               </button>
               <button
                 onClick={() => {
-                  setSelectedModel('DEEPSEEK');
+                  setSelectedModel('DEEPSEEK_V3');
                   setShowModelDropdown(false);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedModel === 'DEEPSEEK' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  selectedModel === 'DEEPSEEK_V3' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
                 }`}
               >
-                DEEPSEEK
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedModel('GPT-5.1');
-                  setShowModelDropdown(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedModel === 'GPT-5.1' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                GPT-5.1
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedModel('GROK-4');
-                  setShowModelDropdown(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedModel === 'GROK-4' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                GROK-4
+                DEEPSEEK_V3
               </button>
             </div>
           )}
@@ -668,8 +688,8 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
                 <input
                   type="datetime-local"
                   step="1"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  value={convertToInputFormat(startTime)}
+                  onChange={(e) => setStartTime(convertToApiFormat(e.target.value))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                 />
               </div>
@@ -681,8 +701,8 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
                 <input
                   type="datetime-local"
                   step="1"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
+                  value={convertToInputFormat(endTime)}
+                  onChange={(e) => setEndTime(convertToApiFormat(e.target.value))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                 />
               </div>

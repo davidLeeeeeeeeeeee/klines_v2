@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ChevronLeft, TrendingUp, TrendingDown, Activity, Users, Check, BarChart3, Target, Clock, Percent, ChevronDown } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie } from 'recharts';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 interface StrategyDetailProps {
   strategyId: string | null;
@@ -16,6 +17,21 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
   const [showTimeRangeDropdown, setShowTimeRangeDropdown] = useState(false);
   const [symbolTimeRange, setSymbolTimeRange] = useState<'7' | '30' | '90' | '180'>('90');
   const [showSymbolTimeRangeDropdown, setShowSymbolTimeRangeDropdown] = useState(false);
+
+  // Refs for click outside detection
+  const timeRangeDropdownRef = useRef<HTMLDivElement>(null);
+  const symbolTimeRangeDropdownRef = useRef<HTMLDivElement>(null);
+  const followModalRef = useRef<HTMLDivElement>(null);
+
+  // Click outside handlers
+  useClickOutside(timeRangeDropdownRef, () => setShowTimeRangeDropdown(false));
+  useClickOutside(symbolTimeRangeDropdownRef, () => setShowSymbolTimeRangeDropdown(false));
+  useClickOutside(followModalRef, () => {
+    if (showFollowModal) {
+      setShowFollowModal(false);
+      setSelectedAccount('');
+    }
+  });
 
   // Mock data - 实际应用中根据 strategyId 从 API 获取
   const strategy = {
@@ -418,7 +434,7 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
                 )}
               </div>
             </div>
-            <div className="relative">
+            <div className="relative" ref={timeRangeDropdownRef}>
               <button
                 onClick={() => setShowTimeRangeDropdown(!showTimeRangeDropdown)}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
@@ -511,7 +527,7 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
             <div className="p-6">
               <div className="flex items-start justify-between mb-6">
                 <h2 className="text-lg text-gray-900 font-semibold">商品排名</h2>
-                <div className="relative">
+                <div className="relative" ref={symbolTimeRangeDropdownRef}>
                   <button
                     className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 transition-colors"
                     onClick={() => setShowSymbolTimeRangeDropdown(!showSymbolTimeRangeDropdown)}
@@ -715,7 +731,7 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
       {/* Follow Strategy Modal */}
       {showFollowModal && (
         <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div ref={followModalRef} className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-gray-900">选择交易账户</h2>
               <p className="text-gray-600 mt-2">请选择要跟随该策略的交易账户</p>

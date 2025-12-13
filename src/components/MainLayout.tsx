@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LayoutDashboard, Target, Users, TrendingUp, Wallet, Monitor, Menu, X, User, ChevronDown, LogOut, Moon, Sun, KeyRound, Activity, Shield, Settings, Sliders, Layers } from 'lucide-react';
 import { Dashboard } from './Dashboard';
 import { StrategyList } from './StrategyList';
@@ -54,6 +54,9 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
   const [ethPrice, setEthPrice] = useState<number | null>(null);
   const [priceChangePercent, setPriceChangePercent] = useState<{ btc: number; eth: number }>({ btc: 0, eth: 0 });
 
+  // User dropdown ref for click outside detection
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+
   // Fetch crypto prices from Binance
   useEffect(() => {
     const fetchPrices = async () => {
@@ -102,6 +105,23 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
 
     return () => clearInterval(interval);
   }, []); // 移除依赖项，只在组件挂载时执行一次
+
+  // Handle click outside to close user dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setShowUserDropdown(false);
+      }
+    };
+
+    if (showUserDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserDropdown]);
 
   // User management navigation
   const handleNavigateToCreateUser = () => {
@@ -645,9 +665,9 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
             <div className="h-6 w-px bg-gray-300"></div>
             
             {/* User Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={userDropdownRef}>
               <button
-                onClick={() => setShowUserDropdown(!showUserDropdown)}>
+                onMouseEnter={() => setShowUserDropdown(true)}>
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
                   <User className="w-6 h-6 text-white" />
                 </div>

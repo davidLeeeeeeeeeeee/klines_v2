@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Plus, Edit, Trash2, Eye, EyeOff, X, AlertCircle, Search, ChevronDown, RefreshCw } from 'lucide-react';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 type InitStatus = '已初始化' | '未初始化' | '初始化失败';
 
@@ -121,6 +122,19 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Refs for click outside detection
+  const exchangeDropdownRef = useRef<HTMLDivElement>(null);
+  const strategyModalRef = useRef<HTMLDivElement>(null);
+
+  // Click outside handlers
+  useClickOutside(exchangeDropdownRef, () => setShowExchangeDropdown(false));
+  useClickOutside(strategyModalRef, () => {
+    if (showStrategyModal) {
+      setShowStrategyModal(false);
+      setSelectedStrategyId(null);
+    }
+  });
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -275,7 +289,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
 
       {/* Exchange Filter */}
       <div className="mb-6">
-        <div className="relative">
+        <div className="relative" ref={exchangeDropdownRef}>
           <button
             onClick={() => setShowExchangeDropdown(!showExchangeDropdown)}
             className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
@@ -522,7 +536,8 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
       {/* Strategy Selection Modal */}
       {showStrategyModal && selectedAccountId && (
         <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-end justify-center z-50">
-          <div 
+          <div
+            ref={strategyModalRef}
             className="bg-white rounded-t-3xl shadow-xl p-6 w-full max-w-4xl h-[85vh] flex flex-col animate-slide-up"
             style={{
               animation: 'slideUp 0.3s ease-out'

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, X, Play, XCircle, RefreshCw, Loader2 } from 'lucide-react';
 import {
   getPositionList,
@@ -13,6 +13,7 @@ import {
 } from '../services/api';
 import { getToken } from '../utils/storage';
 import { JsonViewer } from './JsonViewer';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 interface AccountMonitorProps {
   onBack: () => void;
@@ -75,6 +76,31 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [batchCloseSymbol, setBatchCloseSymbol] = useState('BTCUSDT');
   const [batchCloseAction, setBatchCloseAction] = useState<'long' | 'short' | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Refs for click outside detection
+  const strategyDropdownRef = useRef<HTMLDivElement>(null);
+  const symbolDropdownRef = useRef<HTMLDivElement>(null);
+  const closeModalRef = useRef<HTMLDivElement>(null);
+  const aiChatModalRef = useRef<HTMLDivElement>(null);
+  const batchCloseModalRef = useRef<HTMLDivElement>(null);
+
+  // Click outside handlers
+  useClickOutside(strategyDropdownRef, () => setShowStrategyDropdown(false));
+  useClickOutside(symbolDropdownRef, () => setShowSymbolDropdown(false));
+  useClickOutside(closeModalRef, () => {
+    if (showCloseModal) {
+      setShowCloseModal(false);
+      setSelectedPosition(null);
+    }
+  });
+  useClickOutside(aiChatModalRef, () => setShowAIChatModal(false));
+  useClickOutside(batchCloseModalRef, () => {
+    if (showBatchCloseModal) {
+      setShowBatchCloseModal(false);
+      setBatchCloseSymbol('BTCUSDT');
+      setBatchCloseAction(null);
+    }
+  });
 
   // API相关状态
   const [positions, setPositions] = useState<PositionResponse[]>([]);
@@ -167,7 +193,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   };
 
   // 获取历史Chat详情
-  const fetchHistoryChat = async (tradeId: string, chatId: number, isClosing: boolean = false) => {
+  const fetchHistoryChat = async (tradeId: number, chatId: number, isClosing: boolean = false) => {
     const loadingKey = `${tradeId}-${chatId}`;
     setLoadingHistoryChatId(loadingKey);
     try {
@@ -332,6 +358,9 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   // 从API数据转换为组件需要的格式
   const currentPositions: Position[] = positions.map(convertToPosition);
 
+  // 计算总的持仓盈亏
+  const totalUnrealizedPnL = currentPositions.reduce((sum, position) => sum + position.unrealizedPnL, 0);
+
   // Mock historical trades data
   const historicalTrades: HistoricalTrade[] = [
     {
@@ -427,7 +456,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       <div className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Strategy Selector */}
-          <div className="relative">
+          <div className="relative" ref={strategyDropdownRef}>
             <button
               onClick={() => setShowStrategyDropdown(!showStrategyDropdown)}
               className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-left flex items-center justify-between hover:border-gray-400 transition-colors"
@@ -497,7 +526,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
         </button>
 
         {/* Symbol Filter */}
-        <div className="relative">
+        <div className="relative" ref={symbolDropdownRef}>
           <button
             onClick={() => setShowSymbolDropdown(!showSymbolDropdown)}
             className="flex items-center gap-1.5 pb-3 text-base text-gray-700 hover:text-gray-900 transition-colors"
@@ -538,6 +567,13 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             </div>
           )}
         </div>
+
+        {/* Total Unrealized PnL */}
+        {activeTab === 'positions' && currentPositions.length > 0 && (
+          <div className={`pb-3 text-base font-semibold ${totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            未结盈亏：{Math.abs(totalUnrealizedPnL).toFixed(2)}
+          </div>
+        )}
       </div>
 
       {/* Current Positions */}
@@ -590,14 +626,14 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                   <div className={`text-right ${position.unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     <div className="text-sm text-gray-500 mb-1">未结盈亏</div>
                     <div>
-                      <span className="text-lg">{position.unrealizedPnL >= 0 ? '+' : ''}${position.unrealizedPnL.toFixed(2)}</span>
-                      <span className="text-sm ml-1">({position.unrealizedPnLPercent >= 0 ? '+' : ''}{position.unrealizedPnLPercent.toFixed(2)}%)</span>
+                      <span className="text-lg">{Math.abs(position.unrealizedPnL).toFixed(2)}</span>
+                      <span className="text-sm ml-1">({Math.abs(position.unrealizedPnLPercent).toFixed(2)}%)</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Position Details Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div>
                     <div className="text-sm text-gray-500 mb-1">订单数量</div>
                     <div className="text-gray-900">{position.quantity}</div>
@@ -619,6 +655,11 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         {position.stopLoss ? `$${position.stopLoss.toLocaleString()}` : '-'}
                       </span>
                     </div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">交易所</div>
+                    <div className="text-gray-900">BYBIT</div>
                   </div>
                 </div>
 
@@ -722,8 +763,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       <div className={`text-right ${trade.closedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         <div className="text-sm text-gray-500 mb-1">已结盈亏</div>
                         <div>
-                          <span className="text-lg">{trade.closedPnl >= 0 ? '+' : ''}${trade.closedPnl.toFixed(2)}</span>
-                          <span className="text-sm ml-1">({parseFloat(pnlPercent) >= 0 ? '+' : ''}{pnlPercent}%)</span>
+                          <span className="text-lg">{Math.abs(trade.closedPnl).toFixed(2)}</span>
+                          <span className="text-sm ml-1">({Math.abs(parseFloat(pnlPercent)).toFixed(2)}%)</span>
                         </div>
                       </div>
                     </div>
@@ -773,7 +814,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     {/* Actions */}
                     <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                       <div className="text-sm text-gray-500">
-                        跟随策略: <span className="text-gray-900">{trade.strategyType || '-'}</span>
+                        <span className="text-gray-900">{trade.strategyType || '-'}</span>
                       </div>
                       <div className="flex gap-2">
                         {trade.openChatId && (
@@ -846,7 +887,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       {/* Close Position Modal */}
       {showCloseModal && selectedPosition && (
         <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-end justify-center z-50">
-          <div 
+          <div
+            ref={closeModalRef}
             className="bg-white rounded-t-3xl shadow-xl p-6 w-full max-w-4xl h-[85vh] flex flex-col animate-slide-up"
             style={{
               animation: 'slideUp 0.3s ease-out'
@@ -901,7 +943,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                   <span className="text-sm text-gray-500">预计盈亏</span>
                   <span className={`text-sm font-semibold ${selectedPosition.unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {selectedPosition.unrealizedPnL >= 0 ? '+' : ''}${selectedPosition.unrealizedPnL.toFixed(2)} (${selectedPosition.unrealizedPnLPercent >= 0 ? '+' : ''}{selectedPosition.unrealizedPnLPercent}%)
+                    {Math.abs(selectedPosition.unrealizedPnL).toFixed(2)} ({Math.abs(selectedPosition.unrealizedPnLPercent).toFixed(2)}%)
                   </span>
                 </div>
               </div>
@@ -945,7 +987,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       {/* AI Chat Modal */}
       {showAIChatModal && selectedAIChat && (
         <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-end justify-center z-50">
-          <div 
+          <div
+            ref={aiChatModalRef}
             className="bg-white rounded-t-3xl shadow-xl p-6 w-full max-w-4xl h-[85vh] flex flex-col animate-slide-up"
             style={{
               animation: 'slideUp 0.3s ease-out'
@@ -1156,7 +1199,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       {/* Batch Close Position Modal */}
       {showBatchCloseModal && (
         <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-end justify-center z-50">
-          <div 
+          <div
+            ref={batchCloseModalRef}
             className="bg-white rounded-t-3xl shadow-xl p-6 w-full max-w-4xl h-[85vh] flex flex-col animate-slide-up"
             style={{
               animation: 'slideUp 0.3s ease-out'
