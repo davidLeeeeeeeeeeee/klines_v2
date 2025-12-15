@@ -13,6 +13,7 @@ interface EditTradingAccountPageProps {
     apiSecret: string;
     apiPassphrase?: string;
     initStatus: InitStatus;
+    accountType?: '主账户' | '子账户';
   };
   onBack: () => void;
   onSave: (data: any) => void;
@@ -66,7 +67,9 @@ export function EditTradingAccountPage({ account, onBack, onSave }: EditTradingA
               <ChevronLeft className="w-6 h-6 text-gray-600" />
             </button>
             <div className="flex-1">
-              <h1 className="text-2xl font-semibold text-gray-900">编辑交易账户</h1>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                {account.accountType === '子账户' ? '编辑子账户' : '编辑主账户'}
+              </h1>
             </div>
           </div>
         </div>
@@ -76,70 +79,20 @@ export function EditTradingAccountPage({ account, onBack, onSave }: EditTradingA
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <form onSubmit={handleSubmit}>
-            {/* Account Info */}
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
-                <User className="w-5 h-5 text-blue-600" />
-                <h2 className="text-gray-900">账户信息</h2>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-500 mb-2">
-                    账户名称 *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.accountName}
-                    onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
             {/* Exchange Info */}
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
               <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
                 <Building2 className="w-5 h-5 text-blue-600" />
                 <h2 className="text-gray-900">交易所信息</h2>
               </div>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-gray-500 mb-2">
                     选择交易所 *
                   </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowExchangeDropdown(!showExchangeDropdown)}
-                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-left flex items-center justify-between hover:border-gray-400 transition-colors"
-                    >
-                      <span className="text-gray-900">{formData.exchange}</span>
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
-                    </button>
-
-                    {showExchangeDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20">
-                        {exchanges.map((exchange) => (
-                          <button
-                            type="button"
-                            key={exchange}
-                            onClick={() => {
-                              setFormData({ ...formData, exchange });
-                              setShowExchangeDropdown(false);
-                            }}
-                            className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
-                              formData.exchange === exchange ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                            }`}
-                          >
-                            {exchange}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-500 cursor-not-allowed">
+                    {formData.exchange}
                   </div>
                 </div>
 
@@ -150,7 +103,29 @@ export function EditTradingAccountPage({ account, onBack, onSave }: EditTradingA
                   <input
                     type="text"
                     value={formData.uid}
-                    onChange={(e) => setFormData({ ...formData, uid: e.target.value })}
+                    readOnly
+                    className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-500 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Account Info */}
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
+                <User className="w-5 h-5 text-blue-600" />
+                <h2 className="text-gray-900">账户信息</h2>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    账户名称 *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.accountName}
+                    onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                     required
                   />
@@ -230,41 +205,16 @@ export function EditTradingAccountPage({ account, onBack, onSave }: EditTradingA
                 <Shield className="w-5 h-5 text-blue-600" />
                 <h2 className="text-gray-900">状态管理</h2>
               </div>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-gray-500 mb-2">
                     初始化状态
                   </label>
                   <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-left flex items-center justify-between hover:border-gray-400 transition-colors"
-                    >
-                      <span className="text-gray-900">{formData.initStatus}</span>
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
-                    </button>
-
-                    {showStatusDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20">
-                        {statuses.map((status) => (
-                          <button
-                            type="button"
-                            key={status}
-                            onClick={() => {
-                              setFormData({ ...formData, initStatus: status });
-                              setShowStatusDropdown(false);
-                            }}
-                            className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
-                              formData.initStatus === status ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                            }`}
-                          >
-                            {status}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-500 cursor-not-allowed">
+                      {formData.initStatus}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -324,7 +274,7 @@ export function EditTradingAccountPage({ account, onBack, onSave }: EditTradingA
               }}
               className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
-              保存修改
+              确定
             </button>
           </div>
         </div>

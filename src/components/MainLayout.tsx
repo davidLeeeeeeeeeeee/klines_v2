@@ -17,7 +17,10 @@ import { EditUserPage } from './EditUserPage';
 import { ResetUserPasswordPage } from './ResetUserPasswordPage';
 import { CreateTradingAccountPage } from './CreateTradingAccountPage';
 import { EditTradingAccountPage } from './EditTradingAccountPage';
+import { InitAccountPage } from './InitAccountPage';
 import { RiskManagement } from './RiskManagement';
+import { FundTransfer } from './FundTransfer';
+import type { TradingAccount } from './TradingAccounts';
 import { getBinancePrices } from '../services/api';
 
 interface MainLayoutProps {
@@ -48,6 +51,84 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
 
   // Trading account state
   const [selectedTradingAccount, setSelectedTradingAccount] = useState<any>(null);
+  const [allTradingAccounts, setAllTradingAccounts] = useState<TradingAccount[]>([
+    {
+      id: '1',
+      exchange: 'Binance',
+      uid: '123456789012',
+      accountName: '主交易账户',
+      apiKey: 'aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890',
+      apiSecret: '1234567890aBcDeFgHiJkLmNoPqRsTuVwXyZ',
+      initStatus: '已初始化',
+      netValue: '10000.00',
+      initialNetValue: '10000.00',
+      createdAt: '2024-01-15 10:30:25',
+      username: 'admin',
+      strategyName: '趋势追踪策略',
+      accountType: '主账户'
+    },
+    {
+      id: '2',
+      exchange: 'OKX',
+      uid: '987654321098',
+      accountName: '备用账户',
+      apiKey: 'ZyXwVuTsRqPoNmLkJiHgFeDcBa0987654321',
+      apiSecret: '0987654321ZyXwVuTsRqPoNmLkJiHgFeDcBa',
+      initStatus: '已初始化',
+      netValue: '5000.00',
+      initialNetValue: '5000.00',
+      createdAt: '2024-02-20 14:22:10',
+      username: 'user1',
+      strategyName: '网格交易策略',
+      accountType: '子账户',
+      parentAccountId: '1'
+    },
+    {
+      id: '3',
+      exchange: 'Bybit',
+      uid: '112233445566',
+      accountName: '测试账户',
+      apiKey: 'TeSt1234567890aBcDeFgHiJkLmNoPqRsT',
+      apiSecret: 'TeSt0987654321ZyXwVuTsRqPoNmLkJiH',
+      initStatus: '未初始化',
+      netValue: '0.00',
+      initialNetValue: '0.00',
+      createdAt: '2024-03-10 09:15:33',
+      username: 'test',
+      accountType: '子账户',
+      parentAccountId: '1'
+    },
+    {
+      id: '4',
+      exchange: 'Gate',
+      uid: '556677889900',
+      accountName: '策略账户A',
+      apiKey: 'GaTe1234567890aBcDeFgHiJkLmNoPq',
+      apiSecret: 'GaTe0987654321ZyXwVuTsRqPoNmLk',
+      initStatus: '已初始化',
+      netValue: '8000.00',
+      initialNetValue: '8000.00',
+      createdAt: '2024-03-15 16:45:50',
+      username: 'strategy',
+      accountType: '主账户'
+    },
+    {
+      id: '5',
+      exchange: 'MEXC',
+      uid: '998877665544',
+      accountName: '备用账户B',
+      apiKey: 'MeXc1234567890aBcDeFgHiJkLmNoPqRsT',
+      apiSecret: 'MeXc0987654321ZyXwVuTsRqPoNmLkJiH',
+      initStatus: '已初始化',
+      netValue: '3500.00',
+      initialNetValue: '3500.00',
+      createdAt: '2024-04-01 11:20:15',
+      username: 'user2',
+      strategyName: '套利策略',
+      accountType: '子账户',
+      parentAccountId: '4'
+    }
+  ]);
 
   // Crypto prices state
   const [btcPrice, setBtcPrice] = useState<number | null>(null);
@@ -153,6 +234,16 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
   const handleNavigateToEditTradingAccount = (account: any) => {
     setSelectedTradingAccount(account);
     setCurrentPage('trading-account-edit');
+  };
+
+  const handleNavigateToInitAccount = (account: any, subAccountCount: number) => {
+    setSelectedTradingAccount({ ...account, subAccountCount });
+    setCurrentPage('trading-account-init');
+  };
+
+  const handleNavigateToTransfer = (account: TradingAccount) => {
+    setSelectedTradingAccount(account);
+    setCurrentPage('fund-transfer');
   };
 
   const handleBackToTradingAccountList = () => {
@@ -471,9 +562,11 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
         );
       case 'account-management':
         return (
-          <TradingAccounts 
+          <TradingAccounts
             onNavigateToCreate={handleNavigateToCreateTradingAccount}
             onNavigateToEdit={handleNavigateToEditTradingAccount}
+            onNavigateToInit={handleNavigateToInitAccount}
+            onNavigateToTransfer={handleNavigateToTransfer}
           />
         );
       case 'strategy-monitor':
@@ -490,6 +583,27 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
         return <CreateTradingAccountPage onBack={handleBackToTradingAccountList} />;
       case 'trading-account-edit':
         return <EditTradingAccountPage account={selectedTradingAccount} onBack={handleBackToTradingAccountList} />;
+      case 'trading-account-init':
+        return <InitAccountPage
+          account={selectedTradingAccount}
+          subAccountCount={selectedTradingAccount?.subAccountCount}
+          onBack={handleBackToTradingAccountList}
+          onSave={(data) => {
+            console.log('Init data:', data);
+            alert('账户已初始化');
+          }}
+        />;
+      case 'fund-transfer':
+        const parentAccount = selectedTradingAccount?.parentAccountId
+          ? allTradingAccounts.find(acc => acc.id === selectedTradingAccount.parentAccountId) || null
+          : null;
+        return (
+          <FundTransfer
+            account={selectedTradingAccount}
+            parentAccount={parentAccount}
+            onBack={handleBackToTradingAccountList}
+          />
+        );
       case 'risk-management':
         return <RiskManagement onBack={() => setCurrentPage('dashboard')} />;
       default:
@@ -499,15 +613,17 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
 
   // Hide sidebar and header for secondary pages
   const isSecondaryPage = [
-    'strategy-detail', 
-    'strategy-config', 
-    'profile', 
+    'strategy-detail',
+    'strategy-config',
+    'profile',
     'change-password',
     'user-create',
     'user-edit',
     'user-reset-password',
     'trading-account-create',
-    'trading-account-edit'
+    'trading-account-edit',
+    'trading-account-init',
+    'fund-transfer'
   ].includes(currentPage);
 
   if (isSecondaryPage) {

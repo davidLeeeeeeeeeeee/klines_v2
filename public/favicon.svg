@@ -1,0 +1,29 @@
+<svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gradient background circle -->
+  <circle cx="30" cy="30" r="28" fill="url(#logoGradient)"/>
+
+  <!-- Simplified "A" with upward trend arrow -->
+  <path
+    d="M30 16L40 44M20 44L30 16"
+    stroke="white"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <!-- Crossbar with upward arrow -->
+  <path
+    d="M23 32L30 32L37 26M37 26L34 29M37 26L40 29"
+    stroke="white"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <defs>
+    <linearGradient id="logoGradient" x1="2" y1="2" x2="58" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+</svg>
+

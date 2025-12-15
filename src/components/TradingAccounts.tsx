@@ -1,6 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Plus, Edit, Trash2, Eye, EyeOff, X, AlertCircle, Search, ChevronDown, RefreshCw } from 'lucide-react';
 import { useClickOutside } from '../hooks/useClickOutside';
+import { getAccountList, AccountListReq, AccountRes } from '../services/api';
+import { getToken } from '../utils/storage';
 
 type InitStatus = '已初始化' | '未初始化' | '初始化失败';
 
@@ -35,89 +37,36 @@ export interface TradingAccount {
   apiSecret: string;
   initStatus: InitStatus;
   netValue: string;
+  initialNetValue: string;
   createdAt: string;
   username: string;
   strategyName?: string;
+  accountType: '主账户' | '子账户';
+  parentAccountId?: string;
 }
 
 interface TradingAccountsProps {
   onNavigateToCreate?: () => void;
   onNavigateToEdit?: (account: TradingAccount) => void;
+  onNavigateToInit?: (account: TradingAccount, subAccountCount: number) => void;
+  onNavigateToTransfer?: (account: TradingAccount) => void;
 }
 
-export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: TradingAccountsProps) {
-  const [accounts, setAccounts] = useState<TradingAccount[]>([
-    {
-      id: '1',
-      exchange: 'Binance',
-      uid: 'BN12345678',
-      accountName: '主交易账户',
-      apiKey: 'aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890',
-      apiSecret: '1234567890aBcDeFgHiJkLmNoPqRsTuVwXyZ',
-      initStatus: '已初始化',
-      netValue: '10000.00',
-      createdAt: '2024-01-15 10:30:25',
-      username: 'admin',
-      strategyName: '趋势追踪策略'
-    },
-    {
-      id: '2',
-      exchange: 'OKX',
-      uid: 'OKX98765432',
-      accountName: '备用账户',
-      apiKey: 'ZyXwVuTsRqPoNmLkJiHgFeDcBa0987654321',
-      apiSecret: '0987654321ZyXwVuTsRqPoNmLkJiHgFeDcBa',
-      initStatus: '已初始化',
-      netValue: '5000.00',
-      createdAt: '2024-02-20 14:22:10',
-      username: 'user1',
-      strategyName: '网格交易策略'
-    },
-    {
-      id: '3',
-      exchange: 'Bybit',
-      uid: 'BYB11223344',
-      accountName: '测试账户',
-      apiKey: 'TeSt1234567890aBcDeFgHiJkLmNoPqRsT',
-      apiSecret: 'TeSt0987654321ZyXwVuTsRqPoNmLkJiH',
-      initStatus: '未初始化',
-      netValue: '0.00',
-      createdAt: '2024-03-10 09:15:33',
-      username: 'test'
-    },
-    {
-      id: '4',
-      exchange: 'Gate',
-      uid: 'GT55667788',
-      accountName: '策略账户A',
-      apiKey: 'GaTe1234567890aBcDeFgHiJkLmNoPq',
-      apiSecret: 'GaTe0987654321ZyXwVuTsRqPoNmLk',
-      initStatus: '已初始化',
-      netValue: '8000.00',
-      createdAt: '2024-03-15 16:45:50',
-      username: 'strategy'
-    },
-    {
-      id: '5',
-      exchange: 'MEXC',
-      uid: 'MX11223344',
-      accountName: '备用账户B',
-      apiKey: 'MeXc1234567890aBcDeFgHiJkLmNoPqRsT',
-      apiSecret: 'MeXc0987654321ZyXwVuTsRqPoNmLkJiH',
-      initStatus: '已初始化',
-      netValue: '3500.00',
-      createdAt: '2024-04-01 11:20:15',
-      username: 'user2',
-      strategyName: '套利策略'
-    }
-  ]);
+export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNavigateToInit, onNavigateToTransfer }: TradingAccountsProps) {
+  const [accounts, setAccounts] = useState<TradingAccount[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null);
   const [visibleSecrets, setVisibleSecrets] = useState<{ [key: string]: boolean }>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [filterExchange, setFilterExchange] = useState<string>('all');
+  const [filterAccountType, setFilterAccountType] = useState<string>('all');
+  const [filterStrategyFollow, setFilterStrategyFollow] = useState<string>('all');
   const [showExchangeDropdown, setShowExchangeDropdown] = useState(false);
+  const [showAccountTypeDropdown, setShowAccountTypeDropdown] = useState(false);
+  const [showStrategyFollowDropdown, setShowStrategyFollowDropdown] = useState(false);
   const [showStrategyModal, setShowStrategyModal] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
@@ -136,11 +85,80 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
     }
   });
 
+  // 将API返回的数据转换为组件使用的格式
+  const convertApiDataToTradingAccount = (apiAccount: AccountRes): TradingAccount => {
+    return {
+      id: apiAccount.id.toString(),
+      exchange: apiAccount.exchange,
+      uid: apiAccount.uid,
+      accountName: apiAccount.name,
+      apiKey: '', // API不返回敏感信息
+      apiSecret: '', // API不返回敏感信息
+      initStatus: apiAccount.init ? '已初始化' : '未初始化',
+      netValue: apiAccount.equity.toFixed(2),
+      initialNetValue: apiAccount.initEquity.toFixed(2),
+      createdAt: apiAccount.createTime,
+      username: '', // API响应中没有username字段
+      strategyName: apiAccount.strategyTypeName || apiAccount.strategyType || undefined,
+      accountType: apiAccount.accType === 0 ? '主账户' : '子账户',
+      parentAccountId: apiAccount.mainAccId > 0 ? apiAccount.mainAccId.toString() : undefined
+    };
+  };
+
+  // 获取账户列表
+  const fetchAccounts = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('未登录，请先登录');
+      }
+
+      // 构建请求参数 - 所有参数都必须传递，使用默认值表示不筛选
+      const request: AccountListReq = {
+        accType: filterAccountType === 'all' ? 0 : (filterAccountType === '主账户' ? 0 : 1),
+        exchange: filterExchange === 'all' ? '' : filterExchange,
+        search: searchTerm || '',
+        strategyType: (filterStrategyFollow === 'all' || filterStrategyFollow === '已跟随' || filterStrategyFollow === '未跟随')
+          ? ''
+          : filterStrategyFollow
+      };
+
+      const data = await getAccountList(token, request);
+      const convertedAccounts = data.map(convertApiDataToTradingAccount);
+      setAccounts(convertedAccounts);
+    } catch (err: any) {
+      setError(err.message || '获取账户列表失败');
+      console.error('获取账户列表失败:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 组件挂载时获取数据
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
+
   const handleRefresh = () => {
     setIsRefreshing(true);
-    setTimeout(() => {
+    fetchAccounts().finally(() => {
       setIsRefreshing(false);
-    }, 500);
+    });
+  };
+
+  // Calculate sub-account count for each main account
+  const getSubAccountCount = (mainAccountId: string) => {
+    return accounts.filter(acc => acc.parentAccountId === mainAccountId).length;
+  };
+
+  // Get parent account name for sub-accounts
+  const getParentAccountName = (parentAccountId?: string) => {
+    if (!parentAccountId) return '';
+    const parentAccount = accounts.find(acc => acc.id === parentAccountId);
+    return parentAccount?.accountName || '';
   };
 
   // Mock strategies data
@@ -231,18 +249,13 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
     }
   };
 
+  // 前端额外筛选（策略跟随状态）
   const filteredAccounts = accounts.filter(account => {
-    if (filterExchange !== 'all' && account.exchange !== filterExchange) {
+    if (filterStrategyFollow === '已跟随' && !account.strategyName) {
       return false;
     }
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const matchesUsername = account.username.toLowerCase().includes(term);
-      const matchesUid = account.uid.toLowerCase().includes(term);
-      const matchesAccountName = account.accountName.toLowerCase().includes(term);
-      if (!matchesUsername && !matchesUid && !matchesAccountName) {
-        return false;
-      }
+    if (filterStrategyFollow === '未跟随' && account.strategyName) {
+      return false;
     }
     return true;
   });
@@ -272,26 +285,58 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
         </button>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-700 hover:text-red-900"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="mb-6">
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="搜索用户名、账户UID、账户名称..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-          />
+        <div className="relative flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="搜索账户UID、账户名称..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleRefresh();
+                }
+              }}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+            />
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-400"
+          >
+            {loading ? '搜索中...' : '搜索'}
+          </button>
         </div>
       </div>
 
-      {/* Exchange Filter */}
-      <div className="mb-6">
+      {/* Exchange, Account Type, and Strategy Follow Filters */}
+      <div className="mb-6 flex items-center gap-6">
+        {/* Exchange Filter */}
         <div className="relative" ref={exchangeDropdownRef}>
           <button
-            onClick={() => setShowExchangeDropdown(!showExchangeDropdown)}
+            onClick={() => {
+              setShowExchangeDropdown(!showExchangeDropdown);
+              setShowAccountTypeDropdown(false);
+              setShowStrategyFollowDropdown(false);
+            }}
             className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
           >
             <span>{filterExchange === 'all' ? '交易所' : filterExchange}</span>
@@ -306,6 +351,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
                 onClick={() => {
                   setFilterExchange('all');
                   setShowExchangeDropdown(false);
+                  setTimeout(() => fetchAccounts(), 100);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
                   filterExchange === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
@@ -317,6 +363,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
                 onClick={() => {
                   setFilterExchange('Binance');
                   setShowExchangeDropdown(false);
+                  setTimeout(() => fetchAccounts(), 100);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
                   filterExchange === 'Binance' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
@@ -328,6 +375,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
                 onClick={() => {
                   setFilterExchange('Bybit');
                   setShowExchangeDropdown(false);
+                  setTimeout(() => fetchAccounts(), 100);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
                   filterExchange === 'Bybit' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
@@ -339,6 +387,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
                 onClick={() => {
                   setFilterExchange('OKX');
                   setShowExchangeDropdown(false);
+                  setTimeout(() => fetchAccounts(), 100);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
                   filterExchange === 'OKX' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
@@ -350,6 +399,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
                 onClick={() => {
                   setFilterExchange('Gate');
                   setShowExchangeDropdown(false);
+                  setTimeout(() => fetchAccounts(), 100);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
                   filterExchange === 'Gate' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
@@ -361,6 +411,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
                 onClick={() => {
                   setFilterExchange('MEXC');
                   setShowExchangeDropdown(false);
+                  setTimeout(() => fetchAccounts(), 100);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
                   filterExchange === 'MEXC' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
@@ -371,44 +422,190 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
             </div>
           )}
         </div>
+
+        {/* Account Type Filter */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              setShowAccountTypeDropdown(!showAccountTypeDropdown);
+              setShowExchangeDropdown(false);
+              setShowStrategyFollowDropdown(false);
+            }}
+            className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
+          >
+            <span>{filterAccountType === 'all' ? '账户类型' : filterAccountType}</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+              <path d="M5 6L0 0h10L5 6z" />
+            </svg>
+          </button>
+
+          {showAccountTypeDropdown && (
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
+              <button
+                onClick={() => {
+                  setFilterAccountType('all');
+                  setShowAccountTypeDropdown(false);
+                  setTimeout(() => fetchAccounts(), 100);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterAccountType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                全部
+              </button>
+              <button
+                onClick={() => {
+                  setFilterAccountType('主账户');
+                  setShowAccountTypeDropdown(false);
+                  setTimeout(() => fetchAccounts(), 100);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterAccountType === '主账户' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                主账户
+              </button>
+              <button
+                onClick={() => {
+                  setFilterAccountType('子账户');
+                  setShowAccountTypeDropdown(false);
+                  setTimeout(() => fetchAccounts(), 100);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterAccountType === '子账户' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                子账户
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Strategy Follow Filter */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              setShowStrategyFollowDropdown(!showStrategyFollowDropdown);
+              setShowExchangeDropdown(false);
+              setShowAccountTypeDropdown(false);
+            }}
+            className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
+          >
+            <span>{filterStrategyFollow === 'all' ? '策略跟随' : filterStrategyFollow === '已跟随' ? '已跟随' : filterStrategyFollow === '未跟随' ? '未跟随' : filterStrategyFollow}</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+              <path d="M5 6L0 0h10L5 6z" />
+            </svg>
+          </button>
+
+          {showStrategyFollowDropdown && (
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
+              <button
+                onClick={() => {
+                  setFilterStrategyFollow('all');
+                  setShowStrategyFollowDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterStrategyFollow === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                全部
+              </button>
+              <button
+                onClick={() => {
+                  setFilterStrategyFollow('已跟随');
+                  setShowStrategyFollowDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterStrategyFollow === '已跟随' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                已跟随
+              </button>
+              <button
+                onClick={() => {
+                  setFilterStrategyFollow('未跟随');
+                  setShowStrategyFollowDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterStrategyFollow === '未跟随' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                未跟随
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Accounts List */}
-      <div className="space-y-4">
-        {filteredAccounts.map((account) => (
-          <div key={account.id} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-4 relative">
-            {/* Strategy Name - Top Right Corner */}
-            <div className="absolute top-4 right-4 text-sm">
-              {account.strategyName ? (
-                <span className="text-gray-500">{account.strategyName}</span>
-              ) : (
-                <span className="text-red-500">未跟随</span>
-              )}
+      <div className="space-y-4 flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <div className="text-gray-500 mb-4">加载中...</div>
+            <div className="flex justify-center">
+              <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
             </div>
+          </div>
+        ) : filteredAccounts.length === 0 && !error ? (
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <div className="text-gray-500 mb-4">还没有添加任何交易账户</div>
+            <button
+              onClick={handleCreateAccount}
+              className="inline-flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              添加第一个账户
+            </button>
+          </div>
+        ) : (
+          filteredAccounts.map((account) => (
+          <div key={account.id} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-4 relative">
+            {/* Strategy Name - Top Right Corner - Only for Sub Accounts */}
+            {account.accountType === '子账户' && (
+              <button
+                onClick={() => {
+                  setSelectedAccountId(account.id);
+                  setShowStrategyModal(true);
+                }}
+                className="absolute top-4 right-4 text-sm hover:opacity-80 transition-opacity flex items-center gap-1"
+              >
+                {account.strategyName ? (
+                  <span className="text-blue-500">{account.strategyName} &gt;</span>
+                ) : (
+                  <span className="text-red-600">暂未跟随策略 &gt;</span>
+                )}
+              </button>
+            )}
 
             {/* Account Name with Status */}
             <div className="flex items-center justify-between mb-4 pr-24">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <ExchangeIcon exchange={account.exchange} />
                   <h3 className="text-lg text-gray-900">{account.accountName}</h3>
                   <span className={`px-3 py-1 rounded-2xl text-sm ${getStatusBadgeColor(account.initStatus)}`}>
                     {account.initStatus}
                   </span>
+                  <span className={`px-3 py-1 rounded-2xl text-sm ${
+                    account.accountType === '主账户'
+                      ? 'bg-red-100 text-red-600'
+                      : 'bg-blue-100 text-blue-600'
+                  }`}>
+                    {account.accountType}
+                  </span>
                 </div>
-                <div className="text-sm text-gray-500 mt-0.5">{account.uid}</div>
+                <div className="text-sm text-gray-500 mt-0.5">{account.exchange}: {account.uid}</div>
               </div>
             </div>
-            
+
             {/* Account Info Grid - Label above value */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
               <div>
-                <div className="text-sm text-gray-500 mb-1">净值</div>
-                <div className="text-green-600">¥{account.netValue}</div>
+                <div className="text-sm text-gray-500 mb-1">当前净值</div>
+                <div className="text-green-600">${account.netValue}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-500 mb-1">API Key</div>
-                <div className="text-gray-900">{account.apiKey.substring(0, 3)}......{account.apiKey.substring(account.apiKey.length - 3)}</div>
+                <div className="text-sm text-gray-500 mb-1">初始净值</div>
+                <div className="text-gray-900">${account.initialNetValue}</div>
               </div>
               <div>
                 <div className="text-sm text-gray-500 mb-1">创建时间</div>
@@ -429,15 +626,40 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
 
             {/* Actions */}
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
-              <button
-                onClick={() => {
-                  setSelectedAccountId(account.id);
-                  setShowStrategyModal(true);
-                }}
-                className="px-4 py-1.5 text-sm border border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
-              >
-                跟随策略
-              </button>
+              {account.accountType === '子账户' && (
+                <>
+                  <div className="flex-1 text-sm text-gray-600">
+                    主账户: {getParentAccountName(account.parentAccountId)}
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (onNavigateToTransfer) {
+                        onNavigateToTransfer(account);
+                      }
+                    }}
+                    className="px-4 py-1.5 text-sm border border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
+                  >
+                    划转
+                  </button>
+                </>
+              )}
+              {account.accountType === '主账户' && (
+                <>
+                  <div className="flex-1 text-sm text-gray-600">
+                    子账户数: {getSubAccountCount(account.id)}
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (onNavigateToInit) {
+                        onNavigateToInit(account, getSubAccountCount(account.id));
+                      }
+                    }}
+                    className="px-4 py-1.5 text-sm border border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
+                  >
+                    子账户
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => handleEditAccount(account)}
                 className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
@@ -452,19 +674,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit }: Tradin
               </button>
             </div>
           </div>
-        ))}
-
-        {filteredAccounts.length === 0 && (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <div className="text-gray-500 mb-4">还没有添加任何交易账户</div>
-            <button
-              onClick={handleCreateAccount}
-              className="inline-flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              加第一个账户
-            </button>
-          </div>
+          ))
         )}
       </div>
 

@@ -568,12 +568,28 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
           )}
         </div>
 
-        {/* Total Unrealized PnL */}
-        {activeTab === 'positions' && currentPositions.length > 0 && (
-          <div className={`pb-3 text-base font-semibold ${totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            未结盈亏：{Math.abs(totalUnrealizedPnL).toFixed(2)}
+        {/* Position Count Display */}
+        <div className="ml-auto text-right">
+          <div className="text-sm text-gray-500">仓位数量</div>
+          <div className="text-lg font-semibold text-gray-900">
+            {activeTab === 'positions' ? currentPositions.length : closedPositions.length}
           </div>
-        )}
+        </div>
+
+        {/* Total PnL Display */}
+        <div className="text-right ml-6">
+          <div className="text-sm text-gray-500">总盈亏</div>
+          <div className={`text-lg font-semibold ${
+            activeTab === 'positions'
+              ? (totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600')
+              : (closedPositions.reduce((sum, t) => sum + t.closedPnl, 0) >= 0 ? 'text-green-600' : 'text-red-600')
+          }`}>
+            {activeTab === 'positions'
+              ? Math.abs(totalUnrealizedPnL).toFixed(2)
+              : Math.abs(closedPositions.reduce((sum, t) => sum + t.closedPnl, 0)).toFixed(2)
+            }
+          </div>
+        </div>
       </div>
 
       {/* Current Positions */}

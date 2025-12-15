@@ -59,8 +59,13 @@ export async function login(request: LoginRequest): Promise<LoginResponse> {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || errorData.message || `登录失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
       throw new ApiError(
-        errorData.description || errorData.message || `登录失败: ${response.statusText}`,
+        errorMessage,
         response.status,
         errorData
       );
@@ -71,8 +76,13 @@ export async function login(request: LoginRequest): Promise<LoginResponse> {
 
     // 检查业务状态码
     if (!apiResponse.success || apiResponse.code !== 200) {
+      // 构建详细的错误信息
+      let errorMessage = apiResponse.description || '登录失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
       throw new ApiError(
-        apiResponse.description || '登录失败',
+        errorMessage,
         apiResponse.code,
         apiResponse
       );
@@ -111,8 +121,13 @@ export async function logout(token: string): Promise<boolean> {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || errorData.message || `登出失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
       throw new ApiError(
-        errorData.description || errorData.message || `登出失败: ${response.statusText}`,
+        errorMessage,
         response.status,
         errorData
       );
@@ -123,8 +138,13 @@ export async function logout(token: string): Promise<boolean> {
 
     // 检查业务状态码
     if (!apiResponse.success || apiResponse.code !== 200) {
+      // 构建详细的错误信息
+      let errorMessage = apiResponse.description || '登出失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
       throw new ApiError(
-        apiResponse.description || '登出失败',
+        errorMessage,
         apiResponse.code,
         apiResponse
       );
@@ -273,8 +293,13 @@ export async function getPositionList(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || errorData.message || `获取持仓列表失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
       throw new ApiError(
-        errorData.description || errorData.message || `获取持仓列表失败: ${response.statusText}`,
+        errorMessage,
         response.status,
         errorData
       );
@@ -285,8 +310,13 @@ export async function getPositionList(
 
     // 检查业务状态码
     if (!apiResponse.success || apiResponse.code !== 200) {
+      // 构建详细的错误信息
+      let errorMessage = apiResponse.description || '获取持仓列表失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
       throw new ApiError(
-        apiResponse.description || '获取持仓列表失败',
+        errorMessage,
         apiResponse.code,
         apiResponse
       );
@@ -331,8 +361,13 @@ export async function getPositionChat(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || errorData.message || `获取AI Chat失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
       throw new ApiError(
-        errorData.description || errorData.message || `获取AI Chat失败: ${response.statusText}`,
+        errorMessage,
         response.status,
         errorData
       );
@@ -343,8 +378,13 @@ export async function getPositionChat(
 
     // 检查业务状态码
     if (!apiResponse.success || apiResponse.code !== 200) {
+      // 构建详细的错误信息
+      let errorMessage = apiResponse.description || '获取AI Chat失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
       throw new ApiError(
-        apiResponse.description || '获取AI Chat失败',
+        errorMessage,
         apiResponse.code,
         apiResponse
       );
@@ -387,8 +427,13 @@ export async function getClosedPositionList(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || `HTTP错误: ${response.status}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
       throw new ApiError(
-        errorData.description || `HTTP错误: ${response.status}`,
+        errorMessage,
         response.status,
         errorData
       );
@@ -399,8 +444,13 @@ export async function getClosedPositionList(
 
     // 检查业务状态码
     if (!apiResponse.success || apiResponse.code !== 200) {
+      // 构建详细的错误信息
+      let errorMessage = apiResponse.description || '获取平仓订单列表失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
       throw new ApiError(
-        apiResponse.description || '获取平仓订单列表失败',
+        errorMessage,
         apiResponse.code,
         apiResponse
       );
@@ -442,8 +492,13 @@ export async function getChatDetail(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || `HTTP错误: ${response.status}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
       throw new ApiError(
-        errorData.description || `HTTP错误: ${response.status}`,
+        errorMessage,
         response.status,
         errorData
       );
@@ -454,8 +509,13 @@ export async function getChatDetail(
 
     // 检查业务状态码
     if (!apiResponse.success || apiResponse.code !== 200) {
+      // 构建详细的错误信息
+      let errorMessage = apiResponse.description || '获取对话详情失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
       throw new ApiError(
-        apiResponse.description || '获取对话详情失败',
+        errorMessage,
         apiResponse.code,
         apiResponse
       );
@@ -498,8 +558,13 @@ export async function getChatList(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || `HTTP错误: ${response.status}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
       throw new ApiError(
-        errorData.description || `HTTP错误: ${response.status}`,
+        errorMessage,
         response.status,
         errorData
       );
@@ -510,8 +575,13 @@ export async function getChatList(
 
     // 检查业务状态码
     if (!apiResponse.success || apiResponse.code !== 200) {
+      // 构建详细的错误信息
+      let errorMessage = apiResponse.description || '获取对话列表失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
       throw new ApiError(
-        apiResponse.description || '获取对话列表失败',
+        errorMessage,
         apiResponse.code,
         apiResponse
       );
@@ -526,6 +596,53 @@ export async function getChatList(
       error instanceof Error ? error.message : '获取对话列表失败'
     );
   }
+}
+
+// 账户管理相关接口类型定义
+export interface AccountListReq {
+  accType: number; // 账号类型：0=主账号，1=子账号，传0表示不筛选
+  exchange: string; // 交易所类型：BYBIT，传空字符串表示不筛选
+  search: string; // 搜索关键字，传空字符串表示不搜索
+  strategyType: string; // 策略类型，传空字符串表示不筛选
+}
+
+export interface AccountRes {
+  accType: number; // 账号类型：0=主账号，1=子账号
+  createTime: string; // 创建时间
+  equity: number; // 净值
+  exchange: string; // 交易所
+  id: number; // 本地账户ID
+  init: boolean; // 初始化状态
+  initEquity: number; // 初始净值
+  mainAccId: number; // 主账号ID，主账号该值为0
+  mainAccName: string; // 主账号名，主账号该值为空
+  mainAccUid: string; // 主账号UID，主账号该值为空
+  name: string; // 账户名
+  strategyType: string; // 策略类型
+  strategyTypeName: string; // 策略类型(名)
+  subAccCount: number; // 子账户数 (当前为主账户时展示)
+  uid: string; // 交易所账户ID
+  updateTime: string; // 更新时间
+}
+
+// 创建主账号请求参数
+export interface AccountCreateReq {
+  accType: number; // 账号类型：0=主账号，1=子账号
+  apiKey: string; // KEY
+  apiPassphrase: string; // 密码（可选）
+  apiSecret: string; // SECRET
+  exchange: string; // 交易所类型：BYBIT
+  mainAccId: number; // 主账号ID，主账号该值为-1
+  name: string; // 账户名
+  strategyType: string; // 策略类型（可选）
+}
+
+// Bybit创建子账户请求参数
+export interface BybitAccountInitReq {
+  mainAccId: number; // 主账号数据库ID
+  num: number; // 子账户数量
+  subBalance: number; // 子账户余额(整数)
+  subPrefix: string; // 子账户前缀(需4字符以上)
 }
 
 // 币安价格接口类型
@@ -584,6 +701,213 @@ export async function getBinancePrices(symbols: string[]): Promise<BinanceTicker
     }
     throw new ApiError(
       error instanceof Error ? error.message : '获取币安价格失败'
+    );
+  }
+}
+
+/**
+ * 获取账户列表
+ * @param token 用户token
+ * @param request 账户列表请求参数
+ * @returns 账户列表
+ */
+export async function getAccountList(
+  token: string,
+  request: AccountListReq
+): Promise<AccountRes[]> {
+  try {
+    console.log('获取账户列表 - Token:', token);
+    console.log('获取账户列表 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/account/list`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    console.log('账户列表响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || errorData.message || `获取账户列表失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
+      throw new ApiError(
+        errorMessage,
+        response.status,
+        errorData
+      );
+    }
+
+    const apiResponse: ApiResponse<AccountRes[]> = await response.json();
+    console.log('账户列表完整响应:', apiResponse);
+
+    // 检查业务状态码
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      // 构建详细的错误信息
+      let errorMessage = apiResponse.description || '获取账户列表失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
+      throw new ApiError(
+        errorMessage,
+        apiResponse.code,
+        apiResponse
+      );
+    }
+
+    // 如果 data 为 null，返回空数组
+    return apiResponse.data || [];
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 创建主账号
+ * @param token 用户token
+ * @param request 创建主账号请求参数
+ * @returns 创建结果
+ */
+export async function createMainAccount(
+  token: string,
+  request: AccountCreateReq
+): Promise<void> {
+  try {
+    console.log('创建主账号 - Token:', token);
+    console.log('创建主账号 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/account/main/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    console.log('创建主账号响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || errorData.message || `创建主账号失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
+      console.log('HTTP 错误响应:', errorData);
+      console.log('构建的错误信息:', errorMessage);
+      throw new ApiError(
+        errorMessage,
+        response.status,
+        errorData
+      );
+    }
+
+    const apiResponse: ApiResponse<any> = await response.json();
+    console.log('创建主账号完整响应:', apiResponse);
+
+    // 检查业务状态码
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      // 构建详细的错误信息
+      let errorMessage = apiResponse.description || '创建主账号失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
+      throw new ApiError(
+        errorMessage,
+        apiResponse.code,
+        apiResponse
+      );
+    }
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * Bybit创建子账户
+ * @param token 用户token
+ * @param request Bybit创建子账户请求参数
+ * @returns 创建的子账户数量
+ */
+export async function createBybitSubAccounts(
+  token: string,
+  request: BybitAccountInitReq
+): Promise<number> {
+  try {
+    console.log('Bybit创建子账户 - Token:', token);
+    console.log('Bybit创建子账户 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/account/bybit/sub/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    console.log('Bybit创建子账户响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || errorData.message || `创建子账户失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
+      console.log('HTTP 错误响应:', errorData);
+      console.log('构建的错误信息:', errorMessage);
+      throw new ApiError(
+        errorMessage,
+        response.status,
+        errorData
+      );
+    }
+
+    const apiResponse: ApiResponse<number> = await response.json();
+    console.log('Bybit创建子账户完整响应:', apiResponse);
+
+    // 检查业务状态码
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      // 构建详细的错误信息
+      let errorMessage = apiResponse.description || '创建子账户失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
+      throw new ApiError(
+        errorMessage,
+        apiResponse.code,
+        apiResponse
+      );
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
     );
   }
 }

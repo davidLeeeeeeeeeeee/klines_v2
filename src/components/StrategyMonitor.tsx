@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronRight, Play, X, RefreshCw, Loader2 } from 'lucide-react';
+import { ChevronRight, Play, X, RefreshCw, Loader2 } from 'lucide-react';
 import { getChatList, ChatResVO, PageRequest, ChatListReq } from '../services/api';
 import { getToken } from '../utils/storage';
 import { JsonViewer } from './JsonViewer';
@@ -287,20 +287,22 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
         </p>
       </div>
 
-      {/* Filters - All in One Box */}
-      <div className="mb-6">
+      {/* Filters - All in One Row */}
+      <div className="mb-6 flex items-center gap-8">
         {/* Strategy Selector */}
         <div className="relative" ref={strategyDropdownRef}>
           <button
             onClick={() => setShowStrategyDropdown(!showStrategyDropdown)}
-            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-left flex items-center justify-between hover:border-gray-400 transition-colors"
+            className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
           >
-            <span className="text-gray-900">{selectedStrategyName}</span>
-            <ChevronDown className="w-5 h-5 text-gray-400" />
+            <span>{selectedStrategy === 'all' ? '所有策略' : selectedStrategyName}</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+              <path d="M5 6L0 0h10L5 6z" />
+            </svg>
           </button>
 
           {showStrategyDropdown && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20">
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[180px]">
               {strategies.map((strategy) => (
                 <button
                   key={strategy.id}
@@ -310,7 +312,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
                     setCurrentPage(1); // 重置页码
                     // 触发新的API请求会在useEffect中自动执行
                   }}
-                  className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
                     selectedStrategy === strategy.id ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
                   }`}
                 >
@@ -320,10 +322,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Action Type Tabs with Symbol Filter */}
-      <div className="mb-6 flex items-center gap-8">
         {/* Symbol Filter */}
         <div className="relative" ref={symbolDropdownRef}>
           <button
@@ -543,18 +542,21 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
               <div className="text-sm text-gray-500 ml-4 whitespace-nowrap">{formatTime(message.timestamp)}</div>
             </div>
 
-            {/* Symbol and Action */}
+            {/* Symbol and Action with ID */}
             {tradeSignalArgs && (
               <div className="mb-3">
-                <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                  <span>{tradeSignalArgs.coin}</span>
-                  <span className={`px-2 py-0.5 rounded-2xl ${getActionColor(
-                    tradeSignalArgs.side === 'Buy' ? '开多' :
-                    tradeSignalArgs.side === 'Sell' ? '开空' : '观望'
-                  )}`}>
-                    {tradeSignalArgs.side === 'Buy' ? '开多' :
-                     tradeSignalArgs.side === 'Sell' ? '开空' : '观望'}
-                  </span>
+                <div className="flex items-center justify-between gap-1.5 text-sm text-gray-600">
+                  <div className="flex items-center gap-1.5">
+                    <span>{tradeSignalArgs.coin}</span>
+                    <span className={`px-2 py-0.5 rounded-2xl ${getActionColor(
+                      tradeSignalArgs.side === 'Buy' ? '开多' :
+                      tradeSignalArgs.side === 'Sell' ? '开空' : '观望'
+                    )}`}>
+                      {tradeSignalArgs.side === 'Buy' ? '开多' :
+                       tradeSignalArgs.side === 'Sell' ? '开空' : '观望'}
+                    </span>
+                  </div>
+                  <span className="text-gray-400 text-xs">ID: {message.id}</span>
                 </div>
               </div>
             )}
