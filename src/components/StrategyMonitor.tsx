@@ -76,6 +76,8 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
   const [expandedOutput, setExpandedOutput] = useState<{ [key: string]: boolean }>({});
   const [startTime, setStartTime] = useState(getDefaultStartTime());
   const [endTime, setEndTime] = useState(getDefaultEndTime());
+  // 追踪用户是否手动设置了时间范围
+  const [isCustomTimeRange, setIsCustomTimeRange] = useState(false);
 
   // Refs for click outside detection
   const strategyDropdownRef = useRef<HTMLDivElement>(null);
@@ -151,6 +153,13 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
 
   const handleRefresh = () => {
     setIsRefreshing(true);
+
+    // 如果用户没有手动设置时间范围，则更新为当前时间的最近1天
+    if (!isCustomTimeRange) {
+      setStartTime(getDefaultStartTime());
+      setEndTime(getDefaultEndTime());
+    }
+
     fetchChatList().finally(() => {
       setTimeout(() => {
         setIsRefreshing(false);
@@ -273,7 +282,9 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
             <RefreshCw className="w-5 h-5" />
           </button>
         </div>
-        <p className="text-sm text-gray-500">仅展示过去 1 天的AI交互信息</p>
+        <p className="text-sm text-gray-500">
+          {isCustomTimeRange ? '展示自定义时间范围的AI交互信息' : '自动展示最近 1 天的AI交互信息（每次刷新自动更新时间范围）'}
+        </p>
       </div>
 
       {/* Filters - All in One Box */}
@@ -423,7 +434,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
           onClick={() => setShowTimeRangeModal(true)}
           className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
         >
-          <span>{startTime || endTime ? '已设时间' : '时间'}</span>
+          <span>{isCustomTimeRange ? '自定义时间' : '最近1天'}</span>
           <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
             <path d="M5 6L0 0h10L5 6z" />
           </svg>
@@ -712,18 +723,34 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
             <div className="flex-1"></div>
 
             {/* Actions */}
-            <div className="flex items-center gap-3">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <button
+                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={() => setShowTimeRangeModal(false)}
+                >
+                  取消
+                </button>
+                <button
+                  className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  onClick={() => {
+                    setIsCustomTimeRange(true);
+                    setShowTimeRangeModal(false);
+                  }}
+                >
+                  确认
+                </button>
+              </div>
               <button
-                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                onClick={() => setShowTimeRangeModal(false)}
+                className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                onClick={() => {
+                  setIsCustomTimeRange(false);
+                  setStartTime(getDefaultStartTime());
+                  setEndTime(getDefaultEndTime());
+                  setShowTimeRangeModal(false);
+                }}
               >
-                取消
-              </button>
-              <button
-                className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                onClick={() => setShowTimeRangeModal(false)}
-              >
-                确认
+                重置为自动更新（最近1天）
               </button>
             </div>
           </div>
