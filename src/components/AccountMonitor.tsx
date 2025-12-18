@@ -5,11 +5,14 @@ import {
   getPositionChat,
   getClosedPositionList,
   getChatDetail,
+  closeAllPositions,
+  closeOnePosition,
   PositionResponse,
   ChatResponse,
   ClosePnlVO,
   PageRequest,
-  ClosePnlListReq
+  ClosePnlListReq,
+  ClosePositionReq
 } from '../services/api';
 import { getToken } from '../utils/storage';
 import { JsonViewer } from './JsonViewer';
@@ -318,11 +321,52 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   };
 
   // Function to confirm close position
-  const confirmClosePosition = () => {
-    // Handle closing position logic here
-    console.log('Closing position:', selectedPosition);
-    setShowCloseModal(false);
-    setSelectedPosition(null);
+  const confirmClosePosition = async () => {
+    if (!selectedPosition) return;
+
+    try {
+      const token = getToken();
+      if (!token) {
+        alert('未登录，请先登录');
+        return;
+      }
+
+      if (!confirm(`确定要平掉 ${selectedPosition.symbol} 的${selectedPosition.type === 'long' ? '多' : '空'}单持仓吗？`)) {
+        return;
+      }
+
+      // 从API数据中获取accountId
+      const apiPosition = positions.find(p =>
+        `${p.accountId}-${p.symbol}-${p.side}` === selectedPosition.id
+      );
+
+      if (!apiPosition) {
+        alert('找不到对应的持仓信息');
+        return;
+      }
+
+      const request: ClosePositionReq = {
+        accountId: apiPosition.accountId,
+        symbol: selectedPosition.symbol.replace('/', ''), // 移除斜杠，如 BTC/USDT -> BTCUSDT
+        closeSide: selectedPosition.type === 'long' ? 'Buy' : 'Sell',
+      };
+
+      console.log('单个平仓操作:', request);
+      const result = await closeOnePosition(token, request);
+
+      if (result) {
+        alert(`平仓成功！\n商品: ${selectedPosition.symbol}\n类型: ${selectedPosition.type === 'long' ? '多单' : '空单'}`);
+        setShowCloseModal(false);
+        setSelectedPosition(null);
+        // 刷新持仓列表
+        fetchPositions();
+      } else {
+        alert('平仓失败，请重试');
+      }
+    } catch (err: any) {
+      console.error('平仓操作失败:', err);
+      alert(`平仓操作失败: ${err.message || '未知错误'}`);
+    }
   };
 
   // Get action badge color
@@ -657,18 +701,18 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
                   <div>
                     <div className="text-sm text-gray-500 mb-1">入场价格</div>
-                    <div className="text-gray-900">${position.entryPrice.toLocaleString()}</div>
+                    <div className="text-gray-900">{position.entryPrice.toLocaleString()}</div>
                   </div>
 
                   <div>
                     <div className="text-sm text-gray-500 mb-1">止盈/止损</div>
                     <div className="flex items-center gap-2">
                       <span className="text-green-600">
-                        {position.takeProfit ? `$${position.takeProfit.toLocaleString()}` : '-'}
+                        {position.takeProfit ? `${position.takeProfit.toLocaleString()}` : '-'}
                       </span>
                       <span className="text-gray-400">/</span>
                       <span className="text-red-600">
-                        {position.stopLoss ? `$${position.stopLoss.toLocaleString()}` : '-'}
+                        {position.stopLoss ? `${position.stopLoss.toLocaleString()}` : '-'}
                       </span>
                     </div>
                   </div>
@@ -794,12 +838,12 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
                       <div>
                         <div className="text-sm text-gray-500 mb-1">入场价格</div>
-                        <div className="text-gray-900">${trade.avgEntryPrice.toLocaleString()}</div>
+                        <div className="text-gray-900">{trade.avgEntryPrice.toLocaleString()}</div>
                       </div>
 
                       <div>
                         <div className="text-sm text-gray-500 mb-1">出场价格</div>
-                        <div className="text-gray-900">${trade.avgExitPrice.toLocaleString()}</div>
+                        <div className="text-gray-900">{trade.avgExitPrice.toLocaleString()}</div>
                       </div>
 
                       <div>
@@ -946,20 +990,32 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">入场价格</span>
-                  <span className="text-sm text-gray-900 font-medium">${selectedPosition.entryPrice.toLocaleString()}</span>
+                  <span className="text-sm text-gray-900 font-medium">{selectedPosition.entryPrice.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">市场价格</span>
-                  <span className="text-sm text-gray-900 font-medium">${selectedPosition.currentPrice.toLocaleString()}</span>
+                  <span className="text-sm text-gray-900 font-medium">{selectedPosition.currentPrice.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">数量</span>
                   <span className="text-sm text-gray-900 font-medium">{selectedPosition.quantity}</span>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500">止盈价格</span>
+                  <span className="text-sm text-gray-900 font-medium">
+                    {selectedPosition.takeProfit ? `${selectedPosition.takeProfit.toLocaleString()}` : '未设置'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500">止损价格</span>
+                  <span className="text-sm text-gray-900 font-medium">
+                    {selectedPosition.stopLoss ? `${selectedPosition.stopLoss.toLocaleString()}` : '未设置'}
+                  </span>
+                </div>
                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                   <span className="text-sm text-gray-500">预计盈亏</span>
                   <span className={`text-sm font-semibold ${selectedPosition.unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {Math.abs(selectedPosition.unrealizedPnL).toFixed(2)} ({Math.abs(selectedPosition.unrealizedPnLPercent).toFixed(2)}%)
+                    {selectedPosition.unrealizedPnL >= 0 ? '+' : ''}{Math.abs(selectedPosition.unrealizedPnL).toFixed(2)} ({selectedPosition.unrealizedPnLPercent >= 0 ? '+' : ''}{Math.abs(selectedPosition.unrealizedPnLPercent).toFixed(2)}%)
                   </span>
                 </div>
               </div>
@@ -1092,11 +1148,11 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     {tradeSignalArgs && (
                       <div className="bg-gray-50 rounded-lg p-4 pb-8 border border-gray-200 mb-4 relative">
                         <div className="text-gray-900 text-sm space-y-1">
-                          <div>入场价格: <span className="font-semibold">${tradeSignalArgs.entryPrice}</span></div>
-                          <div>止盈: <span className="font-semibold text-green-600">${tradeSignalArgs.takeProfit}</span></div>
-                          <div>止损: <span className="font-semibold text-red-600">${tradeSignalArgs.stopLoss}</span></div>
+                          <div>入场价格: <span className="font-semibold">{tradeSignalArgs.entryPrice}</span></div>
+                          <div>止盈: <span className="font-semibold text-green-600">{tradeSignalArgs.takeProfit}</span></div>
+                          <div>止损: <span className="font-semibold text-red-600">{tradeSignalArgs.stopLoss}</span></div>
                           <div>信心度: <span className="font-semibold">{(tradeSignalArgs.confidence * 100).toFixed(0)}%</span></div>
-                          <div>风险金额: <span className="font-semibold">${tradeSignalArgs.riskUsd}</span></div>
+                          <div>风险金额: <span className="font-semibold">{tradeSignalArgs.riskUsd}</span></div>
                         </div>
                         {/* ID in bottom-right corner */}
                         {selectedAIChat.id && (
@@ -1274,29 +1330,57 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
               {/* Position Summary */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-sm text-gray-600">将要平仓的持仓数量</div>
-                  <div className="text-sm text-gray-600">浮动盈亏</div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="text-2xl text-gray-900">
-                    {currentPositions.filter(p => 
-                      p.symbol.replace('/', '') === batchCloseSymbol && (!batchCloseAction || p.type === batchCloseAction)
-                    ).length} 个仓位
+                <div className="grid grid-cols-2 gap-4">
+                  {/* 多单持仓 */}
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <div className="text-sm text-gray-600 mb-2">多单持仓数量</div>
+                    <div className="text-2xl text-green-600 font-semibold">
+                      {currentPositions.filter(p =>
+                        p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long'
+                      ).length} 个
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      浮动盈亏: <span className={
+                        currentPositions.filter(p =>
+                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long'
+                        ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }>
+                        {currentPositions.filter(p =>
+                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long'
+                        ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0 ? '+' : ''}
+                        {currentPositions.filter(p =>
+                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long'
+                        ).reduce((sum, p) => sum + p.unrealizedPnL, 0).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
-                  <div className={`text-2xl ${
-                    currentPositions.filter(p => 
-                      p.symbol.replace('/', '') === batchCloseSymbol && (!batchCloseAction || p.type === batchCloseAction)
-                    ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0 
-                      ? 'text-green-600' 
-                      : 'text-red-600'
-                  }`}>
-                    {currentPositions.filter(p => 
-                      p.symbol.replace('/', '') === batchCloseSymbol && (!batchCloseAction || p.type === batchCloseAction)
-                    ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0 ? '+' : ''}
-                    ${currentPositions.filter(p => 
-                      p.symbol.replace('/', '') === batchCloseSymbol && (!batchCloseAction || p.type === batchCloseAction)
-                    ).reduce((sum, p) => sum + p.unrealizedPnL, 0).toFixed(2)}
+
+                  {/* 空单持仓 */}
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <div className="text-sm text-gray-600 mb-2">空单持仓数量</div>
+                    <div className="text-2xl text-red-600 font-semibold">
+                      {currentPositions.filter(p =>
+                        p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short'
+                      ).length} 个
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      浮动盈亏: <span className={
+                        currentPositions.filter(p =>
+                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short'
+                        ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }>
+                        {currentPositions.filter(p =>
+                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short'
+                        ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0 ? '+' : ''}
+                        {currentPositions.filter(p =>
+                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short'
+                        ).reduce((sum, p) => sum + p.unrealizedPnL, 0).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1305,28 +1389,104 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             {/* Action Buttons */}
             <div className="flex items-center gap-3 mb-3">
               <button
-                onClick={() => {
-                  setBatchCloseAction('long');
-                  console.log('平多操作:', { symbol: batchCloseSymbol, action: 'long' });
-                  alert(`已执行平多操作\n商品: ${batchCloseSymbol}`);
-                  setShowBatchCloseModal(false);
-                  setBatchCloseSymbol('BTCUSDT');
-                  setBatchCloseAction(null);
+                onClick={async () => {
+                  try {
+                    const token = getToken();
+                    if (!token) {
+                      alert('未登录，请先登录');
+                      return;
+                    }
+
+                    const longPositions = currentPositions.filter(p =>
+                      p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long'
+                    );
+
+                    if (longPositions.length === 0) {
+                      alert(`没有${batchCloseSymbol}的多单持仓`);
+                      return;
+                    }
+
+                    if (!confirm(`确定要平掉 ${batchCloseSymbol} 的 ${longPositions.length} 个多单持仓吗？`)) {
+                      return;
+                    }
+
+                    const request: ClosePositionReq = {
+                      symbol: batchCloseSymbol,
+                      closeSide: 'Buy', // 多单对应Buy
+                    };
+
+                    console.log('平多操作:', request);
+                    const result = await closeAllPositions(token, request);
+
+                    if (result) {
+                      alert(`平多操作成功！\n商品: ${batchCloseSymbol}\n数量: ${longPositions.length} 个`);
+                      setShowBatchCloseModal(false);
+                      setBatchCloseSymbol('BTCUSDT');
+                      // 刷新持仓列表
+                      fetchPositions();
+                    } else {
+                      alert('平多操作失败，请重试');
+                    }
+                  } catch (err: any) {
+                    console.error('平多操作失败:', err);
+                    alert(`平多操作失败: ${err.message || '未知错误'}`);
+                  }
                 }}
-                className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={currentPositions.filter(p =>
+                  p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long'
+                ).length === 0}
               >
                 平多
               </button>
               <button
-                onClick={() => {
-                  setBatchCloseAction('short');
-                  console.log('平空操作:', { symbol: batchCloseSymbol, action: 'short' });
-                  alert(`已执行平空操作\n商品: ${batchCloseSymbol}`);
-                  setShowBatchCloseModal(false);
-                  setBatchCloseSymbol('BTCUSDT');
-                  setBatchCloseAction(null);
+                onClick={async () => {
+                  try {
+                    const token = getToken();
+                    if (!token) {
+                      alert('未登录，请先登录');
+                      return;
+                    }
+
+                    const shortPositions = currentPositions.filter(p =>
+                      p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short'
+                    );
+
+                    if (shortPositions.length === 0) {
+                      alert(`没有${batchCloseSymbol}的空单持仓`);
+                      return;
+                    }
+
+                    if (!confirm(`确定要平掉 ${batchCloseSymbol} 的 ${shortPositions.length} 个空单持仓吗？`)) {
+                      return;
+                    }
+
+                    const request: ClosePositionReq = {
+                      symbol: batchCloseSymbol,
+                      closeSide: 'Sell', // 空单对应Sell
+                    };
+
+                    console.log('平空操作:', request);
+                    const result = await closeAllPositions(token, request);
+
+                    if (result) {
+                      alert(`平空操作成功！\n商品: ${batchCloseSymbol}\n数量: ${shortPositions.length} 个`);
+                      setShowBatchCloseModal(false);
+                      setBatchCloseSymbol('BTCUSDT');
+                      // 刷新持仓列表
+                      fetchPositions();
+                    } else {
+                      alert('平空操作失败，请重试');
+                    }
+                  } catch (err: any) {
+                    console.error('平空操作失败:', err);
+                    alert(`平空操作失败: ${err.message || '未知错误'}`);
+                  }
                 }}
-                className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={currentPositions.filter(p =>
+                  p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short'
+                ).length === 0}
               >
                 平空
               </button>

@@ -601,11 +601,11 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
               <div>
                 <div className="text-sm text-gray-500 mb-1">当前净值</div>
-                <div className="text-green-600">${account.netValue}</div>
+                <div className="text-green-600">{account.netValue}</div>
               </div>
               <div>
                 <div className="text-sm text-gray-500 mb-1">初始净值</div>
-                <div className="text-gray-900">${account.initialNetValue}</div>
+                <div className="text-gray-900">{account.initialNetValue}</div>
               </div>
               <div>
                 <div className="text-sm text-gray-500 mb-1">创建时间</div>

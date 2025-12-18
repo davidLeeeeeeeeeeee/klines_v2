@@ -224,6 +224,13 @@ export interface ClosePnlListReq {
   symbol?: string;
 }
 
+// 一键平仓请求参数
+export interface ClosePositionReq {
+  accountId?: number;
+  closeSide?: string; // 'Buy' 或 'Sell'，不传表示全部平仓
+  symbol?: string;
+}
+
 export interface PageRequest<T> {
   page: number;
   pageSize: number;
@@ -645,21 +652,37 @@ export interface BybitAccountInitReq {
   subPrefix: string; // 子账户前缀(需4字符以上)
 }
 
-// 币安价格接口类型
-export interface BinanceTickerPrice {
+// Bybit 价格接口类型
+export interface BybitTickerItem {
+  symbol: string;
+  lastPrice: string;
+  price24hPcnt: string;
+}
+
+export interface BybitTickerResponse {
+  retCode: number;
+  retMsg: string;
+  result: {
+    category: string;
+    list: BybitTickerItem[];
+  };
+  time: number;
+}
+
+export interface CryptoPrice {
   symbol: string;
   price: string;
+  priceChangePercent: string;
 }
 
 /**
- * 从币安获取单个交易对的实时价格
- * @param symbol 交易对，例如 'BTCUSDT'
- * @returns 价格数据
+ * 从 Bybit 获取所有交易对的实时价格
+ * @returns 价格数据数组
  */
-export async function getBinancePrice(symbol: string): Promise<BinanceTickerPrice> {
+export async function getBybitPrices(): Promise<BybitTickerResponse> {
   try {
     const response = await fetch(
-      `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`,
+      'https://api.bybit.com/v5/market/tickers?category=linear',
       {
         method: 'GET',
       }
@@ -667,7 +690,7 @@ export async function getBinancePrice(symbol: string): Promise<BinanceTickerPric
 
     if (!response.ok) {
       throw new ApiError(
-        `获取币安价格失败: ${response.status} ${response.statusText}`,
+        `获取 Bybit 价格失败: ${response.status} ${response.statusText}`,
         response.status
       );
     }
@@ -679,28 +702,40 @@ export async function getBinancePrice(symbol: string): Promise<BinanceTickerPric
       throw error;
     }
     throw new ApiError(
-      error instanceof Error ? error.message : '获取币安价格失败'
+      error instanceof Error ? error.message : '获取 Bybit 价格失败'
     );
   }
 }
 
 /**
- * 从币安获取多个交易对的实时价格
- * @param symbols 交易对数组，例如 ['BTCUSDT', 'ETHUSDT']
+ * 从 Bybit 获取指定交易对的实时价格
+ * @param symbols 交易对数组，例如 ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
  * @returns 价格数据数组
  */
-export async function getBinancePrices(symbols: string[]): Promise<BinanceTickerPrice[]> {
+export async function getCryptoPrices(symbols: string[]): Promise<CryptoPrice[]> {
   try {
-    // 并发请求所有交易对的价格
-    const promises = symbols.map(symbol => getBinancePrice(symbol));
-    const results = await Promise.all(promises);
-    return results;
+    const allPrices = await getBybitPrices();
+
+    if (allPrices.retCode !== 0) {
+      throw new ApiError(`Bybit API 错误: ${allPrices.retMsg}`);
+    }
+
+    // 从所有价格中筛选出需要的交易对
+    const filteredPrices = allPrices.result.list
+      .filter(item => symbols.includes(item.symbol))
+      .map(item => ({
+        symbol: item.symbol,
+        price: item.lastPrice,
+        priceChangePercent: item.price24hPcnt,
+      }));
+
+    return filteredPrices;
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
     }
     throw new ApiError(
-      error instanceof Error ? error.message : '获取币安价格失败'
+      error instanceof Error ? error.message : '获取加密货币价格失败'
     );
   }
 }
@@ -899,6 +934,465 @@ export async function createBybitSubAccounts(
         apiResponse.code,
         apiResponse
       );
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 一键平仓(全部)
+ * @param token 用户token
+ * @param request 一键平仓请求参数
+ * @returns 是否成功
+ */
+export async function closeAllPositions(
+  token: string,
+  request: ClosePositionReq
+): Promise<boolean> {
+  try {
+    console.log('一键平仓 - Token:', token);
+    console.log('一键平仓 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/trade/position/close/all`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    console.log('一键平仓响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || errorData.message || `一键平仓失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
+      console.log('HTTP 错误响应:', errorData);
+      console.log('构建的错误信息:', errorMessage);
+      throw new ApiError(
+        errorMessage,
+        response.status,
+        errorData
+      );
+    }
+
+    const apiResponse: ApiResponse<boolean> = await response.json();
+    console.log('一键平仓完整响应:', apiResponse);
+
+    // 检查业务状态码
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      // 构建详细的错误信息
+      let errorMessage = apiResponse.description || '一键平仓失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
+      throw new ApiError(
+        errorMessage,
+        apiResponse.code,
+        apiResponse
+      );
+    }
+
+    return apiResponse.data === true;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 一键平仓(单个)
+ * @param token 用户token
+ * @param request 一键平仓请求参数
+ * @returns 是否成功
+ */
+export async function closeOnePosition(
+  token: string,
+  request: ClosePositionReq
+): Promise<boolean> {
+  try {
+    console.log('单个平仓 - Token:', token);
+    console.log('单个平仓 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/trade/position/close/one`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    console.log('单个平仓响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || errorData.message || `单个平仓失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
+      console.log('HTTP 错误响应:', errorData);
+      console.log('构建的错误信息:', errorMessage);
+      throw new ApiError(
+        errorMessage,
+        response.status,
+        errorData
+      );
+    }
+
+    const apiResponse: ApiResponse<boolean> = await response.json();
+    console.log('单个平仓完整响应:', apiResponse);
+
+    // 检查业务状态码
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      // 构建详细的错误信息
+      let errorMessage = apiResponse.description || '单个平仓失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
+      throw new ApiError(
+        errorMessage,
+        apiResponse.code,
+        apiResponse
+      );
+    }
+
+    return apiResponse.data === true;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+// ==================== 仪表盘相关接口 ====================
+
+// 通用时间请求体
+export interface CommonTimeReq {
+  startTime?: string; // ISO 8601 格式的日期时间字符串
+  endTime?: string;   // ISO 8601 格式的日期时间字符串
+}
+
+// 顶部总览响应
+export interface PanelOverviewRes {
+  equity: number;           // 总净值
+  initEquity: number;       // 初始净值
+  totalClosePnl: number;    // 总平仓盈亏
+  unrealisedPnl: number;    // 持仓浮动盈亏
+  userId: number;           // 用户ID
+}
+
+// 交易统计响应
+export interface PanelCloseStatistics {
+  lossAmount: number;       // 亏损金额
+  lossCount: number;        // 亏损交易数
+  maxDrawdownRate: number;  // 最大回撤(比例)
+  positionCount: number;    // 仓位总数
+  totalFee: number;         // 总手续费
+  totalTradeAmount: number; // 总交易金额
+  userId: number;           // 用户ID
+  winAmount: number;        // 盈利金额
+  winCount: number;         // 盈利交易数
+}
+
+// 策略排名响应
+export interface PanelStrategyRankingRes {
+  strategyType: string;     // 策略类型
+  totalClosePnl: number;    // 总平仓盈亏
+}
+
+// 交易对偏好响应
+export interface PanelSymbolLikeRes {
+  symbol: string;           // 交易对
+  tradeCount: number;       // 交易次数
+}
+
+// 交易对排名响应
+export interface PanelSymbolRankingRes {
+  symbol: string;           // 交易对
+  totalClosePnl: number;    // 总平仓盈亏
+}
+
+/**
+ * 获取仪表盘顶部总览数据
+ * @param token 用户token
+ * @returns 总览数据
+ */
+export async function getPanelOverview(token: string): Promise<PanelOverviewRes> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/overview`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let errorMessage = errorData.description || errorData.message || `获取总览数据失败: ${response.statusText}`;
+      throw new ApiError(errorMessage, response.status, errorData);
+    }
+
+    const apiResponse: ApiResponse<PanelOverviewRes> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取总览数据失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 获取交易统计数据
+ * @param token 用户token
+ * @returns 交易统计数据
+ */
+export async function getPanelCloseStatistics(token: string): Promise<PanelCloseStatistics> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/closeStatistics`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let errorMessage = errorData.description || errorData.message || `获取交易统计失败: ${response.statusText}`;
+      throw new ApiError(errorMessage, response.status, errorData);
+    }
+
+    const apiResponse: ApiResponse<PanelCloseStatistics> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取交易统计失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 获取策略排名数据
+ * @param token 用户token
+ * @param timeReq 时间范围请求参数
+ * @returns 策略排名数据数组
+ */
+export async function getPanelStrategyRanking(
+  token: string,
+  timeReq?: CommonTimeReq
+): Promise<PanelStrategyRankingRes[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/strategy/ranking`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(timeReq || {}),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let errorMessage = errorData.description || errorData.message || `获取策略排名失败: ${response.statusText}`;
+      throw new ApiError(errorMessage, response.status, errorData);
+    }
+
+    const apiResponse: ApiResponse<PanelStrategyRankingRes[]> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取策略排名失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 获取交易对偏好数据
+ * @param token 用户token
+ * @returns 交易对偏好数据数组
+ */
+export async function getPanelSymbolLike(token: string): Promise<PanelSymbolLikeRes[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/symbol/like`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let errorMessage = errorData.description || errorData.message || `获取交易对偏好失败: ${response.statusText}`;
+      throw new ApiError(errorMessage, response.status, errorData);
+    }
+
+    const apiResponse: ApiResponse<PanelSymbolLikeRes[]> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取交易对偏好失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 获取交易对排名数据
+ * @param token 用户token
+ * @param timeReq 时间范围请求参数
+ * @returns 交易对排名数据数组
+ */
+export async function getPanelSymbolRanking(
+  token: string,
+  timeReq?: CommonTimeReq
+): Promise<PanelSymbolRankingRes[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/symbol/ranking`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(timeReq || {}),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let errorMessage = errorData.description || errorData.message || `获取交易对排名失败: ${response.statusText}`;
+      throw new ApiError(errorMessage, response.status, errorData);
+    }
+
+    const apiResponse: ApiResponse<PanelSymbolRankingRes[]> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取交易对排名失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+// ==================== 收益率曲线图 API ====================
+
+/**
+ * 历史收益率曲线图响应
+ */
+export interface HistoryLine {
+  createTime: string;
+  id: number;
+  lineX: string[];  // X轴数据（时间）
+  lineY: number[];  // Y轴数据（收益率）
+  updateTime: string;
+}
+
+/**
+ * 获取历史收益率曲线图数据
+ * @param token 认证令牌
+ * @param startTime 开始时间 (格式: YYYY-MM-DD HH:mm:ss)
+ * @param endTime 结束时间 (格式: YYYY-MM-DD HH:mm:ss)
+ * @returns 历史收益率曲线图数据
+ */
+export async function getPanelHistoryEquityLine(
+  token: string,
+  startTime: string,
+  endTime: string
+): Promise<HistoryLine> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/history/equity/line`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      },
+      body: JSON.stringify({
+        startTime,
+        endTime
+      })
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<HistoryLine> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取历史收益率曲线图失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
     }
 
     return apiResponse.data;

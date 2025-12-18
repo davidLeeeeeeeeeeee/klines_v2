@@ -21,7 +21,7 @@ import { InitAccountPage } from './InitAccountPage';
 import { RiskManagement } from './RiskManagement';
 import { FundTransfer } from './FundTransfer';
 import type { TradingAccount } from './TradingAccounts';
-import { getBinancePrices } from '../services/api';
+import { getCryptoPrices } from '../services/api';
 
 interface MainLayoutProps {
   onLogout: () => void;
@@ -133,21 +133,23 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
   // Crypto prices state
   const [btcPrice, setBtcPrice] = useState<number | null>(null);
   const [ethPrice, setEthPrice] = useState<number | null>(null);
-  const [priceChangePercent, setPriceChangePercent] = useState<{ btc: number; eth: number }>({ btc: 0, eth: 0 });
+  const [solPrice, setSolPrice] = useState<number | null>(null);
+  const [priceChangePercent, setPriceChangePercent] = useState<{ btc: number; eth: number; sol: number }>({ btc: 0, eth: 0, sol: 0 });
 
   // User dropdown ref for click outside detection
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch crypto prices from Binance
+  // Fetch crypto prices from Bybit
   useEffect(() => {
     const fetchPrices = async () => {
       try {
-        console.log('正在获取币安价格...');
-        const prices = await getBinancePrices(['BTCUSDT', 'ETHUSDT']);
+        console.log('正在获取 Bybit 价格...');
+        const prices = await getCryptoPrices(['BTCUSDT', 'ETHUSDT', 'SOLUSDT']);
         console.log('获取到的价格:', prices);
 
         const btc = prices.find(p => p.symbol === 'BTCUSDT');
         const eth = prices.find(p => p.symbol === 'ETHUSDT');
+        const sol = prices.find(p => p.symbol === 'SOLUSDT');
 
         if (btc) {
           const newBtcPrice = parseFloat(btc.price);
@@ -170,11 +172,23 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
             return newEthPrice;
           });
         }
+
+        if (sol) {
+          const newSolPrice = parseFloat(sol.price);
+          setSolPrice(prevPrice => {
+            if (prevPrice !== null) {
+              const change = ((newSolPrice - prevPrice) / prevPrice) * 100;
+              setPriceChangePercent(prev => ({ ...prev, sol: change }));
+            }
+            return newSolPrice;
+          });
+        }
       } catch (error) {
-        console.error('获取币安价格失败，详细错误:', error);
-        // 如果是CORS错误，使用备用数据
-        setBtcPrice(prev => prev === null ? 43250.00 : prev);
-        setEthPrice(prev => prev === null ? 2280.50 : prev);
+        console.error('获取 Bybit 价格失败，详细错误:', error);
+        // 如果获取失败，使用备用数据
+        setBtcPrice(prev => prev === null ? 86000.00 : prev);
+        setEthPrice(prev => prev === null ? 2900.00 : prev);
+        setSolPrice(prev => prev === null ? 126.00 : prev);
       }
     };
 
@@ -721,7 +735,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
               <span className="text-gray-600 text-sm font-semibold">BTC</span>
               {btcPrice !== null ? (
                 <span className={priceChangePercent.btc >= 0 ? 'text-green-600' : 'text-red-600'}>
-                  ${btcPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {btcPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               ) : (
                 <span className="text-gray-400">加载中...</span>
@@ -733,7 +747,19 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
               <span className="text-gray-600 text-sm font-semibold">ETH</span>
               {ethPrice !== null ? (
                 <span className={priceChangePercent.eth >= 0 ? 'text-green-600' : 'text-red-600'}>
-                  ${ethPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {ethPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              ) : (
+                <span className="text-gray-400">加载中...</span>
+              )}
+            </div>
+
+            {/* SOL Price */}
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600 text-sm font-semibold">SOL</span>
+              {solPrice !== null ? (
+                <span className={priceChangePercent.sol >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {solPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               ) : (
                 <span className="text-gray-400">加载中...</span>
