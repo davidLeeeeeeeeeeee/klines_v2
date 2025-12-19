@@ -1,7 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { ChevronLeft, TrendingUp, TrendingDown, Activity, Users, Check, BarChart3, Target, Clock, Percent, ChevronDown } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie } from 'recharts';
-import { useClickOutside } from '../hooks/useClickOutside';
 
 interface StrategyDetailProps {
   strategyId: string | null;
@@ -17,21 +16,6 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
   const [showTimeRangeDropdown, setShowTimeRangeDropdown] = useState(false);
   const [symbolTimeRange, setSymbolTimeRange] = useState<'7' | '30' | '90' | '180'>('90');
   const [showSymbolTimeRangeDropdown, setShowSymbolTimeRangeDropdown] = useState(false);
-
-  // Refs for click outside detection
-  const timeRangeDropdownRef = useRef<HTMLDivElement>(null);
-  const symbolTimeRangeDropdownRef = useRef<HTMLDivElement>(null);
-  const followModalRef = useRef<HTMLDivElement>(null);
-
-  // Click outside handlers
-  useClickOutside(timeRangeDropdownRef, () => setShowTimeRangeDropdown(false));
-  useClickOutside(symbolTimeRangeDropdownRef, () => setShowSymbolTimeRangeDropdown(false));
-  useClickOutside(followModalRef, () => {
-    if (showFollowModal) {
-      setShowFollowModal(false);
-      setSelectedAccount('');
-    }
-  });
 
   // Mock data - 实际应用中根据 strategyId 从 API 获取
   const strategy = {
@@ -72,18 +56,18 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
 
   // Mock weekly performance data for bar chart
   const weeklyData = [
-    { week: '12 周', dateRange: '2024/11/12-11/19', rateChange: 4.2, amountChange: 6200 },
-    { week: '11 周', dateRange: '2024/11/05-11/12', rateChange: 8.5, amountChange: 12500 },
-    { week: '10 周', dateRange: '2024/10/29-11/05', rateChange: -2.1, amountChange: -3100 },
-    { week: '9 周', dateRange: '2024/10/22-10/29', rateChange: 5.2, amountChange: 8200 },
-    { week: '8 周', dateRange: '2024/10/15-10/22', rateChange: 3.8, amountChange: 5800 },
-    { week: '7 周', dateRange: '2024/10/08-10/15', rateChange: -3.5, amountChange: -5600 },
-    { week: '6 周', dateRange: '2024/10/01-10/08', rateChange: 7.6, amountChange: 11200 },
-    { week: '5 周', dateRange: '2024/09/24-10/01', rateChange: 6.8, amountChange: 9800 },
-    { week: '4 周', dateRange: '2024/09/17-09/24', rateChange: -4.3, amountChange: -6400 },
-    { week: '3 周', dateRange: '2024/09/10-09/17', rateChange: 12.3, amountChange: 18600 },
-    { week: '2 周', dateRange: '2024/09/03-09/10', rateChange: 9.1, amountChange: 13500 },
-    { week: '1 周', dateRange: '2024/08/27-09/03', rateChange: -15.2, amountChange: -22400 }
+    { date: '12/03', displayDate: '12/03', week: '12 周', dateRange: '2024/11/12-11/19', rateChange: 4.2, amountChange: 6200 },
+    { date: '12/02', displayDate: '12/02', week: '11 周', dateRange: '2024/11/05-11/12', rateChange: 8.5, amountChange: 12500 },
+    { date: '12/01', displayDate: '12/01', week: '10 周', dateRange: '2024/10/29-11/05', rateChange: -2.1, amountChange: -3100 },
+    { date: '11/30', displayDate: '11/30', week: '9 周', dateRange: '2024/10/22-10/29', rateChange: 5.2, amountChange: 8200 },
+    { date: '11/29', displayDate: '11/29', week: '8 周', dateRange: '2024/10/15-10/22', rateChange: 3.8, amountChange: 5800 },
+    { date: '11/28', displayDate: '11/28', week: '7 周', dateRange: '2024/10/08-10/15', rateChange: -3.5, amountChange: -5600 },
+    { date: '11/27', displayDate: '11/27', week: '6 周', dateRange: '2024/10/01-10/08', rateChange: 7.6, amountChange: 11200 },
+    { date: '11/26', displayDate: '11/26', week: '5 周', dateRange: '2024/09/24-10/01', rateChange: 6.8, amountChange: 9800 },
+    { date: '11/25', displayDate: '11/25', week: '4 周', dateRange: '2024/09/17-09/24', rateChange: -4.3, amountChange: -6400 },
+    { date: '11/24', displayDate: '11/24', week: '3 周', dateRange: '2024/09/10-09/17', rateChange: 12.3, amountChange: 18600 },
+    { date: '11/23', displayDate: '11/23', week: '2 周', dateRange: '2024/09/03-09/10', rateChange: 9.1, amountChange: 13500 },
+    { date: '11/22', displayDate: '11/22', week: '1 周', dateRange: '2024/08/27-09/03', rateChange: -15.2, amountChange: -22400 }
   ];
 
   // Filter data based on selected time range
@@ -198,22 +182,26 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
   const CustomWeeklyTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      const value = weeklyChartType === 'rate' ? data.rateChange : data.amountChange;
-      const isPositive = value >= 0;
+      const rateValue = data.rateChange;
+      const amountValue = data.amountChange;
+      const isRatePositive = rateValue >= 0;
+      const isAmountPositive = amountValue >= 0;
       
       return (
         <div className="bg-white border border-gray-200 rounded-lg p-2.5 shadow-lg">
-          <div className="text-xs text-gray-900 mb-1">{data.dateRange}</div>
-          <div className="text-xs">
-            <span className="text-gray-900">
-              {weeklyChartType === 'rate' ? '周收益率' : '周收益额'}:
-            </span>
+          <div className="text-xs text-gray-900 mb-1">{data.displayDate}</div>
+          <div className="text-xs mb-0.5">
+            <span className="text-gray-900">收益率:</span>
             {' '}
-            <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
-              {weeklyChartType === 'rate' 
-                ? `${isPositive ? '+' : ''}${value.toFixed(2)}%`
-                : `${isPositive ? '+' : ''}$${Math.abs(value).toLocaleString()}`
-              }
+            <span className={isRatePositive ? 'text-green-600' : 'text-red-600'}>
+              {isRatePositive ? '+' : ''}{rateValue.toFixed(2)}%
+            </span>
+          </div>
+          <div className="text-xs">
+            <span className="text-gray-900">收益额:</span>
+            {' '}
+            <span className={isAmountPositive ? 'text-green-600' : 'text-red-600'}>
+              {isAmountPositive ? '+' : ''}${Math.abs(amountValue).toLocaleString()}
             </span>
           </div>
         </div>
@@ -223,10 +211,10 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
   };
 
   // Custom Tooltip for Cumulative Chart
-  const CustomCumulativeTooltip = ({ active, payload }: any) => {
+  const CustomNetValueTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      const value = cumulativeChartType === 'rate' ? data.rate : data.amount;
+      const value = data.amount;
       const isPositive = value >= 0;
       
       return (
@@ -234,14 +222,11 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
           <div className="text-xs text-gray-900 mb-1">{data.date}</div>
           <div className="text-xs">
             <span className="text-gray-900">
-              {cumulativeChartType === 'rate' ? '收益率' : '收益额'}:
+              净值:
             </span>
             {' '}
             <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
-              {cumulativeChartType === 'rate' 
-                ? `${isPositive ? '+' : ''}${value.toFixed(2)}%`
-                : `${isPositive ? '+' : ''}$${Math.abs(value).toLocaleString()}`
-              }
+              {isPositive ? '+' : ''}$${Math.abs(value).toLocaleString()}
             </span>
           </div>
         </div>
@@ -308,9 +293,9 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
 
         {/* Weekly Performance Bar Chart */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {weeklyChartType === 'rate' ? '收益率周表现' : '收益额周表现'}
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-lg text-gray-900 font-semibold">
+              每日盈亏(近2周)
             </h2>
             <div className="flex items-center gap-2">
               <button
@@ -336,188 +321,183 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
             </div>
           </div>
 
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-              <XAxis 
-                dataKey="week" 
-                stroke="#9ca3af" 
-                tick={{ fill: '#6b7280', fontSize: 12 }}
-                axisLine={false}
-                interval={0}
-                tickFormatter={(value) => {
-                  // Only show odd weeks
-                  const weekNum = parseInt(value.split(' ')[0]);
-                  return weekNum % 2 === 1 ? value : '';
-                }}
-              />
-              <YAxis 
-                stroke="#9ca3af" 
-                tick={{ fill: '#6b7280', fontSize: 12 }}
-                axisLine={false}
-                tickFormatter={(value) => 
-                  weeklyChartType === 'rate' ? `${value}%` : `$${Math.abs(value / 1000).toFixed(0)}k`
-                }
-                width={60}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#fff', 
-                  border: '1px solid #e5e7eb', 
-                  borderRadius: '8px',
-                  padding: '8px 12px'
-                }}
-                formatter={(value: number) => 
-                  weeklyChartType === 'rate' 
-                    ? `${value > 0 ? '+' : ''}${value.toFixed(2)}%` 
-                    : `${value > 0 ? '+' : ''}$${Math.abs(value).toLocaleString()}`
-                }
-                cursor={false}
-                content={<CustomWeeklyTooltip />}
-              />
-              <Bar 
-                dataKey={weeklyChartType === 'rate' ? 'rateChange' : 'amountChange'}
-                radius={[0, 0, 0, 0]}
-                maxBarSize={40}
-              >
-                {weeklyData.map((entry, index) => {
-                  const value = weeklyChartType === 'rate' ? entry.rateChange : entry.amountChange;
-                  return (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={value >= 0 ? '#10b981' : '#ef4444'}
-                    />
-                  );
-                })}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <div style={{ marginLeft: '-20px' }}>
+            <ResponsiveContainer width="100%" height={380}>
+              <BarChart data={weeklyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#9ca3af" 
+                  tick={{ fill: '#6b7280', fontSize: 12 }}
+                  axisLine={false}
+                  interval={0}
+                />
+                <YAxis 
+                  stroke="#9ca3af" 
+                  tick={{ fill: '#6b7280', fontSize: 12 }}
+                  axisLine={false}
+                  tickFormatter={(value) => 
+                    weeklyChartType === 'rate' ? `${value}%` : `$${Math.abs(value / 1000).toFixed(0)}k`
+                  }
+                  width={60}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#fff', 
+                    border: '1px solid #e5e7eb', 
+                    borderRadius: '8px',
+                    padding: '8px 12px'
+                  }}
+                  formatter={(value: number) => 
+                    weeklyChartType === 'rate' 
+                      ? `${value > 0 ? '+' : ''}${value.toFixed(2)}%` 
+                      : `${value > 0 ? '+' : ''}$${Math.abs(value).toLocaleString()}`
+                  }
+                  cursor={false}
+                  content={<CustomWeeklyTooltip />}
+                />
+                <Bar 
+                  dataKey={weeklyChartType === 'rate' ? 'rateChange' : 'amountChange'}
+                  radius={[0, 0, 0, 0]}
+                  maxBarSize={40}
+                >
+                  {weeklyData.map((entry, index) => {
+                    const value = weeklyChartType === 'rate' ? entry.rateChange : entry.amountChange;
+                    return (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={value >= 0 ? '#10b981' : '#ef4444'}
+                      />
+                    );
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Cumulative Returns Chart */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {cumulativeChartType === 'rate' ? '收益率' : '收益额'}
+            <h2 className="text-lg text-gray-900 font-semibold">
+              净值曲线
             </h2>
-            <div className="flex items-center gap-2">
+            <div className="relative">
               <button
-                onClick={() => setCumulativeChartType('rate')}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  cumulativeChartType === 'rate'
-                    ? 'bg-gray-100 text-gray-700'
-                    : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                收益率
-              </button>
-              <button
-                onClick={() => setCumulativeChartType('amount')}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  cumulativeChartType === 'amount'
-                    ? 'bg-gray-100 text-gray-700'
-                    : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                收益额
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <div className="text-green-600 mb-1">
-                {cumulativeChartType === 'rate' ? (
-                  <span className="text-3xl font-semibold">+{currentRate.toFixed(2)}%</span>
-                ) : (
-                  <span className="text-3xl font-semibold">+${currentAmount.toLocaleString()}</span>
-                )}
-              </div>
-            </div>
-            <div className="relative" ref={timeRangeDropdownRef}>
-              <button
+                className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 transition-colors"
                 onClick={() => setShowTimeRangeDropdown(!showTimeRangeDropdown)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
               >
-                近 {timeRange} 日
-                <ChevronDown className="w-4 h-4" />
+                近 {timeRange === '180' ? '半年' : `${timeRange} 日`}
+                <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-600">
+                  <path d="M5 6L0 0h10L5 6z" />
+                </svg>
               </button>
               {showTimeRangeDropdown && (
-                <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                <div className="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[100px] z-10">
                   <button
-                    onClick={() => { setTimeRange('7'); setShowTimeRangeDropdown(false); }}
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                      timeRange === '7' ? 'bg-gray-100' : ''
+                    }`}
+                    onClick={() => {
+                      setTimeRange('7');
+                      setShowTimeRangeDropdown(false);
+                    }}
                   >
                     近 7 日
                   </button>
                   <button
-                    onClick={() => { setTimeRange('30'); setShowTimeRangeDropdown(false); }}
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                      timeRange === '30' ? 'bg-gray-100' : ''
+                    }`}
+                    onClick={() => {
+                      setTimeRange('30');
+                      setShowTimeRangeDropdown(false);
+                    }}
                   >
                     近 30 日
                   </button>
                   <button
-                    onClick={() => { setTimeRange('90'); setShowTimeRangeDropdown(false); }}
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                      timeRange === '90' ? 'bg-gray-100' : ''
+                    }`}
+                    onClick={() => {
+                      setTimeRange('90');
+                      setShowTimeRangeDropdown(false);
+                    }}
                   >
                     近 90 日
                   </button>
                   <button
-                    onClick={() => { setTimeRange('180'); setShowTimeRangeDropdown(false); }}
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                      timeRange === '180' ? 'bg-gray-100' : ''
+                    }`}
+                    onClick={() => {
+                      setTimeRange('180');
+                      setShowTimeRangeDropdown(false);
+                    }}
                   >
-                    近 180 日
+                    近半年
                   </button>
                 </div>
               )}
             </div>
           </div>
 
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={performanceData}>
-              <defs>
-                <linearGradient id="colorGreenGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-              <XAxis 
-                dataKey="date" 
-                stroke="#9ca3af" 
-                tick={{ fill: '#6b7280', fontSize: 12 }}
-                axisLine={false}
-              />
-              <YAxis 
-                stroke="#9ca3af" 
-                tick={{ fill: '#6b7280', fontSize: 12 }}
-                axisLine={false}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#fff', 
-                  border: '1px solid #e5e7eb', 
-                  borderRadius: '8px',
-                  padding: '8px 12px'
-                }}
-                formatter={(value: number) => 
-                  cumulativeChartType === 'rate' ? `+${value.toFixed(2)}%` : `+$${value.toLocaleString()}`
-                }
-                labelFormatter={(label) => label}
-                content={<CustomCumulativeTooltip />}
-              />
-              <Area 
-                type="monotone" 
-                dataKey={cumulativeChartType === 'rate' ? 'rate' : 'amount'}
-                stroke="#10b981" 
-                fillOpacity={1} 
-                fill="url(#colorGreenGradient)"
-                strokeWidth={2.5}
-                dot={false}
-                activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <div className="text-green-600 mb-1">
+                <span className="text-3xl font-semibold">+${currentAmount.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginLeft: '-20px' }}>
+            <ResponsiveContainer width="100%" height={340}>
+              <AreaChart data={performanceData}>
+                <defs>
+                  <linearGradient id="colorGreenGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#9ca3af" 
+                  tick={{ fill: '#6b7280', fontSize: 12 }}
+                  axisLine={false}
+                />
+                <YAxis 
+                  stroke="#9ca3af" 
+                  tick={{ fill: '#6b7280', fontSize: 12 }}
+                  axisLine={false}
+                  tickFormatter={(value) => `$${Math.abs(value / 1000).toFixed(0)}k`}
+                  width={60}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#fff', 
+                    border: '1px solid #e5e7eb', 
+                    borderRadius: '8px',
+                    padding: '8px 12px'
+                  }}
+                  formatter={(value: number) => `+$${value.toLocaleString()}`}
+                  labelFormatter={(label) => label}
+                  content={<CustomNetValueTooltip />}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="amount"
+                  stroke="#10b981" 
+                  fillOpacity={1} 
+                  fill="url(#colorGreenGradient)"
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Detailed Statistics */}
@@ -527,7 +507,7 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
             <div className="p-6">
               <div className="flex items-start justify-between mb-6">
                 <h2 className="text-lg text-gray-900 font-semibold">商品排名</h2>
-                <div className="relative" ref={symbolTimeRangeDropdownRef}>
+                <div className="relative">
                   <button
                     className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 transition-colors"
                     onClick={() => setShowSymbolTimeRangeDropdown(!showSymbolTimeRangeDropdown)}
@@ -731,7 +711,7 @@ export function StrategyDetail({ strategyId, onBack }: StrategyDetailProps) {
       {/* Follow Strategy Modal */}
       {showFollowModal && (
         <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
-          <div ref={followModalRef} className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-gray-900">选择交易账户</h2>
               <p className="text-gray-600 mt-2">请选择要跟随该策略的交易账户</p>

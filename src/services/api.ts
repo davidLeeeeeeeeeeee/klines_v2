@@ -1599,3 +1599,346 @@ export async function getPanelHistoryEquityLine(
     );
   }
 }
+
+// ==================== 策略模型相关接口 ====================
+
+/**
+ * 策略模型请求参数
+ */
+export interface StrategyModelReq {
+  aiModel: string;              // 策略模型
+  description: string;          // 策略描述
+  frequency: number;            // 执行频率(分钟)
+  indicators: string[];         // 技术指标列表
+  intervals: string[];          // K线时间周期列表
+  klineNum: number;             // K线数量
+  name: string;                 // 策略名称
+  needPosition: boolean;        // 是否提供持仓数据
+  riskLevel: string;            // 风险等级
+  symbols: string[];            // 币种列表
+  systemPrompt: string;         // 系统提示词
+  tag: string;                  // 标签
+}
+
+/**
+ * 策略模型列表响应
+ */
+export interface StrategyModelListRes {
+  description: string;          // 策略描述
+  id: number;                   // 策略模型id
+  lossAmount: number | null;    // 亏损金额
+  lossCount: number | null;     // 亏损交易数
+  maxDrawdownRate: number | null; // 最大回撤(比例)
+  name: string;                 // 策略名称
+  riskLevel: string;            // 风险等级
+  runTime: number | null;       // 运行时长(天数)
+  status: boolean;              // 策略运行状态
+  tag: string;                  // 标签
+  totalClosePnl: number | null; // 总盈亏
+  totalFollowAmount: number | null; // 跟随资金
+  winAmount: number | null;     // 盈利金额
+  winCount: number | null;      // 盈利交易数
+}
+
+/**
+ * 策略模型历史版本
+ */
+export interface StrategyModelSimpleHistoryRes {
+  createTime: string;           // 创建时间
+  id: number;                   // 策略模型id
+  version: number;              // 版本
+}
+
+/**
+ * 策略模型详情响应
+ */
+export interface StrategyModelDetailRes {
+  aiModel: string | null;       // 策略模型
+  createTime: string | null;    // 创建时间
+  description: string | null;   // 策略描述
+  frequency: number | null;     // 执行频率(分钟)
+  historyList: StrategyModelSimpleHistoryRes[] | null; // 历史版本
+  indicators: string[] | null;  // 技术指标列表
+  intervals: string[] | null;   // K线时间周期列表
+  klineNum: number | null;      // K线数量
+  name: string | null;          // 策略名称
+  needPosition: boolean | null; // 是否提供持仓数据
+  riskLevel: string | null;     // 风险等级
+  status: boolean | null;       // 是否启用
+  symbols: string[] | null;     // 币种列表
+  systemPrompt: string | null;  // 系统提示词
+  tag: string | null;           // 标签
+  version: number | null;       // 版本
+}
+
+/**
+ * 策略模型预览响应
+ */
+export interface StrategyModelPreviewRes {
+  aiOutput: string;             // AI输出
+  name: string;                 // 策略模型名称
+  systemPrompt: string;         // 系统提示词
+  userPrompt: string;           // 用户提示词
+}
+
+/**
+ * 创建策略模型
+ * @param token 认证令牌
+ * @param request 策略模型参数
+ * @returns 是否创建成功
+ */
+export async function createStrategyModel(
+  token: string,
+  request: StrategyModelReq
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/root/strategy/model/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      },
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<boolean> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '创建策略模型失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 获取策略模型列表
+ * @param token 认证令牌
+ * @returns 策略模型列表
+ */
+export async function getStrategyModelList(
+  token: string
+): Promise<StrategyModelListRes[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/root/strategy/model/list`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      }
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<StrategyModelListRes[]> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取策略模型列表失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 获取策略模型详情
+ * @param token 认证令牌
+ * @param id 策略模型ID
+ * @param version 版本号（可选）
+ * @returns 策略模型详情
+ */
+export async function getStrategyModelDetail(
+  token: string,
+  id: number,
+  version?: number
+): Promise<StrategyModelDetailRes> {
+  try {
+    const requestBody: { id: number; version?: number } = { id };
+    if (version !== undefined) {
+      requestBody.version = version;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/root/strategy/model/detail`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<StrategyModelDetailRes> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取策略模型详情失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 更新策略模型
+ * @param token 认证令牌
+ * @param request 策略模型参数
+ * @returns 是否更新成功
+ */
+export async function upgradeStrategyModel(
+  token: string,
+  request: StrategyModelReq
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/root/strategy/model/upgrade`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      },
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<boolean> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '更新策略模型失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 切换策略模型状态
+ * @param token 认证令牌
+ * @param id 策略模型ID
+ * @returns 是否切换成功
+ */
+export async function switchStrategyModelStatus(
+  token: string,
+  id: number
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/root/strategy/model/status/switch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      },
+      body: JSON.stringify({ id })
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<boolean> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '切换策略模型状态失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 预览策略模型
+ * @param token 认证令牌
+ * @param request 策略模型参数
+ * @returns 策略模型预览数据
+ */
+export async function previewStrategyModel(
+  token: string,
+  request: StrategyModelReq
+): Promise<StrategyModelPreviewRes> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/root/strategy/model/preview`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      },
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<StrategyModelPreviewRes> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '预览策略模型失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
