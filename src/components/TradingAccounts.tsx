@@ -43,6 +43,10 @@ export interface TradingAccount {
   strategyName?: string;
   accountType: '主账户' | '子账户';
   parentAccountId?: string;
+  // 主账户信息（仅子账户有）
+  mainAccId?: string;
+  mainAccName?: string;
+  mainAccUid?: string;
 }
 
 interface TradingAccountsProps {
@@ -101,7 +105,11 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
       username: '', // API响应中没有username字段
       strategyName: apiAccount.strategyTypeName || apiAccount.strategyType || undefined,
       accountType: apiAccount.accType === 0 ? '主账户' : '子账户',
-      parentAccountId: apiAccount.mainAccId > 0 ? apiAccount.mainAccId.toString() : undefined
+      parentAccountId: apiAccount.mainAccId > 0 ? apiAccount.mainAccId.toString() : undefined,
+      // 保存主账户信息（仅子账户有）
+      mainAccId: apiAccount.mainAccId > 0 ? apiAccount.mainAccId.toString() : undefined,
+      mainAccName: apiAccount.mainAccName || undefined,
+      mainAccUid: apiAccount.mainAccUid || undefined
     };
   };
 

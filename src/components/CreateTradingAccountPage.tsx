@@ -178,15 +178,14 @@ export function CreateTradingAccountPage({ onBack, onSave }: CreateTradingAccoun
 
                 <div>
                   <label className="block text-sm text-gray-500 mb-2">
-                    UID *
+                    UID
                   </label>
                   <input
                     type="text"
                     value={formData.uid}
                     onChange={(e) => setFormData({ ...formData, uid: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    placeholder="请输入交易所UID"
-                    required
+                    placeholder="请输入交易所UID（可选）"
                   />
                 </div>
               </div>

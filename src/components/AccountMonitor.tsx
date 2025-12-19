@@ -67,6 +67,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [searchFilter, setSearchFilter] = useState('');
   const [selectedSymbol, setSelectedSymbol] = useState('all');
   const [showSymbolDropdown, setShowSymbolDropdown] = useState(false);
+  const [selectedType, setSelectedType] = useState('all');
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [showAIChatModal, setShowAIChatModal] = useState(false);
@@ -83,6 +85,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   // Refs for click outside detection
   const strategyDropdownRef = useRef<HTMLDivElement>(null);
   const symbolDropdownRef = useRef<HTMLDivElement>(null);
+  const typeDropdownRef = useRef<HTMLDivElement>(null);
   const closeModalRef = useRef<HTMLDivElement>(null);
   const aiChatModalRef = useRef<HTMLDivElement>(null);
   const batchCloseModalRef = useRef<HTMLDivElement>(null);
@@ -90,6 +93,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   // Click outside handlers
   useClickOutside(strategyDropdownRef, () => setShowStrategyDropdown(false));
   useClickOutside(symbolDropdownRef, () => setShowSymbolDropdown(false));
+  useClickOutside(typeDropdownRef, () => setShowTypeDropdown(false));
   useClickOutside(closeModalRef, () => {
     if (showCloseModal) {
       setShowCloseModal(false);
@@ -400,7 +404,49 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   ];
 
   // 从API数据转换为组件需要的格式
-  const currentPositions: Position[] = positions.map(convertToPosition);
+  const allCurrentPositions: Position[] = positions.map(convertToPosition);
+
+  // 筛选当前持仓
+  const currentPositions = allCurrentPositions.filter((position) => {
+    // 按搜索框筛选
+    if (searchFilter) {
+      const searchLower = searchFilter.toLowerCase();
+      if (!position.accountUid.toLowerCase().includes(searchLower) &&
+          !position.accountName.toLowerCase().includes(searchLower)) {
+        return false;
+      }
+    }
+
+    // 按类型筛选
+    if (selectedType !== 'all') {
+      if (selectedType === 'long' && position.type !== 'long') return false;
+      if (selectedType === 'short' && position.type !== 'short') return false;
+    }
+
+    return true;
+  });
+
+  // 筛选历史仓位
+  const filteredClosedPositions = closedPositions.filter((position) => {
+    // 按搜索框筛选
+    if (searchFilter) {
+      const searchLower = searchFilter.toLowerCase();
+      if (!position.accountId.toString().toLowerCase().includes(searchLower)) {
+        return false;
+      }
+    }
+
+    // 按类型筛选
+    if (selectedType !== 'all') {
+      // ClosePnlVO 中的 side 字段表示平仓操作的方向
+      // side: "Sell" 表示卖出平仓 = 平多（平掉多单）
+      // side: "Buy" 表示买入平仓 = 平空（平掉空单）
+      if (selectedType === 'closeLong' && position.side !== 'Sell') return false;
+      if (selectedType === 'closeShort' && position.side !== 'Buy') return false;
+    }
+
+    return true;
+  });
 
   // 计算总的持仓盈亏
   const totalUnrealizedPnL = currentPositions.reduce((sum, position) => sum + position.unrealizedPnL, 0);
@@ -496,54 +542,24 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
         </button>
       </div>
 
-      {/* Filters - Strategy and Search */}
+      {/* Search Filter */}
       <div className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Strategy Selector */}
-          <div className="relative" ref={strategyDropdownRef}>
-            <button
-              onClick={() => setShowStrategyDropdown(!showStrategyDropdown)}
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-left flex items-center justify-between hover:border-gray-400 transition-colors"
-            >
-              <span className="text-gray-900">{selectedStrategyName}</span>
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            </button>
-
-            {showStrategyDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20">
-                {strategies.map((strategy) => (
-                  <button
-                    key={strategy.id}
-                    onClick={() => {
-                      setSelectedStrategy(strategy.id);
-                      setShowStrategyDropdown(false);
-                    }}
-                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
-                      selectedStrategy === strategy.id ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                    }`}
-                  >
-                    {strategy.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Search Filter */}
-          <input
-            type="text"
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            placeholder="输入用户名、交易账户UID"
-            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-          />
-        </div>
+        <input
+          type="text"
+          value={searchFilter}
+          onChange={(e) => setSearchFilter(e.target.value)}
+          placeholder="输入用户名、交易账户UID"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+        />
       </div>
 
-      {/* Tab Navigation with Symbol Filter */}
+      {/* Tab Navigation with Filters */}
       <div className="mb-6 flex items-center gap-8">
         <button
-          onClick={() => setActiveTab('positions')}
+          onClick={() => {
+            setActiveTab('positions');
+            setSelectedType('all'); // 切换Tab时重置类型筛选
+          }}
           className={`pb-3 text-base transition-colors relative ${
             activeTab === 'positions'
               ? 'text-gray-900 font-semibold'
@@ -556,7 +572,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
           )}
         </button>
         <button
-          onClick={() => setActiveTab('history')}
+          onClick={() => {
+            setActiveTab('history');
+            setSelectedType('all'); // 切换Tab时重置类型筛选
+          }}
           className={`pb-3 text-base transition-colors relative ${
             activeTab === 'history'
               ? 'text-gray-900 font-semibold'
@@ -569,10 +588,49 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
           )}
         </button>
 
+        {/* Strategy Selector */}
+        <div className="relative" ref={strategyDropdownRef}>
+          <button
+            onClick={() => {
+              setShowStrategyDropdown(!showStrategyDropdown);
+              setShowSymbolDropdown(false);
+            }}
+            className="flex items-center gap-1.5 pb-3 text-base text-gray-700 hover:text-gray-900 transition-colors"
+          >
+            <span>{selectedStrategy === 'all' ? '策略' : selectedStrategyName}</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+              <path d="M5 6L0 0h10L5 6z" />
+            </svg>
+          </button>
+
+          {showStrategyDropdown && (
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
+              {strategies.map((strategy) => (
+                <button
+                  key={strategy.id}
+                  onClick={() => {
+                    setSelectedStrategy(strategy.id);
+                    setShowStrategyDropdown(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                    selectedStrategy === strategy.id ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  }`}
+                >
+                  {strategy.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Symbol Filter */}
         <div className="relative" ref={symbolDropdownRef}>
           <button
-            onClick={() => setShowSymbolDropdown(!showSymbolDropdown)}
+            onClick={() => {
+              setShowSymbolDropdown(!showSymbolDropdown);
+              setShowStrategyDropdown(false);
+              setShowTypeDropdown(false);
+            }}
             className="flex items-center gap-1.5 pb-3 text-base text-gray-700 hover:text-gray-900 transition-colors"
           >
             <span>{selectedSymbol === 'all' ? '商品' : selectedSymbol}</span>
@@ -612,11 +670,102 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
           )}
         </div>
 
+        {/* Type Filter */}
+        <div className="relative" ref={typeDropdownRef}>
+          <button
+            onClick={() => {
+              setShowTypeDropdown(!showTypeDropdown);
+              setShowStrategyDropdown(false);
+              setShowSymbolDropdown(false);
+            }}
+            className="flex items-center gap-1.5 pb-3 text-base text-gray-700 hover:text-gray-900 transition-colors"
+          >
+            <span>
+              {selectedType === 'all'
+                ? '类型'
+                : activeTab === 'positions'
+                  ? (selectedType === 'long' ? '多单' : '空单')
+                  : (selectedType === 'closeLong' ? '平多' : '平空')
+              }
+            </span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+              <path d="M5 6L0 0h10L5 6z" />
+            </svg>
+          </button>
+
+          {showTypeDropdown && (
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
+              <button
+                onClick={() => {
+                  setSelectedType('all');
+                  setShowTypeDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  selectedType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                全部
+              </button>
+              {activeTab === 'positions' ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setSelectedType('long');
+                      setShowTypeDropdown(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                      selectedType === 'long' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
+                  >
+                    多单
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedType('short');
+                      setShowTypeDropdown(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                      selectedType === 'short' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
+                  >
+                    空单
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setSelectedType('closeLong');
+                      setShowTypeDropdown(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                      selectedType === 'closeLong' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
+                  >
+                    平多
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedType('closeShort');
+                      setShowTypeDropdown(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                      selectedType === 'closeShort' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
+                  >
+                    平空
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Position Count Display */}
         <div className="ml-auto text-right">
           <div className="text-sm text-gray-500">仓位数量</div>
           <div className="text-lg font-semibold text-gray-900">
-            {activeTab === 'positions' ? currentPositions.length : closedPositions.length}
+            {activeTab === 'positions' ? currentPositions.length : filteredClosedPositions.length}
           </div>
         </div>
 
@@ -626,11 +775,11 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
           <div className={`text-lg font-semibold ${
             activeTab === 'positions'
               ? (totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600')
-              : (closedPositions.reduce((sum, t) => sum + t.closedPnl, 0) >= 0 ? 'text-green-600' : 'text-red-600')
+              : (filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0) >= 0 ? 'text-green-600' : 'text-red-600')
           }`}>
             {activeTab === 'positions'
               ? Math.abs(totalUnrealizedPnL).toFixed(2)
-              : Math.abs(closedPositions.reduce((sum, t) => sum + t.closedPnl, 0)).toFixed(2)
+              : Math.abs(filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0)).toFixed(2)
             }
           </div>
         </div>
@@ -784,14 +933,14 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
               <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
               <div className="text-gray-600">加载历史仓位数据中...</div>
             </div>
-          ) : closedPositions.length === 0 ? (
+          ) : filteredClosedPositions.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm p-12 text-center">
               <div className="text-gray-400 mb-2">暂无历史交易</div>
-              <div className="text-sm text-gray-500">当前策略没有已完成的交易记录</div>
+              <div className="text-sm text-gray-500">当前没有符合筛选条件的交易记录</div>
             </div>
           ) : (
             <>
-              {closedPositions.map((trade) => {
+              {filteredClosedPositions.map((trade) => {
                 // 计算盈亏百分比
                 const pnlPercent = ((trade.closedPnl / (trade.avgEntryPrice * trade.qty)) * 100).toFixed(2);
 

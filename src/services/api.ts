@@ -644,6 +644,25 @@ export interface AccountCreateReq {
   strategyType: string; // 策略类型（可选）
 }
 
+// 编辑账号请求参数
+export interface AccountModifyReq {
+  id: number; // 账户ID
+  name: string; // 账户名
+}
+
+// 账号资金转移请求参数
+export interface AccountTransferReq {
+  amount: number; // 转移金额
+  fromAccountId: number; // 转出账户ID
+  toAccountId: number; // 转入账户ID
+}
+
+// 通用ID请求参数
+export interface CommonIdRequest {
+  id: number; // ID
+  name?: string; // name（可选）
+}
+
 // Bybit创建子账户请求参数
 export interface BybitAccountInitReq {
   mainAccId: number; // 主账号数据库ID
@@ -867,6 +886,181 @@ export async function createMainAccount(
         apiResponse
       );
     }
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 编辑账号
+ * @param token 用户token
+ * @param request 编辑账号请求参数
+ * @returns 编辑结果
+ */
+export async function modifyAccount(
+  token: string,
+  request: AccountModifyReq
+): Promise<boolean> {
+  try {
+    console.log('编辑账号 - Token:', token);
+    console.log('编辑账号 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/account/modify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    console.log('编辑账号响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || errorData.message || `编辑账号失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
+      console.log('HTTP 错误响应:', errorData);
+      console.log('构建的错误信息:', errorMessage);
+      throw new ApiError(
+        errorMessage,
+        response.status,
+        errorData
+      );
+    }
+
+    const result: boolean = await response.json();
+    console.log('编辑账号完整响应:', result);
+
+    return result;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 账号内互转
+ * @param token 用户token
+ * @param request 账号资金转移请求参数
+ * @returns 转移结果
+ */
+export async function transferAccount(
+  token: string,
+  request: AccountTransferReq
+): Promise<boolean> {
+  try {
+    console.log('账号资金转移 - Token:', token);
+    console.log('账号资金转移 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/account/transfer`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    console.log('账号资金转移响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      // 构建详细的错误信息
+      let errorMessage = errorData.description || errorData.message || `资金转移失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
+      console.log('HTTP 错误响应:', errorData);
+      console.log('构建的错误信息:', errorMessage);
+      throw new ApiError(
+        errorMessage,
+        response.status,
+        errorData
+      );
+    }
+
+    const result: boolean = await response.json();
+    console.log('账号资金转移完整响应:', result);
+
+    return result;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 获取账号详情
+ * @param token 用户token
+ * @param request 通用ID请求参数
+ * @returns 账号详情
+ */
+export async function getAccountDetail(
+  token: string,
+  request: CommonIdRequest
+): Promise<AccountRes> {
+  try {
+    console.log('获取账号详情 - Token:', token);
+    console.log('获取账号详情 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/account/detail`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    console.log('获取账号详情响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let errorMessage = errorData.description || errorData.message || `获取账号详情失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
+      console.log('HTTP 错误响应:', errorData);
+      throw new ApiError(
+        errorMessage,
+        response.status,
+        errorData
+      );
+    }
+
+    const apiResponse: ApiResponse<AccountRes> = await response.json();
+    console.log('获取账号详情完整响应:', apiResponse);
+
+    // 检查业务状态码
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取账号详情失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
+      throw new ApiError(errorMessage, response.status, apiResponse);
+    }
+
+    return apiResponse.data;
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;

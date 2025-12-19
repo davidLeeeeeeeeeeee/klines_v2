@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronDown, Building2, User, Key, Eye, EyeOff, AlertCircle, Shield } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Building2, User, Key, Eye, EyeOff, AlertCircle, Shield, X, CheckCircle } from 'lucide-react';
+import { modifyAccount, AccountModifyReq } from '../services/api';
+import { getToken } from '../utils/storage';
 
 type InitStatus = '已初始化' | '未初始化' | '初始化失败';
 
@@ -34,6 +36,9 @@ export function EditTradingAccountPage({ account, onBack, onSave }: EditTradingA
   const [showApiPassphrase, setShowApiPassphrase] = useState(false);
   const [showExchangeDropdown, setShowExchangeDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const exchanges = [
     'Binance',
@@ -48,14 +53,90 @@ export function EditTradingAccountPage({ account, onBack, onSave }: EditTradingA
 
   const statuses: InitStatus[] = ['已初始化', '未初始化', '初始化失败'];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
-    onBack();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('未登录，请先登录');
+      }
+
+      // 构建API请求参数
+      const request: AccountModifyReq = {
+        id: parseInt(account.id),
+        name: formData.accountName,
+      };
+
+      console.log('准备编辑账号，请求参数:', request);
+
+      const result = await modifyAccount(token, request);
+      console.log('账号编辑成功！返回结果:', result);
+
+      // 调用父组件的保存回调（如果提供）
+      if (onSave) {
+        onSave(formData);
+      }
+
+      // 显示成功提示框
+      console.log('显示成功提示框');
+      setShowSuccessModal(true);
+    } catch (err: any) {
+      setError(err.message || '编辑账户失败');
+      console.error('编辑账号失败:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
+      {/* Error Message - Fixed at top */}
+      {error && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-2xl px-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-red-800 mb-1">编辑失败</h3>
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="text-red-400 hover:text-red-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-8 max-w-md mx-4">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle className="w-10 h-10 text-green-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">编辑成功</h2>
+              <p className="text-gray-600 mb-6">账户信息已成功更新</p>
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  onBack();
+                }}
+                className="w-full px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                确定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -143,28 +224,26 @@ export function EditTradingAccountPage({ account, onBack, onSave }: EditTradingA
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-gray-500 mb-2">
-                    API Key *
+                    API Key
                   </label>
                   <input
                     type="text"
                     value={formData.apiKey}
-                    onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"
-                    required
+                    readOnly
+                    className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-500 cursor-not-allowed font-mono text-sm"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm text-gray-500 mb-2">
-                    API Secret *
+                    API Secret
                   </label>
                   <div className="relative">
                     <input
                       type={showApiSecret ? 'text' : 'password'}
                       value={formData.apiSecret}
-                      onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
-                      className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"
-                      required
+                      readOnly
+                      className="w-full px-4 py-2 pr-12 bg-gray-100 border border-gray-300 rounded-lg text-gray-500 cursor-not-allowed font-mono text-sm"
                     />
                     <button
                       type="button"
@@ -184,8 +263,8 @@ export function EditTradingAccountPage({ account, onBack, onSave }: EditTradingA
                     <input
                       type={showApiPassphrase ? 'text' : 'password'}
                       value={formData.apiPassphrase}
-                      onChange={(e) => setFormData({ ...formData, apiPassphrase: e.target.value })}
-                      className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"
+                      readOnly
+                      className="w-full px-4 py-2 pr-12 bg-gray-100 border border-gray-300 rounded-lg text-gray-500 cursor-not-allowed font-mono text-sm"
                     />
                     <button
                       type="button"
@@ -258,7 +337,8 @@ export function EditTradingAccountPage({ account, onBack, onSave }: EditTradingA
             <button
               type="button"
               onClick={onBack}
-              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={loading}
+              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               取消
             </button>
@@ -272,9 +352,17 @@ export function EditTradingAccountPage({ account, onBack, onSave }: EditTradingA
                   form?.reportValidity();
                 }
               }}
-              className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              确定
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>保存中...</span>
+                </>
+              ) : (
+                '确定'
+              )}
             </button>
           </div>
         </div>
