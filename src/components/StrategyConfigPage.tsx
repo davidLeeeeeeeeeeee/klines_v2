@@ -198,11 +198,6 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
     }
   };
 
-  const handleTextareaResize = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    e.target.style.height = 'auto';
-    e.target.style.height = e.target.scrollHeight + 'px';
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -287,8 +282,8 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
 
       console.log('📤 发送预览请求:', requestData);
 
-      // 调用预览API
-      const response = await previewStrategyModel(token, requestData);
+      // 调用预览API，设置超时时间为 300 秒
+      const response = await previewStrategyModel(token, requestData, 300000);
 
       console.log('📥 收到预览响应:', response);
 
@@ -729,10 +724,9 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   <textarea
                     value={formData.systemPrompt}
                     onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-mono text-sm"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-mono text-sm overflow-y-auto"
                     rows={16}
                     placeholder="你是一个专业的量化交易分析师，擅长技术分析和市场趋势预测。你的任务是基于实时市场数据，为用户提供精准的交易建议..."
-                    onInput={handleTextareaResize}
                     required
                   />
                   <div className="text-gray-500 text-sm mt-2 space-y-1">

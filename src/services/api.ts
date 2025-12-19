@@ -1966,35 +1966,54 @@ export async function switchStrategyModelStatus(
  * 预览策略模型
  * @param token 认证令牌
  * @param request 策略模型参数
+ * @param timeoutMs 超时时间（毫秒），默认 60000ms (60秒)
  * @returns 策略模型预览数据
  */
 export async function previewStrategyModel(
   token: string,
-  request: StrategyModelReq
+  request: StrategyModelReq,
+  timeoutMs: number = 60000
 ): Promise<StrategyModelPreviewRes> {
   try {
-    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/root/strategy/model/preview`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'alphatoken': token
-      },
-      body: JSON.stringify(request)
-    });
+    // 创建超时控制器
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    try {
+      const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/root/strategy/model/preview`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'alphatoken': token
+        },
+        body: JSON.stringify(request),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      }
+
+      const apiResponse: ApiResponse<StrategyModelPreviewRes> = await response.json();
+
+      if (!apiResponse.success || apiResponse.code !== 200) {
+        let errorMessage = apiResponse.description || '预览策略模型失败';
+        throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+      }
+
+      return apiResponse.data;
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      // 处理超时错误
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ApiError(`请求超时（${timeoutMs / 1000}秒），请稍后重试`);
+      }
+      throw error;
     }
-
-    const apiResponse: ApiResponse<StrategyModelPreviewRes> = await response.json();
-
-    if (!apiResponse.success || apiResponse.code !== 200) {
-      let errorMessage = apiResponse.description || '预览策略模型失败';
-      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
-    }
-
-    return apiResponse.data;
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
