@@ -39,6 +39,30 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
     systemPrompt: strategy?.systemPrompt || `【角色设定】
 示例：你是一名严格执行规则的职业交易员，只交易 M15 周期，使用 EMA20 / EMA60 双均线趋势回踩系统，禁止逆势、禁止震荡区交易。
 
+【数据结构说明】
+- 所有 indicators.* 数组长度固定为 20
+- 索引 [0] 表示最早K线，[19] 表示最新K线
+- current.* 为当前指标快照，严格等价于 indicators.*[19]
+- current.* 仅用于当前状态判断，历史比较必须使用 indicators[i]
+- position 为账户持仓数组，每个对象代表一个独立交易账户的持仓
+- 所有条件必须使用完整 json path 描述，如 m15.indicators.rsi[18]
+
+【时间周期】
+- h4: 4小时
+- h1: 1小时
+- m15: 15分钟
+
+【核心指标】
+- ohlc: K线数据
+- volume: 成交量
+- ema20: EMA20 指数移动均线
+- ema60: EMA60 指数移动均线
+- macd_dif: MACD快线（动量快线，短周期与长周期 EMA 差值）
+- macd_dea: MACD慢线（信号慢线，DIF 的指数平滑）
+- macd_hist: MACD动能柱（多空动能，DIF−DEA）
+- rsi: RSI(14) 相对强弱指标
+- atr: ATR(14) 平均真实波幅
+
 【核心思想】
 这里请用一两句话总结策略的核心思想。
 
@@ -50,7 +74,37 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
 - 0.9–1.0: 趋势清晰 + 回踩命中 + 入场条件完全满足 + 成交量确认
 - 0.7–0.8: 趋势清晰 + 回踩命中 + 入场条件部分满足
 - 0.5–0.6: 趋势清晰 + 回踩未完全到位 + 入场条件部分满足
-- ≤0.4: 不交易`,
+- ≤0.4: 不交易
+
+【最终输出格式】
+  1) 严格返回以下JSON格式:
+    {
+      "COIN": {
+        "tradeSignalArgs": {
+          "coin": "<COIN>",
+          "side": "Buy | Sell | Wait",
+          "entryPrice": <float>,
+          "takeProfit": <float>,
+          "stopLoss": <float>,
+          "invalidationCondition": "<string>",
+          "confidence": <0–1>,
+          "riskUsd": <float>,
+          "simpleThought": <简要中文解释>,
+          "position":[
+            {
+                "accountId":<accountId>,
+                "side": "Close | Hold | PLMODIFY",
+                "entryPrice":<float>
+                "newTakeProfit": <float>,
+                "newStopLoss": <float>,
+                "thought":"中文解释"
+            }
+          ]
+        }
+      }
+    }
+    2) 如果当前有持仓，需根据当前仓位的入场点位、止盈、止损情况，判断是否需要进行 平仓(Close)，继续持有且无其它动作(Hold)，调整止盈止损(PLMODIFY)
+    3) 如果需要调整止盈止损(PLMODIFY)，则设置 newTakeProfit、newStopLoss为新止盈止损点位，否则为 null`,
     userPrompt: strategy?.userPrompt || '',
     requestFrequency: strategy?.requestFrequency || 5,
     requestFrequencyUnit: strategy?.requestFrequencyUnit || 'minutes' as 'seconds' | 'minutes' | 'hours',
@@ -419,13 +473,15 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                 <div>
                   <label className="block text-gray-700 mb-2">
                     策略名称 <span className="text-red-500">*</span>
+                    {strategy && <span className="text-gray-500 text-sm ml-2">(修改策略时不可更改名称)</span>}
                   </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 ${strategy ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     placeholder="输入策略名称"
+                    disabled={!!strategy}
                     required
                   />
                 </div>
