@@ -9,6 +9,7 @@ import {
   StrategyModelDetailRes
 } from '../services/api';
 import { getToken } from '../utils/storage';
+import { JsonViewer } from './JsonViewer';
 
 interface Strategy {
   id: string;
@@ -63,7 +64,11 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
   const [expandedSystemPrompt, setExpandedSystemPrompt] = useState(true);
   const [expandedUserPrompt, setExpandedUserPrompt] = useState(true);
   const [expandedAIOutput, setExpandedAIOutput] = useState(true);
-  const [aiOutput, setAiOutput] = useState('');
+  const [previewData, setPreviewData] = useState<{
+    systemPrompt: string;
+    userPrompt: any;
+    aiOutput: any;
+  } | null>(null);
   const [isRunningTest, setIsRunningTest] = useState(false);
   const [selectedPeriods, setSelectedPeriods] = useState<string[]>(['m15']);
   const [includePositionData, setIncludePositionData] = useState(false);
@@ -73,6 +78,14 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
   const [versionHistory, setVersionHistory] = useState<Array<{ version: number; timestamp: string; id?: number }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [testDuration, setTestDuration] = useState<number | null>(null); // 测试耗时（秒）
+
+  // 处理换行符 - 将转义的 \n 转换为真正的换行符
+  const unescapeNewlines = (text: string): string => {
+    if (!text) return text;
+    // 将字符串中的 \\n 替换为真正的换行符
+    return text.replace(/\\n/g, '\n');
+  };
 
   // 加载策略详情
   useEffect(() => {
@@ -247,6 +260,9 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
     setIsRunningTest(true);
     setExpandedAIOutput(true);
 
+    // 记录开始时间
+    const startTime = Date.now();
+
     try {
       const token = getToken();
       if (!token) {
@@ -272,16 +288,35 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
       console.log('📤 发送预览请求:', requestData);
 
       // 调用预览API
-      const previewData = await previewStrategyModel(token, requestData);
+      const response = await previewStrategyModel(token, requestData);
 
-      console.log('📥 收到预览响应:', previewData);
+      console.log('📥 收到预览响应:', response);
 
-      // 显示AI输出
-      setAiOutput(previewData.aiOutput || '暂无AI输出');
+      // 计算耗时
+      const endTime = Date.now();
+      const duration = ((endTime - startTime) / 1000).toFixed(2); // 转换为秒，保留2位小数
+      setTestDuration(parseFloat(duration));
+
+      // 保存完整的预览数据
+      setPreviewData({
+        systemPrompt: unescapeNewlines(response.systemPrompt || formData.systemPrompt || ''),
+        userPrompt: response.userPrompt || '',
+        aiOutput: response.aiOutput || ''
+      });
 
     } catch (err) {
       console.error('❌ 运行AI测试失败:', err);
-      setAiOutput(`❌ 测试失败: ${err instanceof Error ? err.message : '未知错误'}`);
+
+      // 即使失败也计算耗时
+      const endTime = Date.now();
+      const duration = ((endTime - startTime) / 1000).toFixed(2);
+      setTestDuration(parseFloat(duration));
+
+      setPreviewData({
+        systemPrompt: unescapeNewlines(formData.systemPrompt || ''),
+        userPrompt: '',
+        aiOutput: `❌ 测试失败: ${err instanceof Error ? err.message : '未知错误'}`
+      });
     } finally {
       setIsRunningTest(false);
       console.log('✅ AI测试完成');
@@ -329,13 +364,13 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                 {showVersionDropdown && (
                   <>
                     {/* Backdrop */}
-                    <div 
+                    <div
                       className="fixed inset-0 z-10"
                       onClick={() => setShowVersionDropdown(false)}
                     />
-                    
+
                     {/* Dropdown Content */}
-                    <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-[280px] z-20">
+                    <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-[380px] z-20">
                       {versionHistory.map((version) => (
                         <button
                           key={version.version}
@@ -344,14 +379,14 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                             setShowVersionDropdown(false);
                             await loadStrategyVersion(version.version, version.id);
                           }}
-                          className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                          className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4 ${
                             currentVersion === version.version ? 'bg-blue-50' : ''
                           }`}
                         >
-                          <span className={currentVersion === version.version ? 'text-blue-600' : 'text-gray-700'}>
+                          <span className={`font-medium whitespace-nowrap ${currentVersion === version.version ? 'text-blue-600' : 'text-gray-700'}`}>
                             Ver: {version.version}
                           </span>
-                          <span className={`text-sm ${currentVersion === version.version ? 'text-blue-600' : 'text-gray-500'}`}>
+                          <span className={`text-sm whitespace-nowrap ${currentVersion === version.version ? 'text-blue-600' : 'text-gray-500'}`}>
                             {version.timestamp}
                           </span>
                         </button>
@@ -825,9 +860,16 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
             {/* Modal Header */}
             <div className="mb-4 flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold text-gray-900">
-                  {formData.name || '新策略'}-执行预览
-                </h3>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    {formData.name || '新策略'}-执行预览
+                  </h3>
+                  {testDuration !== null && (
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
+                      耗时: {testDuration}s
+                    </span>
+                  )}
+                </div>
                 <button
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                   onClick={() => setShowPreview(false)}
@@ -854,12 +896,15 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   )}
                   <span>SYSTEM_PROMPT</span>
                 </button>
-                
+
                 {expandedSystemPrompt && (
-                  <div className="mt-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div className="text-gray-700 text-sm whitespace-pre-wrap font-mono">
-                      {formData.systemPrompt || '（未设置）'}
-                    </div>
+                  <div className="mt-2">
+                    <textarea
+                      value={unescapeNewlines(previewData?.systemPrompt || formData.systemPrompt || '（未设置）')}
+                      readOnly
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 resize-none font-mono text-sm text-gray-700 cursor-default"
+                      rows={16}
+                    />
                   </div>
                 )}
               </div>
@@ -877,12 +922,14 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   )}
                   <span>USER_PROMPT</span>
                 </button>
-                
+
                 {expandedUserPrompt && (
-                  <div className="mt-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div className="text-gray-700 text-sm whitespace-pre-wrap font-mono">
-                      {formData.userPrompt || '（未设置）'}
-                    </div>
+                  <div className="mt-2 bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                    {previewData?.userPrompt ? (
+                      <JsonViewer data={previewData.userPrompt} expandAll={true} />
+                    ) : (
+                      <div className="text-gray-500 text-sm">点击下方"运行 AI 测试"按钮查看用户提示词</div>
+                    )}
                   </div>
                 )}
               </div>
@@ -900,12 +947,14 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   )}
                   <span>AI_OUTPUT</span>
                 </button>
-                
+
                 {expandedAIOutput && (
                   <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <div className="text-gray-700 text-sm whitespace-pre-line">
-                      {aiOutput || '点击下方"运行 AI 测试"按钮查看AI输出结果'}
-                    </div>
+                    {previewData?.aiOutput ? (
+                      <JsonViewer data={previewData.aiOutput} expandAll={true} />
+                    ) : (
+                      <div className="text-gray-500 text-sm">点击下方"运行 AI 测试"按钮查看AI输出结果</div>
+                    )}
                   </div>
                 )}
               </div>

@@ -663,6 +663,12 @@ export interface CommonIdRequest {
   name?: string; // name（可选）
 }
 
+// 账户策略绑定请求参数
+export interface StrategyModelBindReq {
+  accountId: number; // 账户ID
+  strategyModelName: string; // 策略名
+}
+
 // Bybit创建子账户请求参数
 export interface BybitAccountInitReq {
   mainAccId: number; // 主账号数据库ID
@@ -1057,6 +1063,62 @@ export async function getAccountDetail(
       if (apiResponse.data && typeof apiResponse.data === 'string') {
         errorMessage += `: ${apiResponse.data}`;
       }
+      throw new ApiError(errorMessage, response.status, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 账号绑定策略
+ * @param token 用户token
+ * @param request 账户策略绑定请求参数
+ * @returns 绑定结果
+ */
+export async function bindAccountStrategy(
+  token: string,
+  request: StrategyModelBindReq
+): Promise<boolean> {
+  try {
+    console.log('账号绑定策略 - Token:', token);
+    console.log('账号绑定策略 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/account/strategy/model/bind`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    console.log('账号绑定策略 - 响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let errorMessage = errorData.description || errorData.message || `绑定策略失败: ${response.statusText}`;
+      throw new ApiError(
+        errorMessage,
+        response.status,
+        errorData
+      );
+    }
+
+    const apiResponse: ApiResponse<boolean> = await response.json();
+    console.log('账号绑定策略完整响应:', apiResponse);
+
+    // 检查业务状态码
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '绑定策略失败';
       throw new ApiError(errorMessage, response.status, apiResponse);
     }
 
@@ -1675,10 +1737,10 @@ export interface StrategyModelDetailRes {
  * 策略模型预览响应
  */
 export interface StrategyModelPreviewRes {
-  aiOutput: string;             // AI输出
+  aiOutput: any;                // AI输出（JSON对象）
   name: string;                 // 策略模型名称
   systemPrompt: string;         // 系统提示词
-  userPrompt: string;           // 用户提示词
+  userPrompt: any;              // 用户提示词（JSON对象）
 }
 
 /**

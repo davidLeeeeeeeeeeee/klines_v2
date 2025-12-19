@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Plus, Edit, Trash2, Eye, EyeOff, X, AlertCircle, Search, ChevronDown, RefreshCw } from 'lucide-react';
 import { useClickOutside } from '../hooks/useClickOutside';
-import { getAccountList, AccountListReq, AccountRes } from '../services/api';
+import { getAccountList, AccountListReq, AccountRes, getStrategyModelList, StrategyModelListRes, bindAccountStrategy, StrategyModelBindReq } from '../services/api';
 import { getToken } from '../utils/storage';
 
 type InitStatus = '已初始化' | '未初始化' | '初始化失败';
@@ -75,6 +75,9 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [strategies, setStrategies] = useState<StrategyModelListRes[]>([]);
+  const [strategiesLoading, setStrategiesLoading] = useState(false);
+  const [bindingStrategy, setBindingStrategy] = useState(false);
 
   // Refs for click outside detection
   const exchangeDropdownRef = useRef<HTMLDivElement>(null);
@@ -169,45 +172,31 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
     return parentAccount?.accountName || '';
   };
 
-  // Mock strategies data
-  const strategies = [
-    {
-      id: '1',
-      name: '趋势追踪策略',
-      profitRate: '+25.8%',
-      winRate: '68%'
-    },
-    {
-      id: '2',
-      name: '网格交易策略',
-      profitRate: '+18.3%',
-      winRate: '72%'
-    },
-    {
-      id: '3',
-      name: '套利策略',
-      profitRate: '+12.5%',
-      winRate: '85%'
-    },
-    {
-      id: '4',
-      name: '高频交易策略',
-      profitRate: '+32.1%',
-      winRate: '61%'
-    },
-    {
-      id: '5',
-      name: '波段交易策略',
-      profitRate: '+15.7%',
-      winRate: '65%'
-    },
-    {
-      id: '6',
-      name: '动量交易策略',
-      profitRate: '+22.4%',
-      winRate: '70%'
+  // 获取策略列表
+  const fetchStrategies = async () => {
+    setStrategiesLoading(true);
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('未登录，请先登录');
+      }
+
+      const data = await getStrategyModelList(token);
+      setStrategies(data);
+    } catch (err: any) {
+      console.error('获取策略列表失败:', err);
+      alert(err.message || '获取策略列表失败');
+    } finally {
+      setStrategiesLoading(false);
     }
-  ];
+  };
+
+  // 当打开策略选择弹窗时获取策略列表
+  useEffect(() => {
+    if (showStrategyModal && strategies.length === 0) {
+      fetchStrategies();
+    }
+  }, [showStrategyModal]);
 
   const handleCreateAccount = () => {
     if (onNavigateToCreate) {
@@ -781,31 +770,70 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {strategies.map((strategy) => (
-                  <div
-                    key={strategy.id}
-                    onClick={() => setSelectedStrategyId(strategy.id)}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      selectedStrategyId === strategy.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
-                  >
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">{strategy.name}</h3>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">收益率(30日)</span>
-                        <span className="text-sm font-semibold text-green-600">{strategy.profitRate}</span>
+              {strategiesLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-gray-500">加载策略列表中...</div>
+                </div>
+              ) : strategies.length === 0 ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-gray-500">暂无可用策略</div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {strategies.map((strategy) => {
+                    const winRate = strategy.winCount && strategy.lossCount
+                      ? ((strategy.winCount / (strategy.winCount + strategy.lossCount)) * 100).toFixed(1)
+                      : '0.0';
+                    const totalPnl = strategy.totalClosePnl || 0;
+                    const profitRate = totalPnl >= 0 ? `+${totalPnl.toFixed(2)}` : totalPnl.toFixed(2);
+
+                    return (
+                      <div
+                        key={strategy.id}
+                        onClick={() => setSelectedStrategyId(strategy.id.toString())}
+                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                          selectedStrategyId === strategy.id.toString()
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="text-lg font-semibold text-gray-900">{strategy.name}</h3>
+                          <span className={`px-2 py-1 text-xs rounded ${
+                            strategy.status
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {strategy.status ? '运行中' : '已停止'}
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-500">总盈亏</span>
+                            <span className={`text-sm font-semibold ${
+                              totalPnl >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {profitRate} USDT
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-500">胜率</span>
+                            <span className="text-sm font-semibold text-gray-900">{winRate}%</span>
+                          </div>
+                          {strategy.maxDrawdownRate !== null && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-500">最大回撤</span>
+                              <span className="text-sm font-semibold text-red-600">
+                                {(strategy.maxDrawdownRate * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">胜率(30日)</span>
-                        <span className="text-sm font-semibold text-gray-900">{strategy.winRate}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Buttons */}
@@ -822,29 +850,57 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (selectedStrategyId) {
-                    const strategy = strategies.find(s => s.id === selectedStrategyId);
-                    if (strategy) {
-                      setAccounts(accounts.map(acc => 
-                        acc.id === selectedAccountId 
-                          ? { ...acc, strategyName: strategy.name }
-                          : acc
-                      ));
-                      alert(`已设置跟随策略: ${strategy.name}`);
+                onClick={async () => {
+                  if (!selectedStrategyId || !selectedAccountId) return;
+
+                  setBindingStrategy(true);
+                  try {
+                    const token = getToken();
+                    if (!token) {
+                      throw new Error('未登录，请先登录');
                     }
+
+                    const strategy = strategies.find(s => s.id.toString() === selectedStrategyId);
+                    if (!strategy) {
+                      throw new Error('未找到选中的策略');
+                    }
+
+                    // 调用绑定接口
+                    const request: StrategyModelBindReq = {
+                      accountId: parseInt(selectedAccountId),
+                      strategyModelName: strategy.name
+                    };
+
+                    await bindAccountStrategy(token, request);
+
+                    // 更新本地账户数据
+                    setAccounts(accounts.map(acc =>
+                      acc.id === selectedAccountId
+                        ? { ...acc, strategyName: strategy.name }
+                        : acc
+                    ));
+
+                    alert(`已成功绑定策略: ${strategy.name}`);
+                    setShowStrategyModal(false);
+                    setSelectedStrategyId(null);
+
+                    // 刷新账户列表以获取最新数据
+                    fetchAccounts();
+                  } catch (err: any) {
+                    console.error('绑定策略失败:', err);
+                    alert(err.message || '绑定策略失败');
+                  } finally {
+                    setBindingStrategy(false);
                   }
-                  setShowStrategyModal(false);
-                  setSelectedStrategyId(null);
                 }}
-                disabled={!selectedStrategyId}
+                disabled={!selectedStrategyId || bindingStrategy}
                 className={`flex-1 px-6 py-3 rounded-lg transition-colors ${
-                  selectedStrategyId
+                  selectedStrategyId && !bindingStrategy
                     ? 'bg-blue-500 text-white hover:bg-blue-600'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                立即跟随
+                {bindingStrategy ? '绑定中...' : '立即跟随'}
               </button>
             </div>
           </div>

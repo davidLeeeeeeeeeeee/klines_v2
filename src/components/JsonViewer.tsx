@@ -21,7 +21,7 @@ export function JsonViewer({ data, defaultExpanded = false, level = 0, expandAll
   // 渲染基本类型值
   const renderPrimitiveValue = (value: any): JSX.Element => {
     const type = getType(value);
-    
+
     if (type === 'null') {
       return <span className="text-gray-400">null</span>;
     }
@@ -32,6 +32,16 @@ export function JsonViewer({ data, defaultExpanded = false, level = 0, expandAll
       return <span className="text-blue-600">{value}</span>;
     }
     if (type === 'string') {
+      // 检查字符串是否包含换行符
+      if (value.includes('\n')) {
+        return (
+          <div className="text-green-600">
+            <span>"</span>
+            <div className="whitespace-pre-wrap font-mono ml-2 my-1">{value}</div>
+            <span>"</span>
+          </div>
+        );
+      }
       return <span className="text-green-600">"{value}"</span>;
     }
     return <span>{String(value)}</span>;
