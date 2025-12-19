@@ -1966,13 +1966,13 @@ export async function switchStrategyModelStatus(
  * 预览策略模型
  * @param token 认证令牌
  * @param request 策略模型参数
- * @param timeoutMs 超时时间（毫秒），默认 60000ms (60秒)
+ * @param timeoutMs 超时时间（毫秒），默认 300000 (300秒)
  * @returns 策略模型预览数据
  */
 export async function previewStrategyModel(
   token: string,
   request: StrategyModelReq,
-  timeoutMs: number = 60000
+  timeoutMs: number = 300000
 ): Promise<StrategyModelPreviewRes> {
   try {
     // 创建超时控制器
