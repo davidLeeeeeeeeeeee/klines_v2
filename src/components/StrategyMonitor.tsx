@@ -186,15 +186,26 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
 
     try {
       parsedResponse = JSON.parse(chat.response);
-      // 获取第一个symbol的数据
-      const firstSymbol = Object.keys(parsedResponse)[0];
-      if (firstSymbol && parsedResponse[firstSymbol]?.tradeSignalArgs) {
-        tradeSignalArgs = parsedResponse[firstSymbol].tradeSignalArgs;
-        simpleThought = tradeSignalArgs.simpleThought || '';
+
+      // 新的response结构：直接包含字段，不再嵌套在symbol下
+      if (parsedResponse && typeof parsedResponse === 'object') {
+        // 直接从parsedResponse获取simpleThought
+        simpleThought = parsedResponse.simpleThought || '';
+        // 整个parsedResponse就是tradeSignalArgs
+        tradeSignalArgs = parsedResponse;
       }
+
+      console.log('📊 解析Chat数据:', {
+        chatId: chat.id,
+        symbol: chat.symbol,
+        side: chat.side,
+        prompt: chat.prompt,
+        simpleThought,
+        hasTradeSignalArgs: !!tradeSignalArgs
+      });
     } catch (e) {
       // 如果解析失败，使用原始response
-      console.error('解析response失败:', e);
+      console.error('❌ 解析response失败:', e, '原始数据:', chat.response);
     }
 
     // 将API返回的side转换为前端显示的action
@@ -519,11 +530,13 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
 
             try {
               parsedResponse = JSON.parse(message.output);
-              // 获取第一个symbol的数据
-              const firstSymbol = Object.keys(parsedResponse)[0];
-              if (firstSymbol && parsedResponse[firstSymbol]?.tradeSignalArgs) {
-                tradeSignalArgs = parsedResponse[firstSymbol].tradeSignalArgs;
-                simpleThought = tradeSignalArgs.simpleThought || '';
+
+              // 新的response结构：直接包含字段，不再嵌套在symbol下
+              if (parsedResponse && typeof parsedResponse === 'object') {
+                // 直接从parsedResponse获取simpleThought
+                simpleThought = parsedResponse.simpleThought || '';
+                // 整个parsedResponse就是tradeSignalArgs
+                tradeSignalArgs = parsedResponse;
               }
             } catch (e) {
               // 如果解析失败，使用原始数据
