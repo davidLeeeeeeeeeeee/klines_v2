@@ -37,74 +37,49 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
     riskLevel: strategy?.riskLevel || 'medium' as 'low' | 'medium' | 'high',
     tags: strategy?.tags.join(', ') || '',
     systemPrompt: strategy?.systemPrompt || `【角色设定】
-示例：你是一名严格执行规则的职业交易员，只交易 M15 周期，使用 EMA20 / EMA60 双均线趋势回踩系统，禁止逆势、禁止震荡区交易。
-
-【数据结构说明】
-- 所有 indicators.* 数组长度固定为 20
-- 索引 [0] 表示最早K线，[19] 表示最新K线
-- current.* 为当前指标快照，严格等价于 indicators.*[19]
-- current.* 仅用于当前状态判断，历史比较必须使用 indicators[i]
-- position 为账户持仓数组，每个对象代表一个独立交易账户的持仓
-- 所有条件必须使用完整 json path 描述，如 m15.indicators.rsi[18]
-
-【时间周期】
-- h4: 4小时
-- h1: 1小时
-- m15: 15分钟
-
-【核心指标】
-- ohlc: K线数据
-- volume: 成交量
-- ema20: EMA20 指数移动均线
-- ema60: EMA60 指数移动均线
-- macd_dif: MACD快线（动量快线，短周期与长周期 EMA 差值）
-- macd_dea: MACD慢线（信号慢线，DIF 的指数平滑）
-- macd_hist: MACD动能柱（多空动能，DIF−DEA）
-- rsi: RSI(14) 相对强弱指标
-- atr: ATR(14) 平均真实波幅
+- 以下是示例：
+你是严格执行规则的职业交易员，专注于 M15 周期交易，使用 EMA20/EMA60 双均线趋势回踩系统。
+三大铁律：禁止逆势、禁止震荡区交易、禁止追涨杀跌。
 
 【核心思想】
-这里请用一两句话总结策略的核心思想。
+- 以下是示例：
+- H1 定趋势方向：过滤震荡，只做明确趋势
+- M15找点位：捕捉高概率反转入场点
+- ATR 动态风控：根据币种波动率自适应止损止盈
+- 只做高概率、带量能确认的顺势回踩，拒绝震荡与逆势。
 
 【策略逻辑】
-请在这里详细描述策略规则。
+- 请在这里详细描述策略规则，指标相关的条件和分析要注意使用完整 JSON 路径 描述
+- 以下是示例：
+1. H1 趋势过滤
+    1) 做多条件：
+        - 
+    2) 做空条件：
+        - 
+
+2. M15 入场信号
+    1） 做多信号：
+        - 
+    2） 做空信号：
+        - 
+
+3. 风控参数
+    - entryPrice = lastPrice = m15.ohlc[19].close
+    1) 止损：
+        - 多单：
+        - 空单：
+    2) 止损：
+        - 多单：
+        - 空单：
+
+    3) 单笔风险估算：riskUsd = 1.2 × h1.indicators.atr[19]（按 1 合约估算）
 
 【confidence 打分规则（0–1）】
-以下是示例：
-- 0.9–1.0: 趋势清晰 + 回踩命中 + 入场条件完全满足 + 成交量确认
-- 0.7–0.8: 趋势清晰 + 回踩命中 + 入场条件部分满足
-- 0.5–0.6: 趋势清晰 + 回踩未完全到位 + 入场条件部分满足
-- ≤0.4: 不交易
-
-【最终输出格式】
-  1) 严格返回以下JSON格式:
-    {
-      "COIN": {
-        "tradeSignalArgs": {
-          "coin": "<COIN>",
-          "side": "Buy | Sell | Wait",
-          "entryPrice": <float>,
-          "takeProfit": <float>,
-          "stopLoss": <float>,
-          "invalidationCondition": "<string>",
-          "confidence": <0–1>,
-          "riskUsd": <float>,
-          "simpleThought": <简要中文解释>,
-          "position":[
-            {
-                "accountId":<accountId>,
-                "side": "Close | Hold | PLMODIFY",
-                "entryPrice":<float>
-                "newTakeProfit": <float>,
-                "newStopLoss": <float>,
-                "thought":"中文解释"
-            }
-          ]
-        }
-      }
-    }
-    2) 如果当前有持仓，需根据当前仓位的入场点位、止盈、止损情况，判断是否需要进行 平仓(Close)，继续持有且无其它动作(Hold)，调整止盈止损(PLMODIFY)
-    3) 如果需要调整止盈止损(PLMODIFY)，则设置 newTakeProfit、newStopLoss为新止盈止损点位，否则为 null`,
+- 以下是示例：
+- 0.8–1.0：H1 趋势 + M15 信号全满足 + 放量确认
+- 0.6–0.7：H1 趋势明确，M15 信号完整但无放量
+- ≤0.5：返回 "side": "Wait"
+- 重要：若 H1 无趋势，或 M15 任一子条件不满足，必须返回 "Wait"。`,
     userPrompt: strategy?.userPrompt || '',
     requestFrequency: strategy?.requestFrequency || 5,
     requestFrequencyUnit: strategy?.requestFrequencyUnit || 'minutes' as 'seconds' | 'minutes' | 'hours',
@@ -175,14 +150,34 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
         setSelectedSymbols(detail.symbols || []);
         setCurrentVersion(detail.version || 1);
 
-        // 更新版本历史
+        // 更新版本历史（按版本倒序排列）
+        const currentVersionData = {
+          version: detail.version || 1,
+          timestamp: detail.createTime || new Date().toISOString(),
+          id: parseInt(strategy.id) // 使用当前策略的ID
+        };
+
         if (detail.historyList && detail.historyList.length > 0) {
           const history = detail.historyList.map(h => ({
             version: h.version,
             timestamp: h.createTime,
             id: h.id
           }));
+
+          // 检查当前版本是否已在历史列表中
+          const currentVersionExists = history.some(h => h.version === currentVersionData.version);
+
+          // 如果当前版本不在历史列表中，添加它
+          if (!currentVersionExists) {
+            history.push(currentVersionData);
+          }
+
+          // 按版本号倒序排列
+          history.sort((a, b) => b.version - a.version);
           setVersionHistory(history);
+        } else {
+          // 如果没有历史列表，至少显示当前版本
+          setVersionHistory([currentVersionData]);
         }
       } catch (err) {
         console.error('加载策略详情失败:', err);
@@ -235,14 +230,34 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
       setSelectedSymbols(detail.symbols || []);
       setCurrentVersion(detail.version || version);
 
-      // 更新版本历史（如果返回了新的历史列表）
+      // 更新版本历史（如果返回了新的历史列表，按版本倒序排列）
+      const currentVersionData = {
+        version: detail.version || version,
+        timestamp: detail.createTime || new Date().toISOString(),
+        id: versionId || parseInt(strategy.id)
+      };
+
       if (detail.historyList && detail.historyList.length > 0) {
         const history = detail.historyList.map(h => ({
           version: h.version,
           timestamp: h.createTime,
           id: h.id
         }));
+
+        // 检查当前版本是否已在历史列表中
+        const currentVersionExists = history.some(h => h.version === currentVersionData.version);
+
+        // 如果当前版本不在历史列表中，添加它
+        if (!currentVersionExists) {
+          history.push(currentVersionData);
+        }
+
+        // 按版本号倒序排列
+        history.sort((a, b) => b.version - a.version);
         setVersionHistory(history);
+      } else {
+        // 如果没有历史列表，至少显示当前版本
+        setVersionHistory([currentVersionData]);
       }
     } catch (err) {
       console.error('加载策略版本失败:', err);
@@ -781,7 +796,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                     value={formData.systemPrompt}
                     onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-mono text-sm overflow-y-auto"
-                    rows={16}
+                    rows={32}
                     placeholder="你是一个专业的量化交易分析师，擅长技术分析和市场趋势预测。你的任务是基于实时市场数据，为用户提供精准的交易建议..."
                     required
                   />
@@ -953,7 +968,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                       value={unescapeNewlines(previewData?.systemPrompt || formData.systemPrompt || '（未设置）')}
                       readOnly
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 resize-none font-mono text-sm text-gray-700 cursor-default"
-                      rows={16}
+                      rows={32}
                     />
                   </div>
                 )}

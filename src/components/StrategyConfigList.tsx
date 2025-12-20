@@ -68,6 +68,7 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedApi, setHasLoadedApi] = useState(false); // 标记是否已经加载过API
+  const [activeTab, setActiveTab] = useState<'active' | 'paused'>('active'); // Tab状态
 
   // 加载策略列表
   const loadStrategies = async () => {
@@ -100,7 +101,16 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
   }, []);
 
   // 如果已经加载过API，就使用API数据（即使是空数组）；否则使用props传入的默认数据
-  const displayStrategies = hasLoadedApi ? apiStrategies : strategies;
+  const allStrategies = hasLoadedApi ? apiStrategies : strategies;
+
+  // 根据当前Tab过滤策略
+  const displayStrategies = allStrategies.filter(strategy =>
+    activeTab === 'active' ? strategy.status === 'active' : strategy.status === 'paused'
+  );
+
+  // 统计数量
+  const activeCount = allStrategies.filter(s => s.status === 'active').length;
+  const pausedCount = allStrategies.filter(s => s.status === 'paused').length;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -235,10 +245,54 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
             创建策略
           </button>
         </div>
+
+        {/* Tab Navigation */}
+        <div className="flex gap-2 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('active')}
+            className={`px-4 py-2 font-medium transition-colors relative ${
+              activeTab === 'active'
+                ? 'text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            运行中
+            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+              activeTab === 'active'
+                ? 'bg-blue-100 text-blue-600'
+                : 'bg-gray-100 text-gray-600'
+            }`}>
+              {activeCount}
+            </span>
+            {activeTab === 'active' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('paused')}
+            className={`px-4 py-2 font-medium transition-colors relative ${
+              activeTab === 'paused'
+                ? 'text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            已暂停
+            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+              activeTab === 'paused'
+                ? 'bg-blue-100 text-blue-600'
+                : 'bg-gray-100 text-gray-600'
+            }`}>
+              {pausedCount}
+            </span>
+            {activeTab === 'paused' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto mt-6">
         {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
@@ -259,8 +313,25 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
           </div>
         )}
 
+        {/* Empty State */}
+        {!isLoading && !error && displayStrategies.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <Activity className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-gray-900 mb-2">
+              {activeTab === 'active' ? '暂无运行中的策略' : '暂无已暂停的策略'}
+            </h3>
+            <p className="text-gray-600 text-sm">
+              {activeTab === 'active'
+                ? '点击右上角"创建策略"按钮开始配置新策略'
+                : '所有策略都在运行中'}
+            </p>
+          </div>
+        )}
+
         {/* Strategy Cards Grid */}
-        {!isLoading && !error && (
+        {!isLoading && !error && displayStrategies.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {displayStrategies.map((strategy) => (
             <div
