@@ -175,6 +175,7 @@ export interface PositionResponse {
   takeProfit: number;
   unrealisedPnl: number;
   exchange?: string; // 交易所名称
+  strategyType?: string; // 策略类型
 }
 
 export interface PositionChatRequest {

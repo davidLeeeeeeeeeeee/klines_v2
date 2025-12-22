@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronRight, Play, X, RefreshCw, Loader2 } from 'lucide-react';
+import { ChevronRight, Play, X, RefreshCw, Loader2, Copy } from 'lucide-react';
 import { getChatList, ChatResVO, PageRequest, ChatListReq } from '../services/api';
 import { getToken } from '../utils/storage';
 import { JsonViewer } from './JsonViewer';
@@ -25,6 +25,32 @@ interface AIChatMessage {
 }
 
 export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
+  const formatClipboardText = (data: unknown) => {
+    if (data === null || data === undefined) return '';
+    if (typeof data === 'string') return data;
+    try {
+      return JSON.stringify(data, null, 2);
+    } catch {
+      return String(data);
+    }
+  };
+
+  const copyToClipboard = async (data: unknown) => {
+    const text = formatClipboardText(data);
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+  };
   // 格式化日期为 YYYY-MM-DD HH:mm:ss 格式
   const formatDateTime = (date: Date): string => {
     const year = date.getFullYear();
@@ -136,6 +162,11 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
       };
 
       const response = await getChatList(token, request);
+      console.log('✅ 获取到对话列表:', {
+        total: response.total,
+        recordsCount: response.records.length,
+        records: response.records
+      });
       setChatList(response.records);
       setTotal(response.total);
     } catch (err: any) {
@@ -169,6 +200,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
 
   // Symbols list - 从API数据中动态获取
   const symbols = Array.from(new Set(chatList.map(chat => chat.symbol))).filter(Boolean);
+  console.log('📊 可用的交易对列表:', symbols, '来源数据:', chatList.map(chat => ({ id: chat.id, symbol: chat.symbol })));
 
   // Mock strategies data - 从API数据中动态获取
   const uniqueStrategyTypes = Array.from(new Set(chatList.map(chat => chat.strategyType))).filter(Boolean);
@@ -176,6 +208,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
     { id: 'all', name: '所有策略' },
     ...uniqueStrategyTypes.map(type => ({ id: type, name: type }))
   ];
+  console.log('📊 可用的策略列表:', strategies);
 
   // 将API数据转换为组件需要的格式
   const aiChatMessages: AIChatMessage[] = chatList.map(chat => {
@@ -527,6 +560,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
             let parsedResponse: any = null;
             let simpleThought = '';
             let tradeSignalArgs: any = null;
+            let promptData: any = message.prompt;
 
             try {
               parsedResponse = JSON.parse(message.output);
@@ -540,6 +574,12 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
               }
             } catch (e) {
               // 如果解析失败，使用原始数据
+            }
+
+            try {
+              promptData = JSON.parse(message.prompt);
+            } catch {
+              // 保持原始prompt字符串
             }
 
             return (
@@ -556,50 +596,48 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
             </div>
 
             {/* Symbol and Action with ID */}
-            {tradeSignalArgs && (
-              <div className="mb-3">
-                <div className="flex items-center justify-between gap-1.5 text-sm text-gray-600">
-                  <div className="flex items-center gap-1.5">
-                    <span>{tradeSignalArgs.coin}</span>
-                    <span className={`px-2 py-0.5 rounded-2xl ${getActionColor(
-                      tradeSignalArgs.side === 'Buy' ? '开多' :
-                      tradeSignalArgs.side === 'Sell' ? '开空' : '观望'
-                    )}`}>
-                      {tradeSignalArgs.side === 'Buy' ? '开多' :
-                       tradeSignalArgs.side === 'Sell' ? '开空' : '观望'}
-                    </span>
-                  </div>
-                  <span className="text-gray-400 text-xs">ID: {message.id}</span>
+            <div className="mb-3">
+              <div className="flex items-center justify-between gap-1.5 text-sm text-gray-600">
+                <div className="flex items-center gap-1.5">
+                  <span>{message.symbol || (tradeSignalArgs?.symbol)}</span>
+                  <span className={`px-2 py-0.5 rounded-2xl ${getActionColor(message.action)}`}>
+                    {message.action}
+                  </span>
                 </div>
+                <span className="text-gray-400 text-xs">ID: {message.id}</span>
               </div>
-            )}
+            </div>
 
             {/* Divider */}
             <div className="border-t border-gray-200 mb-4"></div>
 
             {/* USER_PROMPT - Collapsible (默认收起) */}
             <div className="mb-4">
-              <button
-                onClick={() => togglePrompt(message.id)}
-                className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                {expandedPrompt[message.id] ? (
-                  <Play className="w-3 h-3 rotate-90 fill-current" />
-                ) : (
-                  <Play className="w-3 h-3 fill-current" />
-                )}
-                <span>USER_PROMPT</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => togglePrompt(message.id)}
+                  className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {expandedPrompt[message.id] ? (
+                    <Play className="w-3 h-3 rotate-90 fill-current" />
+                  ) : (
+                    <Play className="w-3 h-3 fill-current" />
+                  )}
+                  <span>USER_PROMPT</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(promptData)}
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Copy USER_PROMPT"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
 
               {expandedPrompt[message.id] && (
                 <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
-                  <JsonViewer data={(() => {
-                    try {
-                      return JSON.parse(message.prompt);
-                    } catch {
-                      return message.prompt;
-                    }
-                  })()} expandAll={true} />
+                  <JsonViewer data={promptData} expandAll={true} />
                 </div>
               )}
             </div>
@@ -607,17 +645,27 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
             {/* CHAIN_OF_THOUGHTS - simpleThought */}
             {simpleThought && (
               <div className="mb-4">
-                <button
-                  onClick={() => toggleReasoning(message.id)}
-                  className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {expandedReasoning[message.id] === false ? (
-                    <Play className="w-3 h-3 fill-current" />
-                  ) : (
-                    <Play className="w-3 h-3 rotate-90 fill-current" />
-                  )}
-                  <span>CHAIN_OF_THOUGHTS</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => toggleReasoning(message.id)}
+                    className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    {expandedReasoning[message.id] === false ? (
+                      <Play className="w-3 h-3 fill-current" />
+                    ) : (
+                      <Play className="w-3 h-3 rotate-90 fill-current" />
+                    )}
+                    <span>CHAIN_OF_THOUGHTS</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(simpleThought)}
+                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Copy CHAIN_OF_THOUGHTS"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
 
                 {expandedReasoning[message.id] !== false && (
                   <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
@@ -632,17 +680,27 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
             {/* TRADING_DECISIONS - tradeSignalArgs */}
             {tradeSignalArgs && (
               <div>
-                <button
-                  onClick={() => toggleOutput(message.id)}
-                  className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {expandedOutput[message.id] === false ? (
-                    <Play className="w-3 h-3 fill-current" />
-                  ) : (
-                    <Play className="w-3 h-3 rotate-90 fill-current" />
-                  )}
-                  <span>TRADING_DECISIONS</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => toggleOutput(message.id)}
+                    className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    {expandedOutput[message.id] === false ? (
+                      <Play className="w-3 h-3 fill-current" />
+                    ) : (
+                      <Play className="w-3 h-3 rotate-90 fill-current" />
+                    )}
+                    <span>TRADING_DECISIONS</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(tradeSignalArgs)}
+                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Copy TRADING_DECISIONS"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
 
                 {expandedOutput[message.id] !== false && (
                   <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">

@@ -37,6 +37,8 @@ interface Position {
   takeProfit: number | null;
   stopLoss: number | null;
   createdAt: string;
+  strategyType: string;
+  exchange: string;
 }
 
 interface HistoricalTrade {
@@ -238,6 +240,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       takeProfit: apiPos.takeProfit || null,
       stopLoss: apiPos.stopLoss || null,
       createdAt: new Date().toLocaleString('zh-CN'),
+      strategyType: apiPos.strategyType || '',
+      exchange: apiPos.exchange || 'BYBIT',
     };
   };
 
@@ -274,7 +278,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
-    
+
     if (diffDays > 0) {
       return `${diffDays}天${diffHours}小时${diffMinutes}分${diffSeconds}秒`;
     } else if (diffHours > 0) {
@@ -295,7 +299,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
-    
+
     if (diffDays > 0) {
       return `${diffDays}天${diffHours}小时${diffMinutes}分${diffSeconds}秒`;
     } else if (diffHours > 0) {
@@ -395,12 +399,14 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT'];
 
   // Mock strategies data
+  const uniqueStrategyTypes = Array.from(new Set([
+    ...positions.map(p => p.strategyType),
+    ...closedPositions.map(p => p.strategyType)
+  ])).filter(Boolean);
+
   const strategies = [
-    { id: 'all', name: '所有策略' },
-    { id: '1', name: '趋势追踪策略' },
-    { id: '2', name: '网格交易策略' },
-    { id: '3', name: '套利策略' },
-    { id: '4', name: '高频交易策略' }
+    { id: 'all', name: '策略' },
+    ...uniqueStrategyTypes.map(type => ({ id: type!, name: type! }))
   ];
 
   // 从API数据转换为组件需要的格式
@@ -412,7 +418,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     if (searchFilter) {
       const searchLower = searchFilter.toLowerCase();
       if (!position.accountUid.toLowerCase().includes(searchLower) &&
-          !position.accountName.toLowerCase().includes(searchLower)) {
+        !position.accountName.toLowerCase().includes(searchLower)) {
         return false;
       }
     }
@@ -421,6 +427,11 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     if (selectedType !== 'all') {
       if (selectedType === 'long' && position.type !== 'long') return false;
       if (selectedType === 'short' && position.type !== 'short') return false;
+    }
+
+    // 按策略筛选
+    if (selectedStrategy !== 'all' && position.strategyType !== selectedStrategy) {
+      return false;
     }
 
     return true;
@@ -443,6 +454,11 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       // side: "Buy" 表示买入平仓 = 平空（平掉空单）
       if (selectedType === 'closeLong' && position.side !== 'Sell') return false;
       if (selectedType === 'closeShort' && position.side !== 'Buy') return false;
+    }
+
+    // 按策略筛选
+    if (selectedStrategy !== 'all' && position.strategyType !== selectedStrategy) {
+      return false;
     }
 
     return true;
@@ -560,11 +576,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             setActiveTab('positions');
             setSelectedType('all'); // 切换Tab时重置类型筛选
           }}
-          className={`pb-3 text-base transition-colors relative ${
-            activeTab === 'positions'
+          className={`pb-3 text-base transition-colors relative ${activeTab === 'positions'
               ? 'text-gray-900 font-semibold'
               : 'text-gray-500 hover:text-gray-700'
-          }`}
+            }`}
         >
           当前仓位
           {activeTab === 'positions' && (
@@ -576,11 +591,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             setActiveTab('history');
             setSelectedType('all'); // 切换Tab时重置类型筛选
           }}
-          className={`pb-3 text-base transition-colors relative ${
-            activeTab === 'history'
+          className={`pb-3 text-base transition-colors relative ${activeTab === 'history'
               ? 'text-gray-900 font-semibold'
               : 'text-gray-700 hover:text-gray-900'
-          }`}
+            }`}
         >
           历史仓位
           {activeTab === 'history' && (
@@ -612,9 +626,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     setSelectedStrategy(strategy.id);
                     setShowStrategyDropdown(false);
                   }}
-                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                    selectedStrategy === strategy.id ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                  }`}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedStrategy === strategy.id ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
                 >
                   {strategy.name}
                 </button>
@@ -646,9 +659,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                   setSelectedSymbol('all');
                   setShowSymbolDropdown(false);
                 }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedSymbol === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedSymbol === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  }`}
               >
                 全部
               </button>
@@ -659,9 +671,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     setSelectedSymbol(symbol);
                     setShowSymbolDropdown(false);
                   }}
-                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                    selectedSymbol === symbol ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                  }`}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedSymbol === symbol ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
                 >
                   {symbol}
                 </button>
@@ -700,9 +711,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                   setSelectedType('all');
                   setShowTypeDropdown(false);
                 }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  }`}
               >
                 全部
               </button>
@@ -713,9 +723,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       setSelectedType('long');
                       setShowTypeDropdown(false);
                     }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                      selectedType === 'long' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                    }`}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'long' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                      }`}
                   >
                     多单
                   </button>
@@ -724,9 +733,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       setSelectedType('short');
                       setShowTypeDropdown(false);
                     }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                      selectedType === 'short' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                    }`}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'short' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                      }`}
                   >
                     空单
                   </button>
@@ -738,9 +746,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       setSelectedType('closeLong');
                       setShowTypeDropdown(false);
                     }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                      selectedType === 'closeLong' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                    }`}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'closeLong' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                      }`}
                   >
                     平多
                   </button>
@@ -749,9 +756,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       setSelectedType('closeShort');
                       setShowTypeDropdown(false);
                     }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                      selectedType === 'closeShort' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                    }`}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'closeShort' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                      }`}
                   >
                     平空
                   </button>
@@ -772,11 +778,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
         {/* Total PnL Display */}
         <div className="text-right ml-6">
           <div className="text-sm text-gray-500">总盈亏</div>
-          <div className={`text-lg font-semibold ${
-            activeTab === 'positions'
+          <div className={`text-lg font-semibold ${activeTab === 'positions'
               ? (totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600')
               : (filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0) >= 0 ? 'text-green-600' : 'text-red-600')
-          }`}>
+            }`}>
             {activeTab === 'positions'
               ? Math.abs(totalUnrealizedPnL).toFixed(2)
               : Math.abs(filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0)).toFixed(2)
@@ -818,20 +823,19 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         {position.leverage}x
                       </span>
                       <span
-                        className={`px-3 py-1 rounded-2xl text-sm ${
-                          position.type === 'long'
+                        className={`px-3 py-1 rounded-2xl text-sm ${position.type === 'long'
                             ? 'bg-green-100 text-green-600'
                             : 'bg-red-100 text-red-600'
-                        }`}
+                          }`}
                       >
                         {position.type === 'long' ? '开多' : '开空'}
                       </span>
                     </div>
                     <div className="text-sm text-gray-600">
-                      UID: {position.accountUid}
+                      {position.exchange}: {position.accountUid}
                     </div>
                   </div>
-                  
+
                   <div className={`text-right ${position.unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     <div className="text-sm text-gray-500 mb-1">未结盈亏</div>
                     <div>
@@ -867,15 +871,15 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                   </div>
 
                   <div>
-                    <div className="text-sm text-gray-500 mb-1">交易所</div>
-                    <div className="text-gray-900">BYBIT</div>
+                    <div className="text-sm text-gray-500 mb-1">时长</div>
+                    <div className="text-gray-900">{calculateDurationToNow(position.createdAt)}</div>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div className="text-sm text-gray-500">
-                    时长: <span className="text-gray-900">{formatTime(position.createdAt)}    {calculateDurationToNow(position.createdAt)}</span>
+                    策略类型: <span className="text-gray-900">{position.strategyType || '-'}</span>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -955,17 +959,16 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                             {trade.leverage}x
                           </span>
                           <span
-                            className={`px-3 py-1 rounded-2xl text-sm ${
-                              trade.side === 'Sell'
+                            className={`px-3 py-1 rounded-2xl text-sm ${trade.side === 'Sell'
                                 ? 'bg-green-100 text-green-600'
                                 : 'bg-red-100 text-red-600'
-                            }`}
+                              }`}
                           >
                             {trade.side === 'Sell' ? '平多' : '平空'}
                           </span>
                         </div>
                         <div className="text-sm text-gray-600">
-                          UID: {trade.accountId}
+                          {trade.exchange}: {trade.accountId}
                         </div>
                       </div>
 
@@ -996,8 +999,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       </div>
 
                       <div>
-                        <div className="text-sm text-gray-500 mb-1">交易所</div>
-                        <div className="text-gray-900">{trade.exchange}</div>
+                        <div className="text-sm text-gray-500 mb-1">时长</div>
+                        <div className="text-gray-900">{calculateDuration(trade.openTime, trade.closeTime)}</div>
                       </div>
                     </div>
 
@@ -1014,16 +1017,12 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         <span className="text-sm text-gray-500">平仓手续费</span>
                         <span className="text-sm text-gray-900">{trade.closeFee} USDT</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">时长</span>
-                        <span className="text-sm text-gray-900">{formatTime(trade.openTime)} - {formatTime(trade.closeTime)}    {calculateDuration(trade.openTime, trade.closeTime)}</span>
-                      </div>
                     </div>
 
                     {/* Actions */}
                     <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                       <div className="text-sm text-gray-500">
-                        <span className="text-gray-900">{trade.strategyType || '-'}</span>
+                        策略类型: <span className="text-gray-900">{trade.strategyType || '-'}</span>
                       </div>
                       <div className="flex gap-2">
                         {trade.openChatId && (
@@ -1126,11 +1125,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                   {selectedPosition.leverage}x
                 </span>
                 <span
-                  className={`px-3 py-1 rounded-2xl text-sm ${
-                    selectedPosition.type === 'long'
+                  className={`px-3 py-1 rounded-2xl text-sm ${selectedPosition.type === 'long'
                       ? 'bg-green-100 text-green-600'
                       : 'bg-red-100 text-red-600'
-                  }`}
+                    }`}
                 >
                   {selectedPosition.type === 'long' ? '开多' : '开空'}
                 </span>
@@ -1189,7 +1187,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
               </button>
             </div>
           </div>
-          
+
           <style>{`
             @keyframes slideUp {
               from {
@@ -1276,11 +1274,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       <div className="mb-3">
                         <div className="flex items-center gap-1.5 text-sm text-gray-600">
                           <span>{tradeSignalArgs.coin}</span>
-                          <span className={`px-2 py-0.5 rounded-2xl ${
-                            isChatForClosing
+                          <span className={`px-2 py-0.5 rounded-2xl ${isChatForClosing
                               ? (tradeSignalArgs.side === 'Sell' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600')
                               : (tradeSignalArgs.side === 'Buy' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600')
-                          }`}>
+                            }`}>
                             {isChatForClosing
                               ? (tradeSignalArgs.side === 'Sell' ? '平多' : '平空')
                               : (tradeSignalArgs.side === 'Buy' ? '开多' : '开空')
@@ -1401,7 +1398,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
               </button>
             </div>
           </div>
-          
+
           <style>{`
             @keyframes slideUp {
               from {
@@ -1416,7 +1413,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
           `}</style>
         </div>
       )}
-      
+
       {/* Batch Close Position Modal */}
       {showBatchCloseModal && (
         <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-end justify-center z-50">
@@ -1465,11 +1462,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     <button
                       key={symbol}
                       onClick={() => setBatchCloseSymbol(symbol)}
-                      className={`px-4 py-3 rounded-lg border transition-colors ${
-                        batchCloseSymbol === symbol
+                      className={`px-4 py-3 rounded-lg border transition-colors ${batchCloseSymbol === symbol
                           ? 'bg-blue-50 border-blue-500 text-blue-600'
                           : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                      }`}
+                        }`}
                     >
                       {symbol}
                     </button>
@@ -1653,7 +1649,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
               取消
             </button>
           </div>
-          
+
           <style>{`
             @keyframes slideUp {
               from {

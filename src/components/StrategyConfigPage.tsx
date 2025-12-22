@@ -758,7 +758,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   <label className="block text-gray-700 mb-2">
                     AI MODEL <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 gap-3 mb-2">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2">
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, aiModel: 'DEEPSEEK_V3' })}
@@ -780,6 +780,39 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                       }`}
                     >
                       DEEPSEEK_R1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, aiModel: 'QWEN_PLUS' })}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                        formData.aiModel === 'QWEN_PLUS'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      QWEN_PLUS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, aiModel: 'DEEPSEEK_BL' })}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                        formData.aiModel === 'DEEPSEEK_BL'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      DEEPSEEK_BL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, aiModel: 'GEMINI_3_FLASH' })}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                        formData.aiModel === 'GEMINI_3_FLASH'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      GEMINI_3_FLASH
                     </button>
                   </div>
                   <p className="text-gray-500 text-sm">
