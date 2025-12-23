@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { login } from '../services/api';
+import { getCurrentUserInfo, login } from '../services/api';
 import { saveUserInfo } from '../utils/storage';
 
 interface LoginPageProps {
@@ -33,8 +33,15 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           password,
         });
 
-        // 保存用户信息到localStorage
-        saveUserInfo(response);
+        // Save user info to localStorage
+        // 使用login返回的token，而不是userInfo返回的token
+        const userInfo = await getCurrentUserInfo(response.token);
+
+        // 保存用户信息，但使用login返回的token
+        saveUserInfo({
+          ...userInfo,
+          token: response.token,
+        });
 
         // 登录成功，调用回调
         onLogin();

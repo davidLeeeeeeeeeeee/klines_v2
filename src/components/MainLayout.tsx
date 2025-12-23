@@ -21,7 +21,8 @@ import { InitAccountPage } from './InitAccountPage';
 import { RiskManagement } from './RiskManagement';
 import { FundTransfer } from './FundTransfer';
 import type { TradingAccount } from './TradingAccounts';
-import { getCryptoPrices } from '../services/api';
+import { getCryptoPrices, getCurrentUserInfo } from '../services/api';
+import { getUserInfo, getToken, getUserType } from '../utils/storage';
 
 interface MainLayoutProps {
   onLogout: () => void;
@@ -45,6 +46,8 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isUserManagementInSecondaryView, setIsUserManagementInSecondaryView] = useState(false);
   const [isTradingAccountsInSecondaryView, setIsTradingAccountsInSecondaryView] = useState(false);
+  const [userInfo, setUserInfo] = useState<ReturnType<typeof getUserInfo>>(null);
+  const [isLoadingUserInfo, setIsLoadingUserInfo] = useState(false);
 
   // User management state
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -138,6 +141,54 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
 
   // User dropdown ref for click outside detection
   const userDropdownRef = useRef<HTMLDivElement>(null);
+
+  // 获取用户信息的函数 - 每次显示弹出框时都会调用
+  const fetchUserInfo = async () => {
+    // 如果正在加载中，不重复请求
+    if (isLoadingUserInfo) {
+      console.log('正在加载用户信息，跳过重复请求');
+      return;
+    }
+
+    setIsLoadingUserInfo(true);
+    try {
+      const token = getToken();
+      if (!token) {
+        console.warn('未找到 token，无法获取用户信息');
+        // 如果没有 token，尝试从本地存储获取
+        setUserInfo(getUserInfo());
+        return;
+      }
+
+      console.log('开始获取用户信息...');
+      const userInfoData = await getCurrentUserInfo(token);
+      console.log('获取到的用户信息:', userInfoData);
+
+      // 只更新用户信息状态，不保存token（保留login时的token）
+      setUserInfo(userInfoData);
+    } catch (error) {
+      console.error('获取用户信息失败:', error);
+      // 如果接口失败，尝试从本地存储获取
+      const cachedUserInfo = getUserInfo();
+      if (cachedUserInfo) {
+        setUserInfo(cachedUserInfo);
+      }
+    } finally {
+      setIsLoadingUserInfo(false);
+    }
+  };
+
+  const displayName = userInfo?.username || 'User';
+  const displaySubline = 'userType' in (userInfo || {})
+    ? (userInfo as any).userType
+    : userInfo?.id !== undefined
+      ? `ID: ${userInfo.id}`
+      : 'N/A';
+  const formattedEquity = typeof userInfo?.equity === 'number'
+    ? userInfo.equity.toLocaleString('zh-CN', { style: 'currency', currency: 'CNY' })
+    : 'N/A';
+
+
 
   // Fetch crypto prices from Bybit
   useEffect(() => {
@@ -365,7 +416,15 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
     }
   ]);
 
-  const menuItems: MenuItem[] = [
+  // 普通用户可见的菜单ID
+  const userMenuIds = ['dashboard', 'strategy-list', 'account-management', 'account-monitor'];
+
+  // 获取用户类型
+  const currentUserType = getUserType();
+  const isAdminUser = currentUserType === 0;
+
+  // 所有菜单项
+  const allMenuItems: MenuItem[] = [
     {
       id: 'dashboard',
       label: '仪表盘',
@@ -407,6 +466,11 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       icon: <Layers className="w-5 h-5" />
     }
   ];
+
+  // 根据用户类型过滤菜单
+  const menuItems: MenuItem[] = isAdminUser
+    ? allMenuItems
+    : allMenuItems.filter(item => userMenuIds.includes(item.id));
 
   const toggleMenu = (menuId: string) => {
     setExpandedMenus((prev) =>
@@ -809,7 +873,10 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
             {/* User Dropdown */}
             <div className="relative" ref={userDropdownRef}>
               <button
-                onMouseEnter={() => setShowUserDropdown(true)}>
+                onMouseEnter={() => {
+                  setShowUserDropdown(true);
+                  fetchUserInfo();
+                }}>
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
                   <User className="w-6 h-6 text-white" />
                 </div>
@@ -820,12 +887,20 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
                   {/* User Info Header */}
                   <div className="px-4 py-3 border-b border-gray-200">
-                    <div className="text-gray-900">张三</div>
-                    <div className="text-gray-500 text-sm">user@example.com</div>
-                    <div className="mt-2 pt-2 border-t border-gray-100">
-                      <div className="text-sm text-gray-500">总净值</div>
-                      <div className="text-green-600 font-semibold">¥15,000.00</div>
-                    </div>
+                    {isLoadingUserInfo ? (
+                      <div className="flex items-center justify-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-gray-900">{displayName}</div>
+                        <div className="text-gray-500 text-sm">{displaySubline}</div>
+                        <div className="mt-2 pt-2 border-t border-gray-100">
+                          <div className="text-sm text-gray-500">总净值</div>
+                          <div className="text-green-600 font-semibold">{formattedEquity}</div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Menu Items */}

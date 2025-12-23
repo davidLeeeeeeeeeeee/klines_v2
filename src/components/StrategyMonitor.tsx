@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronRight, Play, X, RefreshCw, Loader2, Copy } from 'lucide-react';
-import { getChatList, ChatResVO, PageRequest, ChatListReq } from '../services/api';
+import { getChatList, ChatResVO, PageRequest, ChatListReq, getSystemDict, DictItem } from '../services/api';
 import { getToken } from '../utils/storage';
 import { JsonViewer } from './JsonViewer';
 import { useClickOutside } from '../hooks/useClickOutside';
@@ -130,6 +130,9 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
   const [pageSize] = useState(10); // 每页10条
   const [total, setTotal] = useState(0);
 
+  // 商品列表 - 从系统字典API获取
+  const [symbolList, setSymbolList] = useState<DictItem[]>([]);
+
   // 获取对话列表
   const fetchChatList = async () => {
     setIsLoading(true);
@@ -177,6 +180,22 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
     }
   };
 
+  // 获取系统字典（商品列表）
+  const fetchSystemDict = async () => {
+    try {
+      const dictData = await getSystemDict();
+      setSymbolList(dictData.SymbolType || []);
+      console.log('📊 获取到商品列表:', dictData.SymbolType);
+    } catch (err: any) {
+      console.error('获取系统字典失败:', err);
+    }
+  };
+
+  // 组件挂载时获取系统字典
+  useEffect(() => {
+    fetchSystemDict();
+  }, []);
+
   // 组件挂载时获取数据，以及当筛选条件变化时重新获取
   useEffect(() => {
     fetchChatList();
@@ -198,9 +217,9 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
     });
   };
 
-  // Symbols list - 从API数据中动态获取
-  const symbols = Array.from(new Set(chatList.map(chat => chat.symbol))).filter(Boolean);
-  console.log('📊 可用的交易对列表:', symbols, '来源数据:', chatList.map(chat => ({ id: chat.id, symbol: chat.symbol })));
+  // Symbols list - 从系统字典API获取
+  const symbols = symbolList.map(item => item.code);
+  console.log('📊 可用的交易对列表:', symbols);
 
   // Mock strategies data - 从API数据中动态获取
   const uniqueStrategyTypes = Array.from(new Set(chatList.map(chat => chat.strategyType))).filter(Boolean);

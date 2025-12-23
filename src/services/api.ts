@@ -25,6 +25,15 @@ export interface LoginResponse {
   id: number;
   token: string;
   username: string;
+  userType: number; // 用户类型：0=管理员，1=普通用户
+}
+
+export interface UserInfoResponse {
+  equity: number;
+  id: number;
+  token: string;
+  userType: number; // 用户类型：0=管理员，1=普通用户
+  username: string;
 }
 
 // API错误类型
@@ -108,6 +117,47 @@ export async function login(request: LoginRequest): Promise<LoginResponse> {
  * @param token 用户token
  * @returns 是否成功登出
  */
+/**
+ * Get current user info after login.
+ * @param token user token
+ * @returns user info response data
+ */
+export async function getCurrentUserInfo(token: string): Promise<UserInfoResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/user/info`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.description || errorData.message || `Failed to fetch user info: ${response.statusText}`;
+      throw new ApiError(errorMessage, response.status, errorData);
+    }
+
+    const apiResponse: ApiResponse<UserInfoResponse> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      const errorMessage = apiResponse.description || 'Failed to fetch user info';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : 'Failed to fetch user info'
+    );
+  }
+}
+
+
 export async function logout(token: string): Promise<boolean> {
   try {
     const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/user/logout`, {
@@ -176,6 +226,7 @@ export interface PositionResponse {
   unrealisedPnl: number;
   exchange?: string; // 交易所名称
   strategyType?: string; // 策略类型
+  createdTime?: string; // 创建时间
 }
 
 export interface PositionChatRequest {
@@ -192,6 +243,8 @@ export interface ChatResponse {
   response: string;
   strategyType: string;
   updateTime: string;
+  symbol?: string; // 交易对
+  side?: string; // 方向: 'Buy', 'Sell', 'Wait'
 }
 
 // 对话列表请求参数
@@ -245,6 +298,7 @@ export interface ClosePnlVO {
   closeChatId: number;
   closeFee: number;
   closeTime: string;
+  closeType: string; // 成交类型: MANUAL(手动平仓), PROFIT_LOSS(止盈止损), STRATEGY(策略平仓)
   closedPnl: number;
   closedQty: number;
   createTime: string;
@@ -262,6 +316,7 @@ export interface ClosePnlVO {
   symbol: string;
   updateTime: string;
   userId: number;
+  fundingFee?: number; // 资金费
 }
 
 export interface PageResponse<T> {
@@ -2021,6 +2076,70 @@ export async function previewStrategyModel(
     }
     throw new ApiError(
       error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+// ==================== 系统字典 API ====================
+
+/**
+ * 字典项
+ */
+export interface DictItem {
+  name: string;
+  code: string;
+  message: string;
+}
+
+/**
+ * 系统字典响应数据
+ */
+export interface SystemDictData {
+  AppConfigType: DictItem[];
+  AiModel: DictItem[];
+  OrderCloseType: DictItem[];
+  SideType: DictItem[];
+  SymbolType: DictItem[];
+  RiskLevel: DictItem[];
+  AccountType: DictItem[];
+  UserType: DictItem[];
+  StrategyModel: DictItem[];
+  Indicator: DictItem[];
+  ExchangeType: DictItem[];
+  Interval: DictItem[];
+}
+
+/**
+ * 获取系统字典
+ * @returns 系统字典数据
+ */
+export async function getSystemDict(): Promise<SystemDictData> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/system/dict`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<SystemDictData> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取系统字典失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '获取系统字典失败'
     );
   }
 }

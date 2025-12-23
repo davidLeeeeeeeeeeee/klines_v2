@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, X, Play, XCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { ChevronDown, X, Play, XCircle, RefreshCw, Loader2, Copy } from 'lucide-react';
 import {
   getPositionList,
   getPositionChat,
@@ -7,12 +7,14 @@ import {
   getChatDetail,
   closeAllPositions,
   closeOnePosition,
+  getSystemDict,
   PositionResponse,
   ChatResponse,
   ClosePnlVO,
   PageRequest,
   ClosePnlListReq,
-  ClosePositionReq
+  ClosePositionReq,
+  DictItem
 } from '../services/api';
 import { getToken } from '../utils/storage';
 import { JsonViewer } from './JsonViewer';
@@ -63,6 +65,33 @@ interface HistoricalTrade {
 }
 
 export function AccountMonitor({ onBack }: AccountMonitorProps) {
+  const formatClipboardText = (data: unknown) => {
+    if (data === null || data === undefined) return '';
+    if (typeof data === 'string') return data;
+    try {
+      return JSON.stringify(data, null, 2);
+    } catch {
+      return String(data);
+    }
+  };
+
+  const copyToClipboard = async (data: unknown) => {
+    const text = formatClipboardText(data);
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+  };
+
   const [selectedStrategy, setSelectedStrategy] = useState('all');
   const [showStrategyDropdown, setShowStrategyDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState<'positions' | 'history'>('positions');
@@ -116,6 +145,9 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [isLoadingPositions, setIsLoadingPositions] = useState(false);
   const [loadingChatId, setLoadingChatId] = useState<string | null>(null); // 记录正在加载的position ID
   const [error, setError] = useState('');
+
+  // 商品列表 - 从系统字典API获取
+  const [symbolList, setSymbolList] = useState<DictItem[]>([]);
 
   // 历史仓位相关状态
   const [closedPositions, setClosedPositions] = useState<ClosePnlVO[]>([]);
@@ -239,11 +271,27 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       leverage: apiPos.leverage,
       takeProfit: apiPos.takeProfit || null,
       stopLoss: apiPos.stopLoss || null,
-      createdAt: new Date().toLocaleString('zh-CN'),
+      createdAt: apiPos.createdTime || '',
       strategyType: apiPos.strategyType || '',
       exchange: apiPos.exchange || 'BYBIT',
     };
   };
+
+  // 获取系统字典（商品列表）
+  const fetchSystemDict = async () => {
+    try {
+      const dictData = await getSystemDict();
+      setSymbolList(dictData.SymbolType || []);
+      console.log('📊 获取到商品列表:', dictData.SymbolType);
+    } catch (err: any) {
+      console.error('获取系统字典失败:', err);
+    }
+  };
+
+  // 组件挂载时获取系统字典
+  useEffect(() => {
+    fetchSystemDict();
+  }, []);
 
   // 加载持仓数据
   useEffect(() => {
@@ -395,8 +443,9 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     }
   };
 
-  // Symbols list
-  const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT'];
+  // Symbols list - 从系统字典API获取
+  const symbols = symbolList.map(item => item.code);
+  console.log('📊 可用的交易对列表:', symbols);
 
   // Mock strategies data
   const uniqueStrategyTypes = Array.from(new Set([
@@ -871,15 +920,15 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                   </div>
 
                   <div>
-                    <div className="text-sm text-gray-500 mb-1">时长</div>
-                    <div className="text-gray-900">{calculateDurationToNow(position.createdAt)}</div>
+                    <div className="text-sm text-gray-500 mb-1">创建时间</div>
+                    <div className="text-gray-900">{position.createdAt || '-'}</div>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div className="text-sm text-gray-500">
-                    策略类型: <span className="text-gray-900">{position.strategyType || '-'}</span>
+                     <span className="text-gray-900">{position.strategyType || '-'}</span>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -999,8 +1048,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       </div>
 
                       <div>
-                        <div className="text-sm text-gray-500 mb-1">时长</div>
-                        <div className="text-gray-900">{calculateDuration(trade.openTime, trade.closeTime)}</div>
+                        <div className="text-sm text-gray-500 mb-1">成交类型</div>
+                        <div className="text-gray-900">{trade.closeType || '-'}</div>
                       </div>
                     </div>
 
@@ -1017,12 +1066,20 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         <span className="text-sm text-gray-500">平仓手续费</span>
                         <span className="text-sm text-gray-900">{trade.closeFee} USDT</span>
                       </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">资金费</span>
+                        <span className="text-sm text-gray-900">{trade.fundingFee !== undefined ? `${trade.fundingFee} USDT` : '-'}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">持仓时长</span>
+                        <span className="text-sm text-gray-900">{calculateDuration(trade.openTime, trade.closeTime)}</span>
+                      </div>
                     </div>
 
                     {/* Actions */}
                     <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                       <div className="text-sm text-gray-500">
-                        策略类型: <span className="text-gray-900">{trade.strategyType || '-'}</span>
+                         <span className="text-gray-900">{trade.strategyType || '-'}</span>
                       </div>
                       <div className="flex gap-2">
                         {trade.openChatId && (
@@ -1240,11 +1297,12 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
                 try {
                   parsedResponse = JSON.parse(selectedAIChat.response);
-                  // 获取第一个symbol的数据
-                  const firstSymbol = Object.keys(parsedResponse)[0];
-                  if (firstSymbol && parsedResponse[firstSymbol]?.tradeSignalArgs) {
-                    tradeSignalArgs = parsedResponse[firstSymbol].tradeSignalArgs;
-                    simpleThought = tradeSignalArgs.simpleThought || '';
+                  // 新的response结构：直接包含字段，不再嵌套在symbol下
+                  if (parsedResponse && typeof parsedResponse === 'object') {
+                    // 直接从parsedResponse获取simpleThought
+                    simpleThought = parsedResponse.simpleThought || '';
+                    // 整个parsedResponse就是tradeSignalArgs
+                    tradeSignalArgs = parsedResponse;
                   }
                 } catch (e) {
                   console.error('解析response失败:', e);
@@ -1273,12 +1331,15 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     {tradeSignalArgs && (
                       <div className="mb-3">
                         <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                          <span>{tradeSignalArgs.coin}</span>
-                          <span className={`px-2 py-0.5 rounded-2xl ${isChatForClosing
+                          <span>{tradeSignalArgs.symbol || tradeSignalArgs.coin || selectedAIChat.symbol}</span>
+                          <span className={`px-2 py-0.5 rounded-2xl ${
+                              tradeSignalArgs.side === 'Wait' ? 'bg-gray-100 text-gray-600' :
+                              isChatForClosing
                               ? (tradeSignalArgs.side === 'Sell' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600')
                               : (tradeSignalArgs.side === 'Buy' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600')
                             }`}>
-                            {isChatForClosing
+                            {tradeSignalArgs.side === 'Wait' ? '观望' :
+                              isChatForClosing
                               ? (tradeSignalArgs.side === 'Sell' ? '平多' : '平空')
                               : (tradeSignalArgs.side === 'Buy' ? '开多' : '开空')
                             }
@@ -1294,11 +1355,41 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     {tradeSignalArgs && (
                       <div className="bg-gray-50 rounded-lg p-4 pb-8 border border-gray-200 mb-4 relative">
                         <div className="text-gray-900 text-sm space-y-1">
-                          <div>入场价格: <span className="font-semibold">{tradeSignalArgs.entryPrice}</span></div>
-                          <div>止盈: <span className="font-semibold text-green-600">{tradeSignalArgs.takeProfit}</span></div>
-                          <div>止损: <span className="font-semibold text-red-600">{tradeSignalArgs.stopLoss}</span></div>
-                          <div>信心度: <span className="font-semibold">{(tradeSignalArgs.confidence * 100).toFixed(0)}%</span></div>
-                          <div>风险金额: <span className="font-semibold">{tradeSignalArgs.riskUsd}</span></div>
+                          {/* 信心度 - 直接从顶层获取 */}
+                          {tradeSignalArgs.confidence !== undefined && (
+                            <div>信心度: <span className="font-semibold">{(tradeSignalArgs.confidence * 100).toFixed(0)}%</span></div>
+                          )}
+                          {/* 失效条件 */}
+                          {tradeSignalArgs.invalidationCondition && (
+                            <div>失效条件: <span className="font-semibold text-orange-600">{tradeSignalArgs.invalidationCondition}</span></div>
+                          )}
+                          {/* 旧结构兼容 - 直接显示入场价格等 */}
+                          {tradeSignalArgs.entryPrice !== undefined && (
+                            <div>入场价格: <span className="font-semibold">{tradeSignalArgs.entryPrice}</span></div>
+                          )}
+                          {tradeSignalArgs.takeProfit !== undefined && (
+                            <div>止盈: <span className="font-semibold text-green-600">{tradeSignalArgs.takeProfit}</span></div>
+                          )}
+                          {tradeSignalArgs.stopLoss !== undefined && (
+                            <div>止损: <span className="font-semibold text-red-600">{tradeSignalArgs.stopLoss}</span></div>
+                          )}
+                          {tradeSignalArgs.riskUsd !== undefined && (
+                            <div>风险金额: <span className="font-semibold">{tradeSignalArgs.riskUsd}</span></div>
+                          )}
+                          {/* 新结构 - 账户操作列表 */}
+                          {tradeSignalArgs.accountActions && tradeSignalArgs.accountActions.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                              <div className="font-medium mb-1">账户操作 ({tradeSignalArgs.accountActions.length}):</div>
+                              {tradeSignalArgs.accountActions.slice(0, 5).map((action: any, idx: number) => (
+                                <div key={idx} className="text-xs text-gray-600 ml-2">
+                                  [{action.action}] {action.symbol} - {action.thought?.substring(0, 50)}...
+                                </div>
+                              ))}
+                              {tradeSignalArgs.accountActions.length > 5 && (
+                                <div className="text-xs text-gray-400 ml-2">... 还有 {tradeSignalArgs.accountActions.length - 5} 条</div>
+                              )}
+                            </div>
+                          )}
                         </div>
                         {/* ID in bottom-right corner */}
                         {selectedAIChat.id && (
@@ -1311,17 +1402,33 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
                     {/* USER_PROMPT - Collapsible (默认收起) */}
                     <div className="mb-4">
-                      <button
-                        onClick={() => setExpandedPrompt(!expandedPrompt)}
-                        className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                      >
-                        {expandedPrompt ? (
-                          <Play className="w-3 h-3 rotate-90 fill-current" />
-                        ) : (
-                          <Play className="w-3 h-3 fill-current" />
-                        )}
-                        <span>USER_PROMPT</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setExpandedPrompt(!expandedPrompt)}
+                          className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                          {expandedPrompt ? (
+                            <Play className="w-3 h-3 rotate-90 fill-current" />
+                          ) : (
+                            <Play className="w-3 h-3 fill-current" />
+                          )}
+                          <span>USER_PROMPT</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              copyToClipboard(JSON.parse(selectedAIChat.prompt));
+                            } catch {
+                              copyToClipboard(selectedAIChat.prompt);
+                            }
+                          }}
+                          className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                          aria-label="Copy USER_PROMPT"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
 
                       {expandedPrompt && (
                         <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
@@ -1339,17 +1446,27 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     {/* CHAIN_OF_THOUGHTS - simpleThought */}
                     {simpleThought && (
                       <div className="mb-4">
-                        <button
-                          onClick={() => setExpandedReasoning(!expandedReasoning)}
-                          className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                        >
-                          {expandedReasoning ? (
-                            <Play className="w-3 h-3 rotate-90 fill-current" />
-                          ) : (
-                            <Play className="w-3 h-3 fill-current" />
-                          )}
-                          <span>CHAIN_OF_THOUGHTS</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setExpandedReasoning(!expandedReasoning)}
+                            className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                          >
+                            {expandedReasoning ? (
+                              <Play className="w-3 h-3 rotate-90 fill-current" />
+                            ) : (
+                              <Play className="w-3 h-3 fill-current" />
+                            )}
+                            <span>CHAIN_OF_THOUGHTS</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(simpleThought)}
+                            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                            aria-label="Copy CHAIN_OF_THOUGHTS"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        </div>
 
                         {expandedReasoning && (
                           <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
@@ -1364,17 +1481,27 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     {/* TRADING_DECISIONS - tradeSignalArgs */}
                     {tradeSignalArgs && (
                       <div>
-                        <button
-                          onClick={() => setExpandedOutput(!expandedOutput)}
-                          className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                        >
-                          {expandedOutput ? (
-                            <Play className="w-3 h-3 rotate-90 fill-current" />
-                          ) : (
-                            <Play className="w-3 h-3 fill-current" />
-                          )}
-                          <span>TRADING_DECISIONS</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setExpandedOutput(!expandedOutput)}
+                            className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                          >
+                            {expandedOutput ? (
+                              <Play className="w-3 h-3 rotate-90 fill-current" />
+                            ) : (
+                              <Play className="w-3 h-3 fill-current" />
+                            )}
+                            <span>TRADING_DECISIONS</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(tradeSignalArgs)}
+                            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                            aria-label="Copy TRADING_DECISIONS"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        </div>
 
                         {expandedOutput && (
                           <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">

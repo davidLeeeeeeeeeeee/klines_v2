@@ -1,4 +1,4 @@
-import { LoginResponse } from '../services/api';
+import type { LoginResponse, UserInfoResponse } from '../services/api';
 
 // LocalStorage键名
 const USER_INFO_KEY = 'user_info';
@@ -8,7 +8,9 @@ const TOKEN_KEY = 'auth_token';
  * 保存用户信息到localStorage
  * @param userInfo 用户信息
  */
-export function saveUserInfo(userInfo: LoginResponse): void {
+export type StoredUserInfo = LoginResponse | UserInfoResponse;
+
+export function saveUserInfo(userInfo: StoredUserInfo): void {
   try {
     console.log('保存用户信息:', userInfo);
     console.log('Token值:', userInfo.token);
@@ -24,7 +26,7 @@ export function saveUserInfo(userInfo: LoginResponse): void {
  * 获取用户信息
  * @returns 用户信息或null
  */
-export function getUserInfo(): LoginResponse | null {
+export function getUserInfo(): StoredUserInfo | null {
   try {
     const userInfoStr = localStorage.getItem(USER_INFO_KEY);
     if (!userInfoStr) {
@@ -74,3 +76,31 @@ export function isLoggedIn(): boolean {
   return !!(token && userInfo);
 }
 
+/**
+ * 获取用户类型
+ * @returns 用户类型：0=管理员，1=普通用户，-1=未登录
+ */
+export function getUserType(): number {
+  try {
+    const userInfo = getUserInfo();
+    if (!userInfo) {
+      return -1;
+    }
+    // 优先从 userType 字段获取，如果没有默认为普通用户(1)
+    if ('userType' in userInfo && typeof userInfo.userType === 'number') {
+      return userInfo.userType;
+    }
+    return 1; // 默认普通用户
+  } catch (error) {
+    console.error('获取用户类型失败:', error);
+    return -1;
+  }
+}
+
+/**
+ * 检查是否是管理员
+ * @returns 是否是管理员
+ */
+export function isAdmin(): boolean {
+  return getUserType() === 0;
+}

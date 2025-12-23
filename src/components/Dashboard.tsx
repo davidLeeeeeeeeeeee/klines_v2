@@ -38,11 +38,11 @@ import { getToken } from '../utils/storage';
 
 export function Dashboard() {
   const [weeklyChartType, setWeeklyChartType] = useState<'rate' | 'amount'>('rate');
-  const [timeRange, setTimeRange] = useState<'7' | '30' | '90' | '180'>('90');
+  const [timeRange, setTimeRange] = useState<'0' | '7' | '30' | '90' | '180'>('90');
   const [showTimeRangeDropdown, setShowTimeRangeDropdown] = useState(false);
-  const [strategyTimeRange, setStrategyTimeRange] = useState<'7' | '30' | '90' | '180'>('90');
+  const [strategyTimeRange, setStrategyTimeRange] = useState<'0' | '7' | '30' | '90' | '180'>('90');
   const [showStrategyTimeRangeDropdown, setShowStrategyTimeRangeDropdown] = useState(false);
-  const [symbolTimeRange, setSymbolTimeRange] = useState<'7' | '30' | '90' | '180'>('90');
+  const [symbolTimeRange, setSymbolTimeRange] = useState<'0' | '7' | '30' | '90' | '180'>('90');
   const [showSymbolTimeRangeDropdown, setShowSymbolTimeRangeDropdown] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -104,10 +104,16 @@ export function Dashboard() {
   };
 
   // 获取时间范围参数
-  const getTimeRangeParams = (range: '7' | '30' | '90' | '180') => {
+  const getTimeRangeParams = (range: '0' | '7' | '30' | '90' | '180') => {
     const endTime = new Date();
     const startTime = new Date();
-    startTime.setDate(startTime.getDate() - parseInt(range));
+
+    if (range === '0') {
+      // 今日：从今天0点开始
+      startTime.setHours(0, 0, 0, 0);
+    } else {
+      startTime.setDate(startTime.getDate() - parseInt(range));
+    }
 
     return {
       startTime: formatDateTime(startTime),
@@ -674,13 +680,24 @@ export function Dashboard() {
                   className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 transition-colors"
                   onClick={() => setShowTimeRangeDropdown(!showTimeRangeDropdown)}
                 >
-                  近 {timeRange === '180' ? '半年' : `${timeRange} 日`}
+                  {timeRange === '0' ? '今日' : timeRange === '180' ? '近半年' : `近 ${timeRange} 日`}
                   <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-600">
                     <path d="M5 6L0 0h10L5 6z" />
                   </svg>
                 </button>
                 {showTimeRangeDropdown && (
                   <div className="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[100px] z-10">
+                    <button
+                      className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                        timeRange === '0' ? 'bg-gray-100' : ''
+                      }`}
+                      onClick={() => {
+                        setTimeRange('0');
+                        setShowTimeRangeDropdown(false);
+                      }}
+                    >
+                      今日
+                    </button>
                     <button
                       className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
                         timeRange === '7' ? 'bg-gray-100' : ''
@@ -811,13 +828,24 @@ export function Dashboard() {
                     className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 transition-colors"
                     onClick={() => setShowStrategyTimeRangeDropdown(!showStrategyTimeRangeDropdown)}
                   >
-                    近 {strategyTimeRange === '180' ? '半年' : `${strategyTimeRange} 日`}
+                    {strategyTimeRange === '0' ? '今日' : strategyTimeRange === '180' ? '近半年' : `近 ${strategyTimeRange} 日`}
                     <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-600">
                       <path d="M5 6L0 0h10L5 6z" />
                     </svg>
                   </button>
                   {showStrategyTimeRangeDropdown && (
                     <div className="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[100px] z-10">
+                      <button
+                        className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                          strategyTimeRange === '0' ? 'bg-gray-100' : ''
+                        }`}
+                        onClick={() => {
+                          setStrategyTimeRange('0');
+                          setShowStrategyTimeRangeDropdown(false);
+                        }}
+                      >
+                        今日
+                      </button>
                       <button
                         className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
                           strategyTimeRange === '7' ? 'bg-gray-100' : ''
@@ -919,13 +947,24 @@ export function Dashboard() {
                     className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 transition-colors"
                     onClick={() => setShowSymbolTimeRangeDropdown(!showSymbolTimeRangeDropdown)}
                   >
-                    近 {symbolTimeRange === '180' ? '半年' : `${symbolTimeRange} 日`}
+                    {symbolTimeRange === '0' ? '今日' : symbolTimeRange === '180' ? '近半年' : `近 ${symbolTimeRange} 日`}
                     <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-600">
                       <path d="M5 6L0 0h10L5 6z" />
                     </svg>
                   </button>
                   {showSymbolTimeRangeDropdown && (
                     <div className="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[100px] z-10">
+                      <button
+                        className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                          symbolTimeRange === '0' ? 'bg-gray-100' : ''
+                        }`}
+                        onClick={() => {
+                          setSymbolTimeRange('0');
+                          setShowSymbolTimeRangeDropdown(false);
+                        }}
+                      >
+                        今日
+                      </button>
                       <button
                         className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
                           symbolTimeRange === '7' ? 'bg-gray-100' : ''

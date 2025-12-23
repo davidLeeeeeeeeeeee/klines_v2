@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Plus, Edit, Trash2, Eye, EyeOff, X, AlertCircle, Search, ChevronDown, RefreshCw } from 'lucide-react';
 import { useClickOutside } from '../hooks/useClickOutside';
-import { getAccountList, AccountListReq, AccountRes, getStrategyModelList, StrategyModelListRes, bindAccountStrategy, StrategyModelBindReq } from '../services/api';
+import { getAccountList, AccountListReq, AccountRes, getStrategyModelList, StrategyModelListRes, bindAccountStrategy, StrategyModelBindReq, getSystemDict, DictItem } from '../services/api';
 import { getToken } from '../utils/storage';
 
 type InitStatus = '已初始化' | '未初始化' | '初始化失败';
@@ -78,6 +78,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
   const [strategies, setStrategies] = useState<StrategyModelListRes[]>([]);
   const [strategiesLoading, setStrategiesLoading] = useState(false);
   const [bindingStrategy, setBindingStrategy] = useState(false);
+  const [dictStrategyModels, setDictStrategyModels] = useState<DictItem[]>([]);
 
   // Refs for click outside detection
   const exchangeDropdownRef = useRef<HTMLDivElement>(null);
@@ -132,7 +133,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
         accType: filterAccountType === 'all' ? 0 : (filterAccountType === '主账户' ? 0 : 1),
         exchange: filterExchange === 'all' ? '' : filterExchange,
         search: searchTerm || '',
-        strategyType: (filterStrategyFollow === 'all' || filterStrategyFollow === '已跟随' || filterStrategyFollow === '未跟随')
+        strategyType: (filterStrategyFollow === 'all' || filterStrategyFollow === '未跟随')
           ? ''
           : filterStrategyFollow
       };
@@ -151,6 +152,27 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
   // 组件挂载时获取数据
   useEffect(() => {
     fetchAccounts();
+  }, []);
+
+  // 当策略筛选变化时刷新列表（排除未跟随）
+  useEffect(() => {
+    if (filterStrategyFollow !== '未跟随') {
+      fetchAccounts();
+    }
+  }, [filterStrategyFollow]);
+
+  // 加载策略模型字典
+  useEffect(() => {
+    const loadStrategyModels = async () => {
+      try {
+        const dictData = await getSystemDict();
+        setDictStrategyModels(dictData.StrategyModel || []);
+      } catch (err) {
+        console.error('加载策略模型字典失败:', err);
+        setDictStrategyModels([]);
+      }
+    };
+    loadStrategyModels();
   }, []);
 
   const handleRefresh = () => {
@@ -488,14 +510,14 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
             }}
             className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
           >
-            <span>{filterStrategyFollow === 'all' ? '策略跟随' : filterStrategyFollow === '已跟随' ? '已跟随' : filterStrategyFollow === '未跟随' ? '未跟随' : filterStrategyFollow}</span>
+            <span>{filterStrategyFollow === 'all' ? '策略跟随' : filterStrategyFollow}</span>
             <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
               <path d="M5 6L0 0h10L5 6z" />
             </svg>
           </button>
 
           {showStrategyFollowDropdown && (
-            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px] max-h-[300px] overflow-y-auto">
               <button
                 onClick={() => {
                   setFilterStrategyFollow('all');
@@ -509,17 +531,6 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
               </button>
               <button
                 onClick={() => {
-                  setFilterStrategyFollow('已跟随');
-                  setShowStrategyFollowDropdown(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  filterStrategyFollow === '已跟随' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                已跟随
-              </button>
-              <button
-                onClick={() => {
                   setFilterStrategyFollow('未跟随');
                   setShowStrategyFollowDropdown(false);
                 }}
@@ -529,6 +540,21 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
               >
                 未跟随
               </button>
+              {/* 策略模型选项 */}
+              {dictStrategyModels.map((strategy) => (
+                <button
+                  key={strategy.code}
+                  onClick={() => {
+                    setFilterStrategyFollow(strategy.name);
+                    setShowStrategyFollowDropdown(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                    filterStrategyFollow === strategy.name ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  }`}
+                >
+                  {strategy.name}
+                </button>
+              ))}
             </div>
           )}
         </div>

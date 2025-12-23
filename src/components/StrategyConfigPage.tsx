@@ -5,8 +5,10 @@ import {
   upgradeStrategyModel,
   getStrategyModelDetail,
   previewStrategyModel,
+  getSystemDict,
   StrategyModelReq,
-  StrategyModelDetailRes
+  StrategyModelDetailRes,
+  DictItem
 } from '../services/api';
 import { getToken } from '../utils/storage';
 import { JsonViewer } from './JsonViewer';
@@ -108,6 +110,36 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [testDuration, setTestDuration] = useState<number | null>(null); // 测试耗时（秒）
+
+  // 字典数据状态
+  const [dictSymbols, setDictSymbols] = useState<DictItem[]>([]);
+  const [dictAiModels, setDictAiModels] = useState<DictItem[]>([]);
+  const [dictIndicators, setDictIndicators] = useState<DictItem[]>([]);
+  const [dictIntervals, setDictIntervals] = useState<DictItem[]>([]);
+  const [isDictLoading, setIsDictLoading] = useState(true);
+
+  // 加载系统字典
+  useEffect(() => {
+    const loadSystemDict = async () => {
+      try {
+        const dictData = await getSystemDict();
+        setDictSymbols(dictData.SymbolType || []);
+        setDictAiModels(dictData.AiModel || []);
+        setDictIndicators(dictData.Indicator || []);
+        setDictIntervals(dictData.Interval || []);
+      } catch (err) {
+        console.error('加载系统字典失败:', err);
+        // 使用默认值作为后备
+        setDictSymbols([]);
+        setDictAiModels([]);
+        setDictIndicators([]);
+        setDictIntervals([]);
+      } finally {
+        setIsDictLoading(false);
+      }
+    };
+    loadSystemDict();
+  }, []);
 
   // 处理换行符 - 将转义的 \n 转换为真正的换行符
   const unescapeNewlines = (text: string): string => {
@@ -623,30 +655,19 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                     时间周期(3个以内) <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                    {[
-                      { display: '3分钟', value: 'm3' },
-                      { display: '5分钟', value: 'm5' },
-                      { display: '15分钟', value: 'm15' },
-                      { display: '30分钟', value: 'm30' },
-                      { display: '1小时', value: 'h1' },
-                      { display: '4小时', value: 'h4' },
-                      { display: '6小时', value: 'h6' },
-                      { display: '12小时', value: 'h12' },
-                      { display: '1天', value: 'd1' },
-                      { display: '1周', value: 'w1' }
-                    ].map((period) => {
-                      const isSelected = selectedPeriods.includes(period.value);
+                    {dictIntervals.map((interval) => {
+                      const isSelected = selectedPeriods.includes(interval.code);
                       const canSelect = !isSelected && selectedPeriods.length >= 3;
 
                       return (
                         <button
-                          key={period.value}
+                          key={interval.code}
                           type="button"
                           onClick={() => {
                             if (isSelected) {
-                              setSelectedPeriods(selectedPeriods.filter(p => p !== period.value));
+                              setSelectedPeriods(selectedPeriods.filter(p => p !== interval.code));
                             } else if (selectedPeriods.length < 3) {
-                              setSelectedPeriods([...selectedPeriods, period.value]);
+                              setSelectedPeriods([...selectedPeriods, interval.code]);
                             }
                           }}
                           disabled={canSelect}
@@ -658,7 +679,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                               : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                           }`}
                         >
-                          {period.display}
+                          {interval.name}
                         </button>
                       );
                     })}
@@ -674,19 +695,19 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                     技术指标(10个以内) <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {['VOLUME', 'MACD', 'RSI', 'ATR', 'KDJ', 'EMA10', 'EMA20', 'EMA30', 'EMA60', 'EMA80', 'EMA100'].map((indicator) => {
-                      const isSelected = selectedIndicators.includes(indicator);
+                    {dictIndicators.map((indicator) => {
+                      const isSelected = selectedIndicators.includes(indicator.code);
                       const canSelect = !isSelected && selectedIndicators.length >= 10;
-                      
+
                       return (
                         <button
-                          key={indicator}
+                          key={indicator.code}
                           type="button"
                           onClick={() => {
                             if (isSelected) {
-                              setSelectedIndicators(selectedIndicators.filter(i => i !== indicator));
+                              setSelectedIndicators(selectedIndicators.filter(i => i !== indicator.code));
                             } else if (selectedIndicators.length < 10) {
-                              setSelectedIndicators([...selectedIndicators, indicator]);
+                              setSelectedIndicators([...selectedIndicators, indicator.code]);
                             }
                           }}
                           disabled={canSelect}
@@ -698,7 +719,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                               : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                           }`}
                         >
-                          {indicator}
+                          {indicator.name}
                         </button>
                       );
                     })}
@@ -759,61 +780,20 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                     AI MODEL <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2">
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, aiModel: 'DEEPSEEK_V3' })}
-                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                        formData.aiModel === 'DEEPSEEK_V3'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      DEEPSEEK_V3
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, aiModel: 'DEEPSEEK_R1' })}
-                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                        formData.aiModel === 'DEEPSEEK_R1'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      DEEPSEEK_R1
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, aiModel: 'QWEN_PLUS' })}
-                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                        formData.aiModel === 'QWEN_PLUS'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      QWEN_PLUS
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, aiModel: 'DEEPSEEK_BL' })}
-                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                        formData.aiModel === 'DEEPSEEK_BL'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      DEEPSEEK_BL
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, aiModel: 'GEMINI_3_FLASH' })}
-                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                        formData.aiModel === 'GEMINI_3_FLASH'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      GEMINI_3_FLASH
-                    </button>
+                    {dictAiModels.map((model) => (
+                      <button
+                        key={model.code}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, aiModel: model.code })}
+                        className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                          formData.aiModel === model.code
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        {model.name}
+                      </button>
+                    ))}
                   </div>
                   <p className="text-gray-500 text-sm">
                     选择用于策略分析的 AI 模型
@@ -853,18 +833,18 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                     商品 <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                    {['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'HYPEUSDT', 'XRPUSDT', 'DOGEUSDT', 'ZECUSDT', 'ADAUSDT'].map((symbol) => {
-                      const isSelected = selectedSymbols.includes(symbol);
+                    {dictSymbols.map((symbol) => {
+                      const isSelected = selectedSymbols.includes(symbol.name);
 
                       return (
                         <button
-                          key={symbol}
+                          key={symbol.code}
                           type="button"
                           onClick={() => {
                             if (isSelected) {
-                              setSelectedSymbols(selectedSymbols.filter(s => s !== symbol));
+                              setSelectedSymbols(selectedSymbols.filter(s => s !== symbol.name));
                             } else {
-                              setSelectedSymbols([...selectedSymbols, symbol]);
+                              setSelectedSymbols([...selectedSymbols, symbol.name]);
                             }
                           }}
                           className={`px-4 py-3 rounded-lg border-2 transition-all ${
@@ -873,7 +853,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                               : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                           }`}
                         >
-                          {symbol}
+                          {symbol.name}
                         </button>
                       );
                     })}
