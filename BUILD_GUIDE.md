@@ -12,7 +12,7 @@
 1. 双击 `build.bat` 文件
 2. 等待构建完成（约15-20秒）
 3. 在项目根目录会生成两个文件：
-   - `build_test.zip` - 测试环境（API: http://170.75.175.152:8755）
+   - `build_test.zip` - 测试环境（API: https://test.alphanow.io）
    - `build_production.zip` - 正式环境（API: https://alphanow.io）
 
 ## 方案一：使用环境变量（推荐）⭐
@@ -36,7 +36,7 @@ npm run dev
 ```bash
 npm run build:test
 ```
-生成的文件在 `build` 目录，使用测试API地址：`http://170.75.175.152:8755`
+生成的文件在 `build` 目录，使用测试API地址：`https://test.alphanow.io`
 
 #### 3. 构建正式环境
 ```bash
@@ -80,7 +80,7 @@ npm install
 
 API地址通过环境变量 `VITE_API_BASE_URL` 控制：
 
-- **测试环境**: `http://170.75.175.152:8755`
+- **测试环境**: `https://test.alphanow.io`
 - **正式环境**: `https://alphanow.io`
 
 如需修改，编辑对应的 `.env.*` 文件即可。
