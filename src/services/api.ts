@@ -3,7 +3,7 @@
 // 根据环境变量决定使用哪个API地址
 // 开发环境默认使用测试地址，生产环境使用正式地址
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.MODE === 'production' ? 'https://alphanow.io' : 'http://170.75.175.152:8755');
+  (import.meta.env.MODE === 'production' ? 'https://alphanow.io' : 'https://test.alphanow.io');
 // 通用API响应包装类型
 export interface ApiResponse<T> {
   code: number;
