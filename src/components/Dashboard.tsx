@@ -38,12 +38,16 @@ import { getToken } from '../utils/storage';
 
 export function Dashboard() {
   const [weeklyChartType, setWeeklyChartType] = useState<'rate' | 'amount'>('rate');
-  const [timeRange, setTimeRange] = useState<'0' | '7' | '30' | '90' | '180'>('90');
+  const [timeRange, setTimeRange] = useState<'0' | '3' | '7' | '30' | '90' | '180'>('90');
   const [showTimeRangeDropdown, setShowTimeRangeDropdown] = useState(false);
-  const [strategyTimeRange, setStrategyTimeRange] = useState<'0' | '7' | '30' | '90' | '180'>('90');
+  const [strategyTimeRange, setStrategyTimeRange] = useState<'0' | '3' | '7' | '30' | '90' | '180'>('90');
   const [showStrategyTimeRangeDropdown, setShowStrategyTimeRangeDropdown] = useState(false);
-  const [symbolTimeRange, setSymbolTimeRange] = useState<'0' | '7' | '30' | '90' | '180'>('90');
+  const [symbolTimeRange, setSymbolTimeRange] = useState<'0' | '3' | '7' | '30' | '90' | '180'>('90');
   const [showSymbolTimeRangeDropdown, setShowSymbolTimeRangeDropdown] = useState(false);
+  const [symbolLikeTimeRange, setSymbolLikeTimeRange] = useState<'0' | '3' | '7' | '30' | '90' | '180'>('90');
+  const [showSymbolLikeTimeRangeDropdown, setShowSymbolLikeTimeRangeDropdown] = useState(false);
+  const [statisticsTimeRange, setStatisticsTimeRange] = useState<'0' | '3' | '7' | '30' | '90' | '180'>('90');
+  const [showStatisticsTimeRangeDropdown, setShowStatisticsTimeRangeDropdown] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,9 +74,9 @@ export function Dashboard() {
       // 并行加载所有数据
       const [overview, statistics, strategyRanking, symbolLike, symbolRanking, equityLine] = await Promise.all([
         getPanelOverview(token),
-        getPanelCloseStatistics(token),
+        getPanelCloseStatistics(token, getTimeRangeParams(statisticsTimeRange)),
         getPanelStrategyRanking(token, getTimeRangeParams(strategyTimeRange)),
-        getPanelSymbolLike(token),
+        getPanelSymbolLike(token, getTimeRangeParams(symbolLikeTimeRange)),
         getPanelSymbolRanking(token, getTimeRangeParams(symbolTimeRange)),
         getPanelHistoryEquityLine(token, getTimeRangeParams(timeRange).startTime, getTimeRangeParams(timeRange).endTime)
       ]);
@@ -104,7 +108,7 @@ export function Dashboard() {
   };
 
   // 获取时间范围参数
-  const getTimeRangeParams = (range: '0' | '7' | '30' | '90' | '180') => {
+  const getTimeRangeParams = (range: '0' | '3' | '7' | '30' | '90' | '180') => {
     const endTime = new Date();
     const startTime = new Date();
 
@@ -175,6 +179,40 @@ export function Dashboard() {
 
     loadHistoryEquityLine();
   }, [timeRange]);
+
+  // 当商品偏好时间范围改变时重新加载
+  useEffect(() => {
+    const loadSymbolLike = async () => {
+      try {
+        const token = getToken();
+        if (!token) return;
+
+        const data = await getPanelSymbolLike(token, getTimeRangeParams(symbolLikeTimeRange));
+        setSymbolLikeData(data);
+      } catch (err) {
+        console.error('加载商品偏好数据失败:', err);
+      }
+    };
+
+    loadSymbolLike();
+  }, [symbolLikeTimeRange]);
+
+  // 当交易统计时间范围改变时重新加载
+  useEffect(() => {
+    const loadStatistics = async () => {
+      try {
+        const token = getToken();
+        if (!token) return;
+
+        const data = await getPanelCloseStatistics(token, getTimeRangeParams(statisticsTimeRange));
+        setStatisticsData(data);
+      } catch (err) {
+        console.error('加载交易统计数据失败:', err);
+      }
+    };
+
+    loadStatistics();
+  }, [statisticsTimeRange]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -700,6 +738,17 @@ export function Dashboard() {
                     </button>
                     <button
                       className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                        timeRange === '3' ? 'bg-gray-100' : ''
+                      }`}
+                      onClick={() => {
+                        setTimeRange('3');
+                        setShowTimeRangeDropdown(false);
+                      }}
+                    >
+                      近 3 日
+                    </button>
+                    <button
+                      className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
                         timeRange === '7' ? 'bg-gray-100' : ''
                       }`}
                       onClick={() => {
@@ -848,6 +897,17 @@ export function Dashboard() {
                       </button>
                       <button
                         className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                          strategyTimeRange === '3' ? 'bg-gray-100' : ''
+                        }`}
+                        onClick={() => {
+                          setStrategyTimeRange('3');
+                          setShowStrategyTimeRangeDropdown(false);
+                        }}
+                      >
+                        近 3 日
+                      </button>
+                      <button
+                        className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
                           strategyTimeRange === '7' ? 'bg-gray-100' : ''
                         }`}
                         onClick={() => {
@@ -967,6 +1027,17 @@ export function Dashboard() {
                       </button>
                       <button
                         className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                          symbolTimeRange === '3' ? 'bg-gray-100' : ''
+                        }`}
+                        onClick={() => {
+                          setSymbolTimeRange('3');
+                          setShowSymbolTimeRangeDropdown(false);
+                        }}
+                      >
+                        近 3 日
+                      </button>
+                      <button
+                        className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
                           symbolTimeRange === '7' ? 'bg-gray-100' : ''
                         }`}
                         onClick={() => {
@@ -1064,7 +1135,34 @@ export function Dashboard() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Symbol Preference Pie Chart */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg text-gray-900 font-semibold mb-6">商品偏好</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg text-gray-900 font-semibold">商品偏好</h2>
+              <div className="relative">
+                <button
+                  onClick={() => setShowSymbolLikeTimeRangeDropdown(!showSymbolLikeTimeRangeDropdown)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  <span>
+                    {symbolLikeTimeRange === '0' ? '今日' :
+                     symbolLikeTimeRange === '3' ? '近 3 日' :
+                     symbolLikeTimeRange === '7' ? '近 7 日' :
+                     symbolLikeTimeRange === '30' ? '近 30 日' :
+                     symbolLikeTimeRange === '90' ? '近 90 日' : '近半年'}
+                  </span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                {showSymbolLikeTimeRangeDropdown && (
+                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[100px]">
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${symbolLikeTimeRange === '0' ? 'bg-gray-100' : ''}`} onClick={() => { setSymbolLikeTimeRange('0'); setShowSymbolLikeTimeRangeDropdown(false); }}>今日</button>
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${symbolLikeTimeRange === '3' ? 'bg-gray-100' : ''}`} onClick={() => { setSymbolLikeTimeRange('3'); setShowSymbolLikeTimeRangeDropdown(false); }}>近 3 日</button>
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${symbolLikeTimeRange === '7' ? 'bg-gray-100' : ''}`} onClick={() => { setSymbolLikeTimeRange('7'); setShowSymbolLikeTimeRangeDropdown(false); }}>近 7 日</button>
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${symbolLikeTimeRange === '30' ? 'bg-gray-100' : ''}`} onClick={() => { setSymbolLikeTimeRange('30'); setShowSymbolLikeTimeRangeDropdown(false); }}>近 30 日</button>
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${symbolLikeTimeRange === '90' ? 'bg-gray-100' : ''}`} onClick={() => { setSymbolLikeTimeRange('90'); setShowSymbolLikeTimeRangeDropdown(false); }}>近 90 日</button>
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${symbolLikeTimeRange === '180' ? 'bg-gray-100' : ''}`} onClick={() => { setSymbolLikeTimeRange('180'); setShowSymbolLikeTimeRangeDropdown(false); }}>近半年</button>
+                  </div>
+                )}
+              </div>
+            </div>
             {symbolPreferenceData.length > 0 ? (
               <div className="flex flex-col md:flex-row items-center gap-6 md:gap-16">
                 {/* Pie Chart */}
@@ -1128,7 +1226,34 @@ export function Dashboard() {
 
           {/* Trading Statistics */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg text-gray-900 font-semibold mb-6">交易统计</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg text-gray-900 font-semibold">交易统计</h2>
+              <div className="relative">
+                <button
+                  onClick={() => setShowStatisticsTimeRangeDropdown(!showStatisticsTimeRangeDropdown)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  <span>
+                    {statisticsTimeRange === '0' ? '今日' :
+                     statisticsTimeRange === '3' ? '近 3 日' :
+                     statisticsTimeRange === '7' ? '近 7 日' :
+                     statisticsTimeRange === '30' ? '近 30 日' :
+                     statisticsTimeRange === '90' ? '近 90 日' : '近半年'}
+                  </span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                {showStatisticsTimeRangeDropdown && (
+                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[100px]">
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${statisticsTimeRange === '0' ? 'bg-gray-100' : ''}`} onClick={() => { setStatisticsTimeRange('0'); setShowStatisticsTimeRangeDropdown(false); }}>今日</button>
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${statisticsTimeRange === '3' ? 'bg-gray-100' : ''}`} onClick={() => { setStatisticsTimeRange('3'); setShowStatisticsTimeRangeDropdown(false); }}>近 3 日</button>
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${statisticsTimeRange === '7' ? 'bg-gray-100' : ''}`} onClick={() => { setStatisticsTimeRange('7'); setShowStatisticsTimeRangeDropdown(false); }}>近 7 日</button>
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${statisticsTimeRange === '30' ? 'bg-gray-100' : ''}`} onClick={() => { setStatisticsTimeRange('30'); setShowStatisticsTimeRangeDropdown(false); }}>近 30 日</button>
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${statisticsTimeRange === '90' ? 'bg-gray-100' : ''}`} onClick={() => { setStatisticsTimeRange('90'); setShowStatisticsTimeRangeDropdown(false); }}>近 90 日</button>
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${statisticsTimeRange === '180' ? 'bg-gray-100' : ''}`} onClick={() => { setStatisticsTimeRange('180'); setShowStatisticsTimeRangeDropdown(false); }}>近半年</button>
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">仓位总数</span>

@@ -105,6 +105,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [showAIChatModal, setShowAIChatModal] = useState(false);
   const [selectedAIChat, setSelectedAIChat] = useState<ChatResponse | null>(null);
   const [isChatForClosing, setIsChatForClosing] = useState(false); // 标识是否为平仓CHAT
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null); // 用于筛选accountActions
+  const [selectedClosePrice, setSelectedClosePrice] = useState<number | null>(null); // 平仓价格
+  const [selectedPositionSide, setSelectedPositionSide] = useState<string | null>(null); // 仓位方向
+  const [selectedEntryPrice, setSelectedEntryPrice] = useState<number | null>(null); // 开仓价格
   const [expandedPrompt, setExpandedPrompt] = useState(false); // 默认收起
   const [expandedReasoning, setExpandedReasoning] = useState(true);
   const [expandedOutput, setExpandedOutput] = useState(true);
@@ -148,6 +152,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
   // 商品列表 - 从系统字典API获取
   const [symbolList, setSymbolList] = useState<DictItem[]>([]);
+  // 策略列表 - 从系统字典API获取
+  const [strategyModelList, setStrategyModelList] = useState<DictItem[]>([]);
 
   // 历史仓位相关状态
   const [closedPositions, setClosedPositions] = useState<ClosePnlVO[]>([]);
@@ -188,11 +194,22 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
         throw new Error('未登录，请先登录');
       }
 
+      // 根据类型筛选确定side参数
+      // closeLong: 平多 = side: 'Sell' (卖出平多)
+      // closeShort: 平空 = side: 'Buy' (买入平空)
+      let sideParam: string | undefined = undefined;
+      if (selectedType === 'closeLong') {
+        sideParam = 'Sell';
+      } else if (selectedType === 'closeShort') {
+        sideParam = 'Buy';
+      }
+
       const request: PageRequest<ClosePnlListReq> = {
         page: page - 1, // API从0开始
         pageSize: pageSize,
         param: {
           symbol: selectedSymbol === 'all' ? undefined : selectedSymbol,
+          side: sideParam,
         }
       };
 
@@ -234,7 +251,15 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   };
 
   // 获取历史Chat详情
-  const fetchHistoryChat = async (tradeId: number, chatId: number, isClosing: boolean = false) => {
+  const fetchHistoryChat = async (
+    tradeId: number,
+    chatId: number,
+    isClosing: boolean = false,
+    accountId?: number,
+    closePrice?: number,
+    positionSide?: string,
+    entryPrice?: number
+  ) => {
     const loadingKey = `${tradeId}-${chatId}`;
     setLoadingHistoryChatId(loadingKey);
     try {
@@ -246,6 +271,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       const chatData = await getChatDetail(token, chatId);
       setSelectedAIChat(chatData);
       setIsChatForClosing(isClosing); // 设置是否为平仓CHAT
+      setSelectedAccountId(accountId || null); // 设置选中的账户ID用于筛选accountActions
+      setSelectedClosePrice(closePrice || null); // 设置平仓价格
+      setSelectedPositionSide(positionSide || null); // 设置仓位方向
+      setSelectedEntryPrice(entryPrice || null); // 设置开仓价格
       setShowAIChatModal(true);
     } catch (err: any) {
       alert(err.message || '获取Chat详情失败');
@@ -277,12 +306,14 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     };
   };
 
-  // 获取系统字典（商品列表）
+  // 获取系统字典（商品列表和策略列表）
   const fetchSystemDict = async () => {
     try {
       const dictData = await getSystemDict();
       setSymbolList(dictData.SymbolType || []);
+      setStrategyModelList(dictData.StrategyModel || []);
       console.log('📊 获取到商品列表:', dictData.SymbolType);
+      console.log('📊 获取到策略列表:', dictData.StrategyModel);
     } catch (err: any) {
       console.error('获取系统字典失败:', err);
     }
@@ -298,12 +329,20 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     fetchPositions();
   }, [selectedSymbol]);
 
-  // 加载历史仓位数据
+  // 加载历史仓位数据 - 所有筛选条件改变都重新请求
+  useEffect(() => {
+    if (activeTab === 'history') {
+      fetchClosedPositions(1); // 筛选条件改变时重置到第一页
+      setCurrentPage(1);
+    }
+  }, [activeTab, selectedSymbol, selectedType, selectedStrategy]);
+
+  // 分页改变时重新请求
   useEffect(() => {
     if (activeTab === 'history') {
       fetchClosedPositions(currentPage);
     }
-  }, [activeTab, selectedSymbol, currentPage]);
+  }, [currentPage]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -368,6 +407,20 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
     return `${month}/${day} ${hours}:${minutes}:${seconds}`;
+  };
+
+  // Function to format position time with open/close time and duration
+  const formatPositionTime = (openTime: string, closeTime: string) => {
+    const open = new Date(openTime);
+    const close = new Date(closeTime);
+    const diffMs = close.getTime() - open.getTime();
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    const remainingSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    return {
+      openTimeFormatted: formatTime(openTime),
+      closeTimeFormatted: formatTime(closeTime),
+      durationFormatted: `${totalMinutes}分${remainingSeconds}秒`
+    };
   };
 
   // Function to handle close position
@@ -447,15 +500,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const symbols = symbolList.map(item => item.code);
   console.log('📊 可用的交易对列表:', symbols);
 
-  // Mock strategies data
-  const uniqueStrategyTypes = Array.from(new Set([
-    ...positions.map(p => p.strategyType),
-    ...closedPositions.map(p => p.strategyType)
-  ])).filter(Boolean);
-
+  // 策略列表 - 使用系统字典API获取的StrategyModel
   const strategies = [
     { id: 'all', name: '策略' },
-    ...uniqueStrategyTypes.map(type => ({ id: type!, name: type! }))
+    ...strategyModelList.map(item => ({ id: item.code, name: item.name }))
   ];
 
   // 从API数据转换为组件需要的格式
@@ -583,40 +631,42 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const selectedStrategyName = strategies.find(s => s.id === selectedStrategy)?.name || '';
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl font-semibold text-gray-900">交易监控</h1>
-            <button
-              onClick={handleRefresh}
-              className={`p-2 text-gray-400 hover:text-gray-600 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
-              title="刷新"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </button>
+    <div className="flex flex-col h-full">
+      {/* Fixed Header Section */}
+      <div className="flex-shrink-0">
+        {/* Page Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-2xl font-semibold text-gray-900">交易监控</h1>
+              <button
+                onClick={handleRefresh}
+                className={`p-2 text-gray-400 hover:text-gray-600 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
+                title="刷新"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500">管理交易所账户持仓</p>
           </div>
-          <p className="text-sm text-gray-500">管理交易所账户持仓</p>
+          <button
+            onClick={() => setShowBatchCloseModal(true)}
+            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+          >
+            一键平仓
+          </button>
         </div>
-        <button
-          onClick={() => setShowBatchCloseModal(true)}
-          className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
-        >
-          一键平仓
-        </button>
-      </div>
 
-      {/* Search Filter */}
-      <div className="mb-6">
-        <input
-          type="text"
-          value={searchFilter}
-          onChange={(e) => setSearchFilter(e.target.value)}
-          placeholder="输入用户名、交易账户UID"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-        />
-      </div>
+        {/* Search Filter */}
+        <div className="mb-6">
+          <input
+            type="text"
+            value={searchFilter}
+            onChange={(e) => setSearchFilter(e.target.value)}
+            placeholder="输入用户名、交易账户UID"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+          />
+        </div>
 
       {/* Tab Navigation with Filters */}
       <div className="mb-6 flex items-center gap-8">
@@ -838,7 +888,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
           </div>
         </div>
       </div>
+      </div>
 
+      {/* Scrollable List Content */}
+      <div className="flex-1 overflow-y-auto">
       {/* Current Positions */}
       {activeTab === 'positions' && (
         <div className="space-y-4">
@@ -1071,8 +1124,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         <span className="text-sm text-gray-900">{trade.fundingFee !== undefined ? `${trade.fundingFee} USDT` : '-'}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">持仓时长</span>
-                        <span className="text-sm text-gray-900">{calculateDuration(trade.openTime, trade.closeTime)}</span>
+                        <span className="text-sm text-gray-500">持仓时间</span>
+                        <span className="text-sm text-gray-900">
+                          {formatPositionTime(trade.openTime, trade.closeTime).openTimeFormatted} - {formatPositionTime(trade.openTime, trade.closeTime).closeTimeFormatted} {formatPositionTime(trade.openTime, trade.closeTime).durationFormatted}
+                        </span>
                       </div>
                     </div>
 
@@ -1101,7 +1156,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         {trade.closeChatId && (
                           <button
                             className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                            onClick={() => fetchHistoryChat(trade.id, trade.closeChatId, true)}
+                            onClick={() => fetchHistoryChat(trade.id, trade.closeChatId, true, trade.accountId, trade.avgExitPrice, trade.side, trade.avgEntryPrice)}
                             disabled={loadingHistoryChatId === `${trade.id}-${trade.closeChatId}`}
                           >
                             {loadingHistoryChatId === `${trade.id}-${trade.closeChatId}` ? (
@@ -1148,6 +1203,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
           )}
         </div>
       )}
+      </div>
 
       {/* Close Position Modal */}
       {showCloseModal && selectedPosition && (
@@ -1355,46 +1411,133 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     {tradeSignalArgs && (
                       <div className="bg-gray-50 rounded-lg p-4 pb-8 border border-gray-200 mb-4 relative">
                         <div className="text-gray-900 text-sm space-y-1">
-                          {/* 信心度 - 直接从顶层获取 */}
-                          {tradeSignalArgs.confidence !== undefined && (
-                            <div>信心度: <span className="font-semibold">{(tradeSignalArgs.confidence * 100).toFixed(0)}%</span></div>
-                          )}
-                          {/* 失效条件 */}
-                          {tradeSignalArgs.invalidationCondition && (
-                            <div>失效条件: <span className="font-semibold text-orange-600">{tradeSignalArgs.invalidationCondition}</span></div>
-                          )}
-                          {/* 旧结构兼容 - 直接显示入场价格等 */}
-                          {tradeSignalArgs.entryPrice !== undefined && (
-                            <div>入场价格: <span className="font-semibold">{tradeSignalArgs.entryPrice}</span></div>
-                          )}
-                          {tradeSignalArgs.takeProfit !== undefined && (
-                            <div>止盈: <span className="font-semibold text-green-600">{tradeSignalArgs.takeProfit}</span></div>
-                          )}
-                          {tradeSignalArgs.stopLoss !== undefined && (
-                            <div>止损: <span className="font-semibold text-red-600">{tradeSignalArgs.stopLoss}</span></div>
-                          )}
-                          {tradeSignalArgs.riskUsd !== undefined && (
-                            <div>风险金额: <span className="font-semibold">{tradeSignalArgs.riskUsd}</span></div>
-                          )}
-                          {/* 新结构 - 账户操作列表 */}
-                          {tradeSignalArgs.accountActions && tradeSignalArgs.accountActions.length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-gray-200">
-                              <div className="font-medium mb-1">账户操作 ({tradeSignalArgs.accountActions.length}):</div>
-                              {tradeSignalArgs.accountActions.slice(0, 5).map((action: any, idx: number) => (
-                                <div key={idx} className="text-xs text-gray-600 ml-2">
-                                  [{action.action}] {action.symbol} - {action.thought?.substring(0, 50)}...
-                                </div>
-                              ))}
-                              {tradeSignalArgs.accountActions.length > 5 && (
-                                <div className="text-xs text-gray-400 ml-2">... 还有 {tradeSignalArgs.accountActions.length - 5} 条</div>
+                          {/* 平仓CHAT: 显示操作类型和操作描述 */}
+                          {isChatForClosing ? (
+                            <>
+                              {/* 账户操作详情 (按accountId筛选) */}
+                              {tradeSignalArgs.accountActions && tradeSignalArgs.accountActions.length > 0 && (() => {
+                                const filteredActions = selectedAccountId
+                                  ? tradeSignalArgs.accountActions.filter((action: any) => action.accountId === selectedAccountId)
+                                  : tradeSignalArgs.accountActions;
+
+                                if (filteredActions.length === 0) return null;
+                                const action = filteredActions[0]; // 取第一个匹配的操作
+
+                                return (
+                                  <>
+                                    {/* 操作类型 (原信心度位置) */}
+                                    {action.action && (
+                                      <div>操作类型: <span className={`font-semibold ${
+                                        action.action === 'close_long' || action.action === 'close_short'
+                                          ? 'text-orange-600'
+                                          : 'text-blue-600'
+                                      }`}>{action.action}</span></div>
+                                    )}
+                                    {/* 操作描述 (原失效条件位置) */}
+                                    {action.thought && (
+                                      <div>操作描述: <span className="font-semibold text-gray-700">{action.thought}</span></div>
+                                    )}
+
+                                    {/* 账户操作详情 */}
+                                    <div className="mt-3 pt-3 border-t border-gray-200">
+                                      <div className="font-medium mb-2">账户操作:</div>
+                                      <div className="space-y-1.5 ml-2">
+                                        {/* 仓位方向 */}
+                                        <div>仓位方向: <span className={`font-semibold ${
+                                          selectedPositionSide === 'Buy' ? 'text-green-600' : 'text-red-600'
+                                        }`}>{selectedPositionSide || '-'}</span></div>
+                                        {/* 开仓价格 */}
+                                        <div>开仓价格: <span className="font-semibold">{selectedEntryPrice ?? '-'}</span></div>
+                                        {/* 平仓价格 */}
+                                        <div>平仓价格: <span className="font-semibold">{selectedClosePrice ?? '-'}</span></div>
+                                        {/* 止盈(新) */}
+                                        {action.takeProfit !== undefined && (
+                                          <div>止盈(新): <span className="font-semibold text-green-600">{action.takeProfit}</span></div>
+                                        )}
+                                        {/* 止损(新) */}
+                                        {action.stopLoss !== undefined && (
+                                          <div>止损(新): <span className="font-semibold text-red-600">{action.stopLoss}</span></div>
+                                        )}
+                                        {/* 止盈(旧) */}
+                                        {action.oldTakeProfit !== undefined && (
+                                          <div>止盈(旧): <span className="font-semibold text-gray-500">{action.oldTakeProfit}</span></div>
+                                        )}
+                                        {/* 止损(旧) */}
+                                        {action.oldStopLoss !== undefined && (
+                                          <div>止损(旧): <span className="font-semibold text-gray-500">{action.oldStopLoss}</span></div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </>
+                                );
+                              })()}
+                            </>
+                          ) : (
+                            <>
+                              {/* 开仓CHAT: 显示原有字段 */}
+                              {/* 信心度 - 直接从顶层获取 */}
+                              {tradeSignalArgs.confidence !== undefined && (
+                                <div>信心度: <span className="font-semibold">{(tradeSignalArgs.confidence * 100).toFixed(0)}%</span></div>
                               )}
-                            </div>
+                              {/* 失效条件 */}
+                              {tradeSignalArgs.invalidationCondition && (
+                                <div>失效条件: <span className="font-semibold text-orange-600">{tradeSignalArgs.invalidationCondition}</span></div>
+                              )}
+                              {/* 旧结构兼容 - 直接显示入场价格等 */}
+                              {tradeSignalArgs.entryPrice !== undefined && (
+                                <div>入场价格: <span className="font-semibold">{tradeSignalArgs.entryPrice}</span></div>
+                              )}
+                              {tradeSignalArgs.takeProfit !== undefined && (
+                                <div>止盈: <span className="font-semibold text-green-600">{tradeSignalArgs.takeProfit}</span></div>
+                              )}
+                              {tradeSignalArgs.stopLoss !== undefined && (
+                                <div>止损: <span className="font-semibold text-red-600">{tradeSignalArgs.stopLoss}</span></div>
+                              )}
+                              {tradeSignalArgs.riskUsd !== undefined && (
+                                <div>风险金额: <span className="font-semibold">{tradeSignalArgs.riskUsd}</span></div>
+                              )}
+                            </>
                           )}
                         </div>
                         {/* ID in bottom-right corner */}
                         {selectedAIChat.id && (
                           <div className="absolute bottom-2 right-3 text-xs text-gray-400">
                             {selectedAIChat.id}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* CHAIN_OF_THOUGHTS - simpleThought */}
+                    {simpleThought && (
+                      <div className="mb-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setExpandedReasoning(!expandedReasoning)}
+                            className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                          >
+                            {expandedReasoning ? (
+                              <Play className="w-3 h-3 rotate-90 fill-current" />
+                            ) : (
+                              <Play className="w-3 h-3 fill-current" />
+                            )}
+                            <span>CHAIN_OF_THOUGHTS</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(simpleThought)}
+                            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                            aria-label="Copy CHAIN_OF_THOUGHTS"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {expandedReasoning && (
+                          <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
+                            <div className="text-gray-700 text-sm whitespace-pre-wrap">
+                              {simpleThought}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1442,41 +1585,6 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         </div>
                       )}
                     </div>
-
-                    {/* CHAIN_OF_THOUGHTS - simpleThought */}
-                    {simpleThought && (
-                      <div className="mb-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setExpandedReasoning(!expandedReasoning)}
-                            className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                          >
-                            {expandedReasoning ? (
-                              <Play className="w-3 h-3 rotate-90 fill-current" />
-                            ) : (
-                              <Play className="w-3 h-3 fill-current" />
-                            )}
-                            <span>CHAIN_OF_THOUGHTS</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => copyToClipboard(simpleThought)}
-                            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                            aria-label="Copy CHAIN_OF_THOUGHTS"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                        {expandedReasoning && (
-                          <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
-                            <div className="text-gray-700 text-sm whitespace-pre-wrap">
-                              {simpleThought}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
 
                     {/* TRADING_DECISIONS - tradeSignalArgs */}
                     {tradeSignalArgs && (

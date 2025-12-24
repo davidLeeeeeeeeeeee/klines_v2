@@ -280,7 +280,9 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
   });
 
   return (
-    <div>
+    <div className="flex flex-col h-full">
+      {/* Fixed Header Section */}
+      <div className="flex-shrink-0">
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -559,8 +561,9 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
           )}
         </div>
       </div>
+      </div>
 
-      {/* Accounts List */}
+      {/* Scrollable Accounts List */}
       <div className="space-y-4 flex-1 overflow-y-auto">
         {loading ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">

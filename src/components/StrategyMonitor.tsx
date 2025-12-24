@@ -132,6 +132,8 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
 
   // 商品列表 - 从系统字典API获取
   const [symbolList, setSymbolList] = useState<DictItem[]>([]);
+  // 策略列表 - 从系统字典API获取
+  const [strategyModelList, setStrategyModelList] = useState<DictItem[]>([]);
 
   // 获取对话列表
   const fetchChatList = async () => {
@@ -180,12 +182,14 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
     }
   };
 
-  // 获取系统字典（商品列表）
+  // 获取系统字典（商品列表和策略列表）
   const fetchSystemDict = async () => {
     try {
       const dictData = await getSystemDict();
       setSymbolList(dictData.SymbolType || []);
+      setStrategyModelList(dictData.StrategyModel || []);
       console.log('📊 获取到商品列表:', dictData.SymbolType);
+      console.log('📊 获取到策略列表:', dictData.StrategyModel);
     } catch (err: any) {
       console.error('获取系统字典失败:', err);
     }
@@ -221,11 +225,10 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
   const symbols = symbolList.map(item => item.code);
   console.log('📊 可用的交易对列表:', symbols);
 
-  // Mock strategies data - 从API数据中动态获取
-  const uniqueStrategyTypes = Array.from(new Set(chatList.map(chat => chat.strategyType))).filter(Boolean);
+  // 策略列表 - 使用系统字典API获取的StrategyModel
   const strategies = [
     { id: 'all', name: '所有策略' },
-    ...uniqueStrategyTypes.map(type => ({ id: type, name: type }))
+    ...strategyModelList.map(item => ({ id: item.code, name: item.name }))
   ];
   console.log('📊 可用的策略列表:', strategies);
 
@@ -332,23 +335,25 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
   const filteredMessages = aiChatMessages;
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-2xl font-semibold text-gray-900">策略监控</h1>
-          <button
-            onClick={handleRefresh}
-            className={`p-2 text-gray-400 hover:text-gray-600 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
-            title="刷新"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
+    <div className="flex flex-col h-full">
+      {/* Fixed Header Section */}
+      <div className="flex-shrink-0">
+        {/* Page Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-2xl font-semibold text-gray-900">策略监控</h1>
+            <button
+              onClick={handleRefresh}
+              className={`p-2 text-gray-400 hover:text-gray-600 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
+              title="刷新"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+          </div>
+          <p className="text-sm text-gray-500">
+            {isCustomTimeRange ? '展示自定义时间范围的AI交互信息' : '自动展示最近 1 天的AI交互信息（每次刷新自动更新时间范围）'}
+          </p>
         </div>
-        <p className="text-sm text-gray-500">
-          {isCustomTimeRange ? '展示自定义时间范围的AI交互信息' : '自动展示最近 1 天的AI交互信息（每次刷新自动更新时间范围）'}
-        </p>
-      </div>
 
       {/* Filters - All in One Row */}
       <div className="mb-6 flex items-center gap-8">
@@ -553,7 +558,10 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
           )}
         </div>
       </div>
+      </div>
 
+      {/* Scrollable List Content */}
+      <div className="flex-1 overflow-y-auto">
       {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -630,37 +638,6 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
             {/* Divider */}
             <div className="border-t border-gray-200 mb-4"></div>
 
-            {/* USER_PROMPT - Collapsible (默认收起) */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => togglePrompt(message.id)}
-                  className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {expandedPrompt[message.id] ? (
-                    <Play className="w-3 h-3 rotate-90 fill-current" />
-                  ) : (
-                    <Play className="w-3 h-3 fill-current" />
-                  )}
-                  <span>USER_PROMPT</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(promptData)}
-                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                  aria-label="Copy USER_PROMPT"
-                >
-                  <Copy className="w-4 h-4" />
-                </button>
-              </div>
-
-              {expandedPrompt[message.id] && (
-                <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
-                  <JsonViewer data={promptData} expandAll={true} />
-                </div>
-              )}
-            </div>
-
             {/* CHAIN_OF_THOUGHTS - simpleThought */}
             {simpleThought && (
               <div className="mb-4">
@@ -695,6 +672,37 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
                 )}
               </div>
             )}
+
+            {/* USER_PROMPT - Collapsible (默认收起) */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => togglePrompt(message.id)}
+                  className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {expandedPrompt[message.id] ? (
+                    <Play className="w-3 h-3 rotate-90 fill-current" />
+                  ) : (
+                    <Play className="w-3 h-3 fill-current" />
+                  )}
+                  <span>USER_PROMPT</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(promptData)}
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Copy USER_PROMPT"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+
+              {expandedPrompt[message.id] && (
+                <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <JsonViewer data={promptData} expandAll={true} />
+                </div>
+              )}
+            </div>
 
             {/* TRADING_DECISIONS - tradeSignalArgs */}
             {tradeSignalArgs && (
@@ -757,6 +765,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
             </div>
           </div>
         )}
+      </div>
       </div>
 
       {/* Time Range Modal */}

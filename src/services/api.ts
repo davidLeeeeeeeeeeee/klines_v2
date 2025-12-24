@@ -1490,9 +1490,10 @@ export async function getPanelOverview(token: string): Promise<PanelOverviewRes>
 /**
  * 获取交易统计数据
  * @param token 用户token
+ * @param params 可选的时间范围参数
  * @returns 交易统计数据
  */
-export async function getPanelCloseStatistics(token: string): Promise<PanelCloseStatistics> {
+export async function getPanelCloseStatistics(token: string, params?: { startTime?: string; endTime?: string }): Promise<PanelCloseStatistics> {
   try {
     const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/closeStatistics`, {
       method: 'POST',
@@ -1501,6 +1502,7 @@ export async function getPanelCloseStatistics(token: string): Promise<PanelClose
         'Authorization': `Bearer ${token}`,
         'alphatoken': token,
       },
+      body: JSON.stringify(params || {}),
     });
 
     if (!response.ok) {
@@ -1575,9 +1577,10 @@ export async function getPanelStrategyRanking(
 /**
  * 获取交易对偏好数据
  * @param token 用户token
+ * @param params 可选的时间范围参数
  * @returns 交易对偏好数据数组
  */
-export async function getPanelSymbolLike(token: string): Promise<PanelSymbolLikeRes[]> {
+export async function getPanelSymbolLike(token: string, params?: { startTime?: string; endTime?: string }): Promise<PanelSymbolLikeRes[]> {
   try {
     const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/symbol/like`, {
       method: 'POST',
@@ -1586,6 +1589,7 @@ export async function getPanelSymbolLike(token: string): Promise<PanelSymbolLike
         'Authorization': `Bearer ${token}`,
         'alphatoken': token,
       },
+      body: JSON.stringify(params || {}),
     });
 
     if (!response.ok) {
