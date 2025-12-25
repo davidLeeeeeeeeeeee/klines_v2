@@ -224,6 +224,9 @@ export interface PositionResponse {
   symbol: string;
   takeProfit: number;
   unrealisedPnl: number;
+  curRealisedPnl: number; // 已结盈亏
+  plBalancePrice: number; // 盈亏平衡价
+  marginPlRatio: number; // 保证金盈亏比率
   exchange?: string; // 交易所名称
   strategyType?: string; // 策略类型
   createdTime?: string; // 创建时间
@@ -1745,21 +1748,26 @@ export interface StrategyModelReq {
 /**
  * 策略模型列表响应
  */
+export interface StrategyModelOverview {
+  totalClosePnl: number | null;      // 总盈亏
+  followAccountNum: number | null;   // 跟随账户数
+  totalFund: number | null;          // 总资金
+  winCount: number | null;           // 盈利交易数
+  winAmount: number | null;          // 盈利金额
+  lossCount: number | null;          // 亏损交易数
+  lossAmount: number | null;         // 亏损金额
+}
+
 export interface StrategyModelListRes {
   description: string;          // 策略描述
   id: number;                   // 策略模型id
-  lossAmount: number | null;    // 亏损金额
-  lossCount: number | null;     // 亏损交易数
-  maxDrawdownRate: number | null; // 最大回撤(比例)
   name: string;                 // 策略名称
   riskLevel: string;            // 风险等级
-  runTime: number | null;       // 运行时长(天数)
+  runDays: number | null;       // 运行天数
   status: boolean;              // 策略运行状态
   tag: string;                  // 标签
-  totalClosePnl: number | null; // 总盈亏
-  totalFollowAmount: number | null; // 跟随资金
-  winAmount: number | null;     // 盈利金额
-  winCount: number | null;      // 盈利交易数
+  overview: StrategyModelOverview | null; // 统计概览
+  aiModel: string | null;       // AI模型
 }
 
 /**
@@ -2145,5 +2153,325 @@ export async function getSystemDict(): Promise<SystemDictData> {
     throw new ApiError(
       error instanceof Error ? error.message : '获取系统字典失败'
     );
+  }
+}
+
+
+// ==================== 每日盈亏 API ====================
+
+/**
+ * 历史线图数据（用于每日盈亏）
+ */
+export interface HistoryLineRes {
+  lineX: string[];  // X轴数据（日期）
+  lineY: number[];  // Y轴数据（数值）
+}
+
+/**
+ * 每日盈亏响应
+ */
+export interface PanelDailyProfitLossRes {
+  amount: HistoryLineRes;  // 收益额
+  rate: HistoryLineRes;    // 收益率
+}
+
+/**
+ * 获取每日盈亏数据
+ * @param token 用户token
+ * @returns 每日盈亏数据
+ */
+export async function getPanelDailyProfitLoss(token: string): Promise<PanelDailyProfitLossRes> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/history/dailyProfitLoss`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let errorMessage = errorData.description || errorData.message || `获取每日盈亏失败: ${response.statusText}`;
+      throw new ApiError(errorMessage, response.status, errorData);
+    }
+
+    const apiResponse: ApiResponse<PanelDailyProfitLossRes> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取每日盈亏失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+// ==================== 策略表现页面 API ====================
+
+/**
+ * 策略顶部总览响应
+ */
+export interface StrategyPanelOverviewRes {
+  followAccountNum: number | null;  // 跟随账户数
+  lossAmount: number | null;        // 亏损金额
+  lossCount: number | null;         // 亏损交易数
+  totalClosePnl: number | null;     // 总收益额
+  totalFund: number | null;         // 资金规模
+  winAmount: number | null;         // 盈利金额
+  winCount: number | null;          // 盈利交易数
+}
+
+/**
+ * 策略交易统计响应
+ */
+export interface StrategyCloseStatisticsRes {
+  lossAmount: number | null;        // 亏损金额
+  lossCount: number | null;         // 亏损交易数
+  maxDrawdownRate: number | null;   // 最大回撤(比例)
+  positionCount: number | null;     // 仓位总数
+  totalFee: number | null;          // 总手续费
+  totalTradeAmount: number | null;  // 总交易金额
+  userId: number | null;            // 用户ID
+  winAmount: number | null;         // 盈利金额
+  winCount: number | null;          // 盈利交易数
+}
+
+/**
+ * 策略交易对偏好响应
+ */
+export interface StrategySymbolLikeRes {
+  symbol: string;                   // 交易对
+  tradeCount: number;               // 交易数
+}
+
+/**
+ * 策略交易对排名响应
+ */
+export interface StrategySymbolRankingRes {
+  symbol: string;                   // 交易对
+  totalClosePnl: number;            // 总盈亏
+}
+
+/**
+ * 获取策略顶部总览
+ */
+export async function getStrategyPanelOverview(
+  token: string,
+  strategyType: string
+): Promise<StrategyPanelOverviewRes> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/strategy/overview?strategyType=${encodeURIComponent(strategyType)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      }
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<StrategyPanelOverviewRes> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      throw new ApiError(apiResponse.description || '获取策略总览失败', apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(error instanceof Error ? error.message : '网络请求失败');
+  }
+}
+
+/**
+ * 获取策略交易统计
+ */
+export async function getStrategyCloseStatistics(
+  token: string,
+  strategyType: string,
+  params?: { startTime?: string; endTime?: string }
+): Promise<StrategyCloseStatisticsRes> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/strategy/closeStatistics?strategyType=${encodeURIComponent(strategyType)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      },
+      body: JSON.stringify({ ...params, strategyType })
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<StrategyCloseStatisticsRes> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      throw new ApiError(apiResponse.description || '获取交易统计失败', apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(error instanceof Error ? error.message : '网络请求失败');
+  }
+}
+
+/**
+ * 获取策略每日盈亏
+ */
+export async function getStrategyDailyProfitLoss(
+  token: string,
+  strategyType: string,
+  params?: { startTime?: string; endTime?: string }
+): Promise<PanelDailyProfitLossRes> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/strategy/history/dailyProfitLoss?strategyType=${encodeURIComponent(strategyType)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      },
+      body: JSON.stringify({ ...params, strategyType })
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<PanelDailyProfitLossRes> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      throw new ApiError(apiResponse.description || '获取每日盈亏失败', apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(error instanceof Error ? error.message : '网络请求失败');
+  }
+}
+
+/**
+ * 获取策略历史净值折线图
+ */
+export async function getStrategyHistoryEquityLine(
+  token: string,
+  strategyType: string,
+  startTime?: string,
+  endTime?: string
+): Promise<HistoryLineRes> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/strategy/history/equity/line?strategyType=${encodeURIComponent(strategyType)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      },
+      body: JSON.stringify({ startTime, endTime, strategyType })
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<HistoryLineRes> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      throw new ApiError(apiResponse.description || '获取净值曲线失败', apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(error instanceof Error ? error.message : '网络请求失败');
+  }
+}
+
+/**
+ * 获取策略交易对偏好
+ */
+export async function getStrategySymbolLike(
+  token: string,
+  strategyType: string,
+  params?: { startTime?: string; endTime?: string }
+): Promise<StrategySymbolLikeRes[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/strategy/symbol/like?strategyType=${encodeURIComponent(strategyType)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      },
+      body: JSON.stringify({ ...params, strategyType })
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<StrategySymbolLikeRes[]> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      throw new ApiError(apiResponse.description || '获取交易对偏好失败', apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(error instanceof Error ? error.message : '网络请求失败');
+  }
+}
+
+/**
+ * 获取策略交易对排名
+ */
+export async function getStrategySymbolRanking(
+  token: string,
+  strategyType: string,
+  params?: { startTime?: string; endTime?: string }
+): Promise<StrategySymbolRankingRes[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/panel/strategy/symbol/ranking?strategyType=${encodeURIComponent(strategyType)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      },
+      body: JSON.stringify({ ...params, strategyType })
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<StrategySymbolRankingRes[]> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      throw new ApiError(apiResponse.description || '获取交易对排名失败', apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(error instanceof Error ? error.message : '网络请求失败');
   }
 }

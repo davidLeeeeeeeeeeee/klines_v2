@@ -32,6 +32,8 @@ interface Position {
   symbol: string;
   unrealizedPnL: number;
   unrealizedPnLPercent: number;
+  curRealisedPnl: number; // 已结盈亏
+  plBalancePrice: number; // 盈亏平衡价
   quantity: number;
   entryPrice: number;
   currentPrice: number;
@@ -293,7 +295,9 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       type: apiPos.side === 'Buy' ? 'long' : 'short',
       symbol: apiPos.symbol,
       unrealizedPnL: apiPos.unrealisedPnl,
-      unrealizedPnLPercent: ((apiPos.unrealisedPnl / (apiPos.entryPrice * apiPos.qty)) * 100),
+      unrealizedPnLPercent: apiPos.marginPlRatio * 100, // 使用API返回的保证金盈亏比率
+      curRealisedPnl: apiPos.curRealisedPnl || 0, // 已结盈亏
+      plBalancePrice: apiPos.plBalancePrice || 0, // 盈亏平衡价
       quantity: apiPos.qty,
       entryPrice: apiPos.entryPrice,
       currentPrice: apiPos.lastPrice,
@@ -680,7 +684,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
               : 'text-gray-500 hover:text-gray-700'
             }`}
         >
-          当前仓位
+          仓位
           {activeTab === 'positions' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></div>
           )}
@@ -933,16 +937,16 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         {position.type === 'long' ? '开多' : '开空'}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-500">
                       {position.exchange}: {position.accountUid}
                     </div>
                   </div>
 
                   <div className={`text-right ${position.unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    <div className="text-sm text-gray-500 mb-1">未结盈亏</div>
+                    <div className="text-sm text-gray-500 mb-1">浮动盈亏</div>
                     <div>
-                      <span className="text-lg">{Math.abs(position.unrealizedPnL).toFixed(2)}</span>
-                      <span className="text-sm ml-1">({Math.abs(position.unrealizedPnLPercent).toFixed(2)}%)</span>
+                      <span className="text-lg">{Math.abs(position.unrealizedPnL).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-sm ml-1">({Math.abs(position.unrealizedPnLPercent).toFixed(1)}%)</span>
                     </div>
                   </div>
                 </div>
@@ -951,7 +955,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div>
                     <div className="text-sm text-gray-500 mb-1">订单数量</div>
-                    <div className="text-gray-900">{position.quantity}</div>
+                    <div className="text-gray-900">{position.quantity.toLocaleString()}</div>
                   </div>
 
                   <div>
@@ -960,28 +964,44 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                   </div>
 
                   <div>
-                    <div className="text-sm text-gray-500 mb-1">止盈/止损</div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-600">
-                        {position.takeProfit ? `${position.takeProfit.toLocaleString()}` : '-'}
+                    <div className="text-sm text-gray-500 mb-1">盈亏平衡价</div>
+                    <div className="text-gray-900">{position.plBalancePrice.toLocaleString()}</div>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-gray-100 mb-4"></div>
+
+                {/* Additional Information */}
+                <div className="grid grid-cols-1 gap-3 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">止盈/止损</span>
+                    <div className="flex items-center gap-0.5">
+                      <span className="text-sm text-green-600">
+                        {position.takeProfit ? position.takeProfit.toLocaleString() : '-'}
                       </span>
-                      <span className="text-gray-400">/</span>
-                      <span className="text-red-600">
-                        {position.stopLoss ? `${position.stopLoss.toLocaleString()}` : '-'}
+                      <span className="text-sm text-gray-400">/</span>
+                      <span className="text-sm text-red-600">
+                        {position.stopLoss ? position.stopLoss.toLocaleString() : '-'}
                       </span>
                     </div>
                   </div>
-
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">创建时间</div>
-                    <div className="text-gray-900">{position.createdAt || '-'}</div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">已结盈亏</span>
+                    <span className={`text-sm ${position.curRealisedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {Math.abs(position.curRealisedPnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">持仓时间</span>
+                    <span className="text-sm text-gray-900">{position.createdAt || '-'}</span>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <div className="text-sm text-gray-500">
-                     <span className="text-gray-900">{position.strategyType || '-'}</span>
+                  <div className="text-sm text-gray-900">
+                    {position.strategyType || '-'}
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -1101,7 +1121,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       </div>
 
                       <div>
-                        <div className="text-sm text-gray-500 mb-1">成交类型</div>
+                        <div className="text-sm text-gray-500 mb-1">持仓类型</div>
                         <div className="text-gray-900">{trade.closeType || '-'}</div>
                       </div>
                     </div>
@@ -1119,10 +1139,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         <span className="text-sm text-gray-500">平仓手续费</span>
                         <span className="text-sm text-gray-900">{trade.closeFee} USDT</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">资金费</span>
-                        <span className="text-sm text-gray-900">{trade.fundingFee !== undefined ? `${trade.fundingFee} USDT` : '-'}</span>
-                      </div>
+                      
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">持仓时间</span>
                         <span className="text-sm text-gray-900">

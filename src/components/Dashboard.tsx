@@ -27,12 +27,14 @@ import {
   getPanelSymbolLike,
   getPanelSymbolRanking,
   getPanelHistoryEquityLine,
+  getPanelDailyProfitLoss,
   PanelOverviewRes,
   PanelCloseStatistics,
   PanelStrategyRankingRes,
   PanelSymbolLikeRes,
   PanelSymbolRankingRes,
-  HistoryLine
+  HistoryLine,
+  PanelDailyProfitLossRes
 } from '../services/api';
 import { getToken } from '../utils/storage';
 
@@ -59,6 +61,7 @@ export function Dashboard() {
   const [symbolLikeData, setSymbolLikeData] = useState<PanelSymbolLikeRes[]>([]);
   const [symbolRankingData, setSymbolRankingData] = useState<PanelSymbolRankingRes[]>([]);
   const [historyEquityLine, setHistoryEquityLine] = useState<HistoryLine | null>(null);
+  const [dailyProfitLossData, setDailyProfitLossData] = useState<PanelDailyProfitLossRes | null>(null);
 
   // 加载所有仪表盘数据
   const loadDashboardData = async () => {
@@ -72,13 +75,14 @@ export function Dashboard() {
       }
 
       // 并行加载所有数据
-      const [overview, statistics, strategyRanking, symbolLike, symbolRanking, equityLine] = await Promise.all([
+      const [overview, statistics, strategyRanking, symbolLike, symbolRanking, equityLine, dailyProfitLoss] = await Promise.all([
         getPanelOverview(token),
         getPanelCloseStatistics(token, getTimeRangeParams(statisticsTimeRange)),
         getPanelStrategyRanking(token, getTimeRangeParams(strategyTimeRange)),
         getPanelSymbolLike(token, getTimeRangeParams(symbolLikeTimeRange)),
         getPanelSymbolRanking(token, getTimeRangeParams(symbolTimeRange)),
-        getPanelHistoryEquityLine(token, getTimeRangeParams(timeRange).startTime, getTimeRangeParams(timeRange).endTime)
+        getPanelHistoryEquityLine(token, getTimeRangeParams(timeRange).startTime, getTimeRangeParams(timeRange).endTime),
+        getPanelDailyProfitLoss(token)
       ]);
 
       setOverviewData(overview);
@@ -87,6 +91,7 @@ export function Dashboard() {
       setSymbolLikeData(symbolLike);
       setSymbolRankingData(symbolRanking);
       setHistoryEquityLine(equityLine);
+      setDailyProfitLossData(dailyProfitLoss);
     } catch (err) {
       console.error('加载仪表盘数据失败:', err);
       setError(err instanceof Error ? err.message : '加载数据失败');
@@ -223,23 +228,43 @@ export function Dashboard() {
     });
   };
 
-  // Mock weekly performance data for bar chart
-  const weeklyData = [
-    { date: '12/17', displayDate: '12/17', week: '12 周', dateRange: '2024/12/17', rateChange: 4.2, amountChange: 6200 },
-    { date: '12/16', displayDate: '12/16', week: '11 周', dateRange: '2024/12/16', rateChange: 8.5, amountChange: 12500 },
-    { date: '12/15', displayDate: '12/15', week: '10 周', dateRange: '2024/12/15', rateChange: -2.1, amountChange: -3100 },
-    { date: '12/14', displayDate: '12/14', week: '9 周', dateRange: '2024/12/14', rateChange: 5.2, amountChange: 8200 },
-    { date: '12/13', displayDate: '12/13', week: '8 周', dateRange: '2024/12/13', rateChange: 3.8, amountChange: 5800 },
-    { date: '12/12', displayDate: '12/12', week: '7 周', dateRange: '2024/12/12', rateChange: -3.5, amountChange: -5600 },
-    { date: '12/11', displayDate: '12/11', week: '6 周', dateRange: '2024/12/11', rateChange: 7.6, amountChange: 11200 },
-    { date: '12/10', displayDate: '12/10', week: '5 周', dateRange: '2024/12/10', rateChange: 6.8, amountChange: 9800 },
-    { date: '12/09', displayDate: '12/09', week: '4 周', dateRange: '2024/12/09', rateChange: -4.3, amountChange: -6400 },
-    { date: '12/08', displayDate: '12/08', week: '3 周', dateRange: '2024/12/08', rateChange: 12.3, amountChange: 18600 },
-    { date: '12/07', displayDate: '12/07', week: '2 周', dateRange: '2024/12/07', rateChange: 9.1, amountChange: 13500 },
-    { date: '12/06', displayDate: '12/06', week: '1 周', dateRange: '2024/12/06', rateChange: -15.2, amountChange: -22400 },
-    { date: '12/05', displayDate: '12/05', week: '0 周', dateRange: '2024/12/05', rateChange: 2.8, amountChange: 4200 },
-    { date: '12/04', displayDate: '12/04', week: '-1 周', dateRange: '2024/12/04', rateChange: -1.5, amountChange: -2300 }
-  ];
+  // 将API数据转换为每日盈亏图表数据格式
+  const weeklyData = (() => {
+    if (!dailyProfitLossData || !dailyProfitLossData.amount || !dailyProfitLossData.rate) {
+      return [];
+    }
+
+    const { amount, rate } = dailyProfitLossData;
+
+    // 确保两个数组长度一致
+    const length = Math.min(amount.lineX?.length || 0, rate.lineX?.length || 0);
+    if (length === 0) return [];
+
+    return amount.lineX.slice(0, length).map((dateStr, index) => {
+      // 解析日期字符串 (格式: YYYYMMDD，例如: "20251225")
+      let displayDate: string;
+      let fullDate: string;
+
+      if (dateStr && dateStr.length === 8) {
+        const year = dateStr.substring(0, 4);
+        const month = dateStr.substring(4, 6);
+        const day = dateStr.substring(6, 8);
+        displayDate = `${month}/${day}`;
+        fullDate = `${year}/${month}/${day}`;
+      } else {
+        displayDate = dateStr;
+        fullDate = dateStr;
+      }
+
+      return {
+        date: displayDate,
+        displayDate: displayDate,
+        dateRange: fullDate,
+        rateChange: (rate.lineY?.[index] || 0) * 100, // 转换为百分比
+        amountChange: amount.lineY?.[index] || 0
+      };
+    });
+  })();
 
   // 将API数据转换为图表数据格式
   const performanceData = (() => {

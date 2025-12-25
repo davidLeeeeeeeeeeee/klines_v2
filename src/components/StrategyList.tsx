@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Activity, DollarSign, Users, ArrowRight, Plus, Play, Pause, Settings, X, RefreshCw } from 'lucide-react';
+import { getStrategyModelList, StrategyModelListRes } from '../services/api';
+import { getToken } from '../utils/storage';
 
 interface Strategy {
   id: string;
@@ -16,31 +18,106 @@ interface Strategy {
   tags: string[];
   riskLevel: 'low' | 'medium' | 'high';
   totalFollowingCapital: string;
-  aiModel?: string;
+  runDays: number;
+  aiModel: string;
   systemPrompt?: string;
   userPrompt?: string;
   requestFrequency?: number;
   requestFrequencyUnit?: 'seconds' | 'minutes' | 'hours';
 }
 
+// 将API数据转换为组件数据
+function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
+  const overview = apiData.overview;
+  const winCount = overview?.winCount ?? 0;
+  const lossCount = overview?.lossCount ?? 0;
+  const winAmount = overview?.winAmount ?? 0;
+  const lossAmount = overview?.lossAmount ?? 0;
+  const totalClosePnl = overview?.totalClosePnl ?? 0;
+  const totalFund = overview?.totalFund ?? 0;
+
+  // 胜率 = winCount / (winCount + lossCount)
+  const winRate = (winCount + lossCount) > 0
+    ? Number(((winCount / (winCount + lossCount)) * 100).toFixed(1))
+    : 0;
+
+  // 盈亏比 = winAmount / |lossAmount|，精确到小数点1位
+  const profitLossRatio = lossAmount !== 0
+    ? Number((winAmount / Math.abs(lossAmount)).toFixed(1))
+    : 0;
+
+  // 风险等级转换
+  let riskLevel: 'low' | 'medium' | 'high' = 'medium';
+  const riskLevelLower = apiData.riskLevel?.toLowerCase() || '';
+  if (riskLevelLower === 'low') {
+    riskLevel = 'low';
+  } else if (riskLevelLower === 'high') {
+    riskLevel = 'high';
+  }
+
+  return {
+    id: apiData.id.toString(),
+    name: apiData.name,
+    description: apiData.description,
+    returns: 0, // 总收益率先写0
+    totalReturn: totalClosePnl >= 0 ? `+${totalClosePnl.toFixed(2)}` : totalClosePnl.toFixed(2),
+    followers: overview?.followAccountNum ?? 0,
+    winRate: winRate,
+    maxDrawdown: 0, // 最大回撤先写0
+    sharpeRatio: profitLossRatio, // 盈亏比
+    createDate: new Date().toISOString().split('T')[0],
+    status: apiData.status ? 'active' : 'paused',
+    tags: apiData.tag ? apiData.tag.split(',').filter(t => t.trim()) : [],
+    riskLevel: riskLevel,
+    totalFollowingCapital: totalFund ? `¥${totalFund.toFixed(2)}` : '¥0',
+    runDays: apiData.runDays ?? 0,
+    aiModel: apiData.aiModel ?? '',
+  };
+}
+
 interface StrategyListProps {
-  onViewDetail: (strategyId: string) => void;
+  onViewDetail: (strategyName: string) => void;
   onNavigateToConfig: (strategy: Strategy | null) => void;
-  strategies: Strategy[];
+  strategies?: Strategy[];
   onUpdateStrategy: (strategyId: string, updates: Partial<Strategy>) => void;
   onNavigateToAccounts?: () => void;
 }
 
-export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onUpdateStrategy, onNavigateToAccounts }: StrategyListProps) {
+export function StrategyList({ onViewDetail, onNavigateToConfig, onUpdateStrategy, onNavigateToAccounts }: StrategyListProps) {
   const [showFollowModal, setShowFollowModal] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [strategies, setStrategies] = useState<Strategy[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleRefresh = () => {
+  // 获取策略列表
+  const fetchStrategies = async () => {
+    try {
+      const token = getToken();
+      if (!token) {
+        console.error('未找到token');
+        setStrategies([]);
+        return;
+      }
+      const apiData = await getStrategyModelList(token);
+      const convertedStrategies = apiData.map(convertApiToStrategy);
+      setStrategies(convertedStrategies);
+    } catch (error) {
+      console.error('获取策略列表失败:', error);
+      setStrategies([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStrategies();
+  }, []);
+
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 500);
+    await fetchStrategies();
+    setIsRefreshing(false);
   };
 
   const handleToggleStatus = (strategyId: string, e: React.MouseEvent) => {
@@ -81,7 +158,6 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
         tags: strategyData.tags || [],
         riskLevel: strategyData.riskLevel || 'medium',
         totalFollowingCapital: '¥0',
-        aiModel: strategyData.aiModel,
         systemPrompt: strategyData.systemPrompt,
         userPrompt: strategyData.userPrompt,
         requestFrequency: strategyData.requestFrequency,
@@ -91,9 +167,8 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
     }
   };
 
-  const calculateRunningDays = (createDate: string) => {
-    const days = Math.floor((new Date().getTime() - new Date(createDate).getTime()) / (1000 * 60 * 60 * 24));
-    return `${days}天`;
+  const getRunningDays = (strategy: Strategy) => {
+    return `${strategy.runDays}天`;
   };
 
   const handleFollowStrategy = (accountId: string) => {
@@ -134,7 +209,17 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Strategy Cards Grid */}
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <RefreshCw className="w-8 h-8 text-gray-400 animate-spin" />
+          </div>
+        ) : strategies.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+            <p>暂无策略数据</p>
+          </div>
+        ) : (
+        /* Strategy Cards Grid */
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {strategies.map((strategy) => (
             <div
@@ -184,15 +269,15 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
                       总收益率
                     </div>
                     <div className={`${strategy.returns >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {Math.abs(strategy.returns)}%
+                      {strategy.returns >= 0 ? '+' : ''}{strategy.returns}%
                     </div>
                   </div>
                   <div>
                     <div className="text-gray-600 text-sm mb-1">
                       总收益额
                     </div>
-                    <div className={`${strategy.totalReturn.startsWith('+') || !strategy.totalReturn.startsWith('-') ? 'text-green-600' : 'text-red-600'}`}>
-                      {strategy.totalReturn.replace(/^[\+\-]/, '')}
+                    <div className={`${strategy.totalReturn.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+                      {strategy.totalReturn}
                     </div>
                   </div>
                   <div className="text-right">
@@ -200,7 +285,7 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
                       最大回撤
                     </div>
                     <div className="text-red-600">
-                      {strategy.maxDrawdown}%
+                      -{strategy.maxDrawdown}%
                     </div>
                   </div>
                   <div>
@@ -236,7 +321,7 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
                 {/* Action Buttons */}
                 <div className="flex gap-3 mb-4">
                   <button
-                    onClick={() => onViewDetail(strategy.id)}
+                    onClick={() => onViewDetail(strategy.name)}
                     className="flex-1 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                   >
                     策略表现
@@ -254,25 +339,22 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
                   </button>
                 </div>
 
-                {/* Status Bar */}
-                <div className={`py-2 px-3 rounded-lg flex items-center justify-between text-sm ${
-                  strategy.status === 'active'
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
-                }`}>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
-                    <span>{strategy.aiModel || 'GPT-4'}</span>
+                {/* AI Model & Run Days Bar */}
+                <div className="py-2 px-3 rounded-lg flex items-center justify-between text-sm bg-green-50 border border-green-200">
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    <span>{strategy.aiModel || 'AI'}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-green-600">
                     <Activity className="w-3.5 h-3.5" />
-                    <span>运行 {calculateRunningDays(strategy.createDate)}</span>
+                    <span>运行 {strategy.runDays}天</span>
                   </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
+        )}
 
         {/* Follow Strategy Modal */}
         {showFollowModal && (

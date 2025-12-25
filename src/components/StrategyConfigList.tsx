@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Activity, DollarSign, Users, ArrowRight, Plus, Play, Pause, Settings, X, RefreshCw } from 'lucide-react';
+import { getStrategyModelList, switchStrategyModelStatus, StrategyModelListRes } from '../services/api';
+import { getToken } from '../utils/storage';
 
 interface Strategy {
   id: string;
@@ -16,7 +18,8 @@ interface Strategy {
   tags: string[];
   riskLevel: 'low' | 'medium' | 'high';
   totalFollowingCapital: string;
-  aiModel?: string;
+  runDays: number;
+  aiModel: string;
   systemPrompt?: string;
   userPrompt?: string;
   requestFrequency?: number;
@@ -24,55 +27,153 @@ interface Strategy {
 }
 
 interface StrategyConfigListProps {
-  onViewDetail: (strategyId: string) => void;
+  onViewDetail: (strategyName: string) => void;
   onNavigateToConfig: (strategy: Strategy | null) => void;
   strategies: Strategy[];
   onUpdateStrategy: (strategyId: string, updates: Partial<Strategy>) => void;
   onNavigateToAccounts?: () => void;
 }
 
+// 将API数据转换为组件数据
+function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
+  // 安全地处理可能为null的数值
+  const overview = apiData.overview;
+  const totalClosePnl = overview?.totalClosePnl ?? 0;
+  const totalFund = overview?.totalFund ?? 0;
+  const winCount = overview?.winCount ?? 0;
+  const lossCount = overview?.lossCount ?? 0;
+  const winAmount = overview?.winAmount ?? 0;
+  const lossAmount = overview?.lossAmount ?? 0;
+  const runDays = apiData.runDays ?? 0;
+
+  // 胜率 = winCount / (winCount + lossCount)
+  const winRate = (winCount + lossCount) > 0
+    ? Number(((winCount / (winCount + lossCount)) * 100).toFixed(1))
+    : 0;
+
+  // 盈亏比 = winAmount / |lossAmount|
+  const profitLossRatio = lossAmount !== 0
+    ? Number((winAmount / Math.abs(lossAmount)).toFixed(1))
+    : 0;
+
+  return {
+    id: apiData.id.toString(),
+    name: apiData.name,
+    description: apiData.description,
+    returns: 0, // 总收益率先写0
+    totalReturn: totalClosePnl >= 0 ? `+${totalClosePnl.toFixed(2)}` : totalClosePnl.toFixed(2),
+    followers: overview?.followAccountNum ?? 0,
+    winRate: winRate,
+    maxDrawdown: 0, // 最大回撤先写0
+    sharpeRatio: profitLossRatio, // 盈亏比
+    createDate: new Date().toISOString().split('T')[0],
+    status: apiData.status ? 'active' : 'paused',
+    tags: apiData.tag ? apiData.tag.split(',').filter(t => t.trim()) : [],
+    riskLevel: apiData.riskLevel?.toLowerCase() as 'low' | 'medium' | 'high',
+    totalFollowingCapital: totalFund ? `¥${totalFund.toFixed(2)}` : '¥0',
+    runDays: runDays,
+    aiModel: apiData.aiModel ?? '',
+  };
+}
+
 export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategies, onUpdateStrategy, onNavigateToAccounts }: StrategyConfigListProps) {
   const [showFollowModal, setShowFollowModal] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'running' | 'paused'>('running');
-  const [showStatusConfirmModal, setShowStatusConfirmModal] = useState(false);
-  const [statusChangeStrategy, setStatusChangeStrategy] = useState<{ id: string; currentStatus: 'active' | 'paused' } | null>(null);
+  const [apiStrategies, setApiStrategies] = useState<Strategy[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasLoadedApi, setHasLoadedApi] = useState(false); // 标记是否已经加载过API
+  const [activeTab, setActiveTab] = useState<'active' | 'paused'>('active'); // Tab状态
 
-  const handleRefresh = () => {
+  // 加载策略列表
+  const loadStrategies = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('未找到认证令牌，请重新登录');
+      }
+
+      const apiData = await getStrategyModelList(token);
+      console.log('📊 API返回的策略列表数据:', apiData);
+      const convertedStrategies = apiData.map(convertApiToStrategy);
+      console.log('✅ 转换后的策略数据:', convertedStrategies);
+      setApiStrategies(convertedStrategies);
+      setHasLoadedApi(true); // 标记已经加载过API
+    } catch (err) {
+      console.error('加载策略列表失败:', err);
+      setError(err instanceof Error ? err.message : '加载策略列表失败');
+      setHasLoadedApi(true); // 即使失败也标记为已加载
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 组件挂载时加载数据
+  useEffect(() => {
+    loadStrategies();
+  }, []);
+
+  // 如果已经加载过API，就使用API数据（即使是空数组）；否则使用props传入的默认数据
+  const allStrategies = hasLoadedApi ? apiStrategies : strategies;
+
+  // 根据当前Tab过滤策略
+  const displayStrategies = allStrategies.filter(strategy =>
+    activeTab === 'active' ? strategy.status === 'active' : strategy.status === 'paused'
+  );
+
+  // 统计数量
+  const activeCount = allStrategies.filter(s => s.status === 'active').length;
+  const pausedCount = allStrategies.filter(s => s.status === 'paused').length;
+
+  const handleRefresh = async () => {
     setIsRefreshing(true);
+    await loadStrategies();
     setTimeout(() => {
       setIsRefreshing(false);
     }, 500);
   };
 
-  const handleToggleStatus = (strategyId: string, e: React.MouseEvent) => {
+  const handleToggleStatus = async (strategyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const strategy = strategies.find(s => s.id === strategyId);
-    if (strategy) {
-      setStatusChangeStrategy({ id: strategyId, currentStatus: strategy.status });
-      setShowStatusConfirmModal(true);
-    }
-  };
 
-  const confirmStatusChange = () => {
-    if (statusChangeStrategy) {
-      onUpdateStrategy(statusChangeStrategy.id, { 
-        status: statusChangeStrategy.currentStatus === 'active' ? 'paused' : 'active' 
-      });
-      setShowStatusConfirmModal(false);
-      setStatusChangeStrategy(null);
-    }
-  };
+    // 先乐观更新UI（立即更新本地状态）
+    const currentStrategy = apiStrategies.find(s => s.id === strategyId);
+    if (currentStrategy) {
+      const newStatus = currentStrategy.status === 'active' ? 'paused' : 'active';
 
-  const cancelStatusChange = () => {
-    setShowStatusConfirmModal(false);
-    setStatusChangeStrategy(null);
+      // 立即更新本地状态
+      setApiStrategies(prev =>
+        prev.map(s => s.id === strategyId ? { ...s, status: newStatus } : s)
+      );
+    }
+
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('未找到认证令牌，请重新登录');
+      }
+
+      // 调用API切换状态
+      const result = await switchStrategyModelStatus(token, parseInt(strategyId));
+      console.log('切换状态API返回:', result);
+
+      // 刷新列表以确保数据同步
+      await loadStrategies();
+    } catch (err) {
+      console.error('切换策略状态失败:', err);
+      alert(err instanceof Error ? err.message : '切换策略状态失败');
+
+      // 如果失败，重新加载列表恢复正确状态
+      await loadStrategies();
+    }
   };
 
   const handleSettings = (strategyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const strategy = strategies.find(s => s.id === strategyId);
+    const strategy = displayStrategies.find(s => s.id === strategyId);
     if (strategy) {
       onNavigateToConfig(strategy);
     }
@@ -103,7 +204,8 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
         tags: strategyData.tags || [],
         riskLevel: strategyData.riskLevel || 'medium',
         totalFollowingCapital: '¥0',
-        aiModel: strategyData.aiModel,
+        runDays: 0,
+        aiModel: strategyData.aiModel || '',
         systemPrompt: strategyData.systemPrompt,
         userPrompt: strategyData.userPrompt,
         requestFrequency: strategyData.requestFrequency,
@@ -123,7 +225,7 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
       alert('请选择要跟随的交易账户');
       return;
     }
-    const strategyName = strategies.find(s => s.id === selectedStrategy)?.name;
+    const strategyName = displayStrategies.find(s => s.id === selectedStrategy)?.name;
     alert(`已成功使用账户跟随策略: ${strategyName}`);
     setShowFollowModal(false);
   };
@@ -163,43 +265,93 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
         </div>
 
         {/* Tab Navigation */}
-        <div className="mb-6 flex items-center gap-8">
+        <div className="flex gap-2 border-b border-gray-200">
           <button
-            onClick={() => setActiveTab('running')}
-            className={`pb-3 text-base transition-colors relative ${
-              activeTab === 'running'
-                ? 'text-gray-900 font-semibold'
-                : 'text-gray-500 hover:text-gray-700'
+            onClick={() => setActiveTab('active')}
+            className={`px-4 py-2 font-medium transition-colors relative ${
+              activeTab === 'active'
+                ? 'text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             运行中
-            {activeTab === 'running' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></div>
+            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+              activeTab === 'active'
+                ? 'bg-blue-100 text-blue-600'
+                : 'bg-gray-100 text-gray-600'
+            }`}>
+              {activeCount}
+            </span>
+            {activeTab === 'active' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
             )}
           </button>
           <button
             onClick={() => setActiveTab('paused')}
-            className={`pb-3 text-base transition-colors relative ${
+            className={`px-4 py-2 font-medium transition-colors relative ${
               activeTab === 'paused'
-                ? 'text-gray-900 font-semibold'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             已暂停
+            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+              activeTab === 'paused'
+                ? 'bg-blue-100 text-blue-600'
+                : 'bg-gray-100 text-gray-600'
+            }`}>
+              {pausedCount}
+            </span>
             {activeTab === 'paused' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></div>
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
             )}
           </button>
         </div>
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto mt-6">
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-gray-500">加载中...</div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-700">{error}</p>
+            <button
+              onClick={loadStrategies}
+              className="mt-2 text-red-600 hover:text-red-800 underline"
+            >
+              重试
+            </button>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && !error && displayStrategies.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <Activity className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-gray-900 mb-2">
+              {activeTab === 'active' ? '暂无运行中的策略' : '暂无已暂停的策略'}
+            </h3>
+            <p className="text-gray-600 text-sm">
+              {activeTab === 'active'
+                ? '点击右上角"创建策略"按钮开始配置新策略'
+                : '所有策略都在运行中'}
+            </p>
+          </div>
+        )}
+
         {/* Strategy Cards Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {strategies
-            .filter(strategy => activeTab === 'running' ? strategy.status === 'active' : strategy.status === 'paused')
-            .map((strategy) => (
+        {!isLoading && !error && displayStrategies.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {displayStrategies.map((strategy) => (
             <div
               key={strategy.id}
               className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
@@ -273,15 +425,15 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
                       总收益率
                     </div>
                     <div className={`${strategy.returns >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {Math.abs(strategy.returns)}%
+                      {strategy.returns >= 0 ? '+' : ''}{strategy.returns}%
                     </div>
                   </div>
                   <div>
                     <div className="text-gray-600 text-sm mb-1">
                       总收益额
                     </div>
-                    <div className={`${strategy.totalReturn.startsWith('+') || !strategy.totalReturn.startsWith('-') ? 'text-green-600' : 'text-red-600'}`}>
-                      {strategy.totalReturn.replace(/^[\+\-]/, '')}
+                    <div className={`${strategy.totalReturn.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+                      {strategy.totalReturn}
                     </div>
                   </div>
                   <div className="text-right">
@@ -289,7 +441,7 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
                       最大回撤
                     </div>
                     <div className="text-red-600">
-                      {strategy.maxDrawdown}%
+                      -{strategy.maxDrawdown}%
                     </div>
                   </div>
                   <div>
@@ -322,19 +474,15 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
                   </p>
                 </div>
 
-                {/* Status Bar */}
-                <div className={`py-2 px-3 rounded-lg flex items-center justify-between text-sm ${
-                  strategy.status === 'active'
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
-                }`}>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
-                    <span>{strategy.aiModel || 'GPT-4'}</span>
+                {/* AI Model & Run Days Bar */}
+                <div className="py-2 px-3 rounded-lg flex items-center justify-between text-sm bg-green-50 border border-green-200">
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    <span>{strategy.aiModel || 'AI'}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-green-600">
                     <Activity className="w-3.5 h-3.5" />
-                    <span>运行 {calculateRunningDays(strategy.createDate)}</span>
+                    <span>运行 {strategy.runDays}天</span>
                   </div>
                 </div>
               </div>
@@ -354,6 +502,7 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Follow Strategy Modal */}
@@ -397,71 +546,6 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Status Confirm Modal */}
-      {showStatusConfirmModal && statusChangeStrategy && (
-        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-end justify-center z-50">
-          <div 
-            className="bg-white rounded-t-3xl shadow-xl p-6 w-full max-w-4xl h-[85vh] flex flex-col animate-slide-up"
-            style={{
-              animation: 'slideUp 0.3s ease-out'
-            }}
-          >
-            {/* Modal Header */}
-            <div className="mb-6 flex-shrink-0">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">确认操作</h2>
-                <button
-                  onClick={cancelStatusChange}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-              {/* Divider */}
-              <div className="border-t border-gray-200"></div>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto mb-6">
-              <div className="text-gray-600 mb-6">
-                您确定要{statusChangeStrategy.currentStatus === 'active' ? '暂停' : '启动'}【{strategies.find(s => s.id === statusChangeStrategy.id)?.name}】吗？
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex gap-3 flex-shrink-0">
-              <button
-                type="button"
-                onClick={cancelStatusChange}
-                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                onClick={confirmStatusChange}
-                className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                确认
-              </button>
-            </div>
-          </div>
-          
-          <style>{`
-            @keyframes slideUp {
-              from {
-                transform: translateY(100%);
-                opacity: 0;
-              }
-              to {
-                transform: translateY(0);
-                opacity: 1;
-              }
-            }
-          `}</style>
         </div>
       )}
     </div>

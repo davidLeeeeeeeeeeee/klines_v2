@@ -37,7 +37,7 @@ type MenuItem = {
 
 export function MainLayout({ onLogout }: MainLayoutProps) {
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
+  const [selectedStrategyName, setSelectedStrategyName] = useState<string | null>(null);
   const [selectedStrategy, setSelectedStrategy] = useState<any | null>(null);
   const [strategyConfigSource, setStrategyConfigSource] = useState<'strategy-list' | 'strategy-config-list'>('strategy-list');
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['trading-monitor']);
@@ -332,7 +332,9 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       status: 'active' as 'active' | 'paused',
       tags: ['趋势策略'],
       riskLevel: 'medium' as 'low' | 'medium' | 'high',
-      totalFollowingCapital: '¥2,450,000'
+      totalFollowingCapital: '¥2,450,000',
+      runDays: 345,
+      aiModel: 'GPT-4'
     },
     {
       id: '2',
@@ -348,7 +350,9 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       status: 'active' as 'active' | 'paused',
       tags: ['网格交易'],
       riskLevel: 'low' as 'low' | 'medium' | 'high',
-      totalFollowingCapital: '¥1,850,000'
+      totalFollowingCapital: '¥1,850,000',
+      runDays: 318,
+      aiModel: 'Claude-3'
     },
     {
       id: '3',
@@ -364,7 +368,9 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       status: 'active' as 'active' | 'paused',
       tags: ['套利'],
       riskLevel: 'low' as 'low' | 'medium' | 'high',
-      totalFollowingCapital: '¥3,120,000'
+      totalFollowingCapital: '¥3,120,000',
+      runDays: 340,
+      aiModel: 'GPT-4'
     },
     {
       id: '4',
@@ -380,7 +386,9 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       status: 'active' as 'active' | 'paused',
       tags: ['做市策略', '高频交易'],
       riskLevel: 'high' as 'low' | 'medium' | 'high',
-      totalFollowingCapital: '¥1,680,000'
+      totalFollowingCapital: '¥1,680,000',
+      runDays: 385,
+      aiModel: 'Gemini Pro'
     },
     {
       id: '5',
@@ -396,7 +404,9 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       status: 'paused' as 'active' | 'paused',
       tags: ['均值回归'],
       riskLevel: 'medium' as 'low' | 'medium' | 'high',
-      totalFollowingCapital: '¥2,050,000'
+      totalFollowingCapital: '¥2,050,000',
+      runDays: 299,
+      aiModel: 'Claude-3'
     },
     {
       id: '6',
@@ -412,7 +422,9 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       status: 'active' as 'active' | 'paused',
       tags: ['对冲策略', '市场中性'],
       riskLevel: 'low' as 'low' | 'medium' | 'high',
-      totalFollowingCapital: '¥2,750,000'
+      totalFollowingCapital: '¥2,750,000',
+      runDays: 313,
+      aiModel: 'GPT-4'
     }
   ]);
 
@@ -530,19 +542,19 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
   };
 
   // Strategy navigation
-  const handleViewStrategyDetail = (strategyId: string) => {
-    setSelectedStrategyId(strategyId);
+  const handleViewStrategyDetail = (strategyName: string) => {
+    setSelectedStrategyName(strategyName);
     setCurrentPage('strategy-detail');
   };
 
   const handleBackToStrategyList = () => {
-    setSelectedStrategyId(null);
+    setSelectedStrategyName(null);
     setSelectedStrategy(null);
     setCurrentPage('strategy-list');
   };
 
   const handleBackToStrategyConfigList = () => {
-    setSelectedStrategyId(null);
+    setSelectedStrategyName(null);
     setSelectedStrategy(null);
     setCurrentPage('strategy-config-list');
   };
@@ -617,7 +629,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
           />
         );
       case 'strategy-detail':
-        return <StrategyDetail strategyId={selectedStrategyId} onBack={handleBackToStrategyList} />;
+        return <StrategyDetail strategyName={selectedStrategyName} onBack={handleBackToStrategyList} />;
       case 'strategy-config':
         return (
           <StrategyConfigPage
