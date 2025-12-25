@@ -148,6 +148,42 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
     return text.replace(/\\n/g, '\n');
   };
 
+  const formatBeijingDateTime = (date: Date): string => {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const hours = String(date.getUTCHours()).padStart(2, '0');
+    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  };
+
+  const formatBeijingTimestamp = (value: string): string => {
+    if (!value) return '';
+
+    const plainMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/);
+    if (plainMatch) {
+      const [, year, month, day, hours, minutes, seconds] = plainMatch;
+      const date = new Date(Date.UTC(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        Number(hours),
+        Number(minutes),
+        Number(seconds)
+      ));
+      return formatBeijingDateTime(date);
+    }
+
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      const beijingDate = new Date(parsed.getTime() + 8 * 60 * 60 * 1000);
+      return formatBeijingDateTime(beijingDate);
+    }
+
+    return value;
+  };
+
   // 加载策略详情
   useEffect(() => {
     const loadStrategyDetail = async () => {
@@ -189,28 +225,34 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
           id: parseInt(strategy.id) // 使用当前策略的ID
         };
 
-        if (detail.historyList && detail.historyList.length > 0) {
-          const history = detail.historyList.map(h => ({
-            version: h.version,
-            timestamp: h.createTime,
-            id: h.id
-          }));
-
-          // 检查当前版本是否已在历史列表中
-          const currentVersionExists = history.some(h => h.version === currentVersionData.version);
-
-          // 如果当前版本不在历史列表中，添加它
-          if (!currentVersionExists) {
-            history.push(currentVersionData);
+        setVersionHistory((prev) => {
+          if (!detail.historyList || detail.historyList.length === 0) {
+            return prev.length > 0 ? prev : [currentVersionData];
           }
 
-          // 按版本号倒序排列
+          const existingByVersion = new Map(prev.map(item => [item.version, item]));
+          const history = detail.historyList.map(h => {
+            const existing = existingByVersion.get(h.version);
+            return {
+              version: h.version,
+              timestamp: existing?.timestamp || h.createTime,
+              id: existing?.id ?? h.id
+            };
+          });
+
+          prev.forEach(item => {
+            if (!history.some(h => h.version === item.version)) {
+              history.push(item);
+            }
+          });
+
+          if (!history.some(h => h.version === currentVersionData.version)) {
+            history.push(existingByVersion.get(currentVersionData.version) || currentVersionData);
+          }
+
           history.sort((a, b) => b.version - a.version);
-          setVersionHistory(history);
-        } else {
-          // 如果没有历史列表，至少显示当前版本
-          setVersionHistory([currentVersionData]);
-        }
+          return history;
+        });
       } catch (err) {
         console.error('加载策略详情失败:', err);
         alert(err instanceof Error ? err.message : '加载策略详情失败');
@@ -269,28 +311,34 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
         id: versionId || parseInt(strategy.id)
       };
 
-      if (detail.historyList && detail.historyList.length > 0) {
-        const history = detail.historyList.map(h => ({
-          version: h.version,
-          timestamp: h.createTime,
-          id: h.id
-        }));
-
-        // 检查当前版本是否已在历史列表中
-        const currentVersionExists = history.some(h => h.version === currentVersionData.version);
-
-        // 如果当前版本不在历史列表中，添加它
-        if (!currentVersionExists) {
-          history.push(currentVersionData);
+      setVersionHistory((prev) => {
+        if (!detail.historyList || detail.historyList.length === 0) {
+          return prev.length > 0 ? prev : [currentVersionData];
         }
 
-        // 按版本号倒序排列
+        const existingByVersion = new Map(prev.map(item => [item.version, item]));
+        const history = detail.historyList.map(h => {
+          const existing = existingByVersion.get(h.version);
+          return {
+            version: h.version,
+            timestamp: existing?.timestamp || h.createTime,
+            id: existing?.id ?? h.id
+          };
+        });
+
+        prev.forEach(item => {
+          if (!history.some(h => h.version === item.version)) {
+            history.push(item);
+          }
+        });
+
+        if (!history.some(h => h.version === currentVersionData.version)) {
+          history.push(existingByVersion.get(currentVersionData.version) || currentVersionData);
+        }
+
         history.sort((a, b) => b.version - a.version);
-        setVersionHistory(history);
-      } else {
-        // 如果没有历史列表，至少显示当前版本
-        setVersionHistory([currentVersionData]);
-      }
+        return history;
+      });
     } catch (err) {
       console.error('加载策略版本失败:', err);
       alert(err instanceof Error ? err.message : '加载策略版本失败');
@@ -483,7 +531,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                             Ver: {version.version}
                           </span>
                           <span className={`text-sm whitespace-nowrap ${currentVersion === version.version ? 'text-blue-600' : 'text-gray-500'}`}>
-                            {version.timestamp}
+                            {formatBeijingTimestamp(version.timestamp)}
                           </span>
                         </button>
                       ))}
