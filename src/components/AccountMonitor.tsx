@@ -59,6 +59,7 @@ interface HistoricalTrade {
   leverage: number;
   openTime: string;
   closeTime: string;
+  orderCreateTime: string; // 订单创建时间
   openFee: number;
   closeFee: number;
   fundingFee: number;
@@ -584,6 +585,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       leverage: 5,
       openTime: '2024-03-15 10:30:21',
       closeTime: '2024-03-18 14:20:21',
+      orderCreateTime: '2024-03-15 10:30:00',
       openFee: 10,
       closeFee: 15,
       fundingFee: 5,
@@ -604,6 +606,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       leverage: 3,
       openTime: '2024-03-16 08:15:32',
       closeTime: '2024-03-17 16:45:18',
+      orderCreateTime: '2024-03-16 08:15:00',
       openFee: 5,
       closeFee: 10,
       fundingFee: 2,
@@ -624,6 +627,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       leverage: 2,
       openTime: '2024-03-14 12:00:45',
       closeTime: '2024-03-16 09:30:12',
+      orderCreateTime: '2024-03-14 12:00:00',
       openFee: 1,
       closeFee: 2,
       fundingFee: 0.5,
@@ -1067,8 +1071,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
           ) : (
             <>
               {filteredClosedPositions.map((trade) => {
-                // 计算盈亏百分比
-                const pnlPercent = ((trade.closedPnl / (trade.avgEntryPrice * trade.qty)) * 100).toFixed(2);
+                // 使用API返回的 marginPlRatio 作为盈亏百分比
+                const pnlPercent = ((trade.marginPlRatio ?? 0) * 100).toFixed(2);
 
                 return (
                   <div key={trade.id} className="bg-white rounded-lg shadow-sm p-6 pb-4">
@@ -1143,7 +1147,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">持仓时间</span>
                         <span className="text-sm text-gray-900">
-                          {formatPositionTime(trade.openTime, trade.closeTime).openTimeFormatted} - {formatPositionTime(trade.openTime, trade.closeTime).closeTimeFormatted} {formatPositionTime(trade.openTime, trade.closeTime).durationFormatted}
+                          {formatPositionTime(trade.openTime, trade.orderCreateTime).openTimeFormatted} - {formatPositionTime(trade.openTime, trade.orderCreateTime).closeTimeFormatted} {formatPositionTime(trade.openTime, trade.orderCreateTime).durationFormatted}
                         </span>
                       </div>
                     </div>

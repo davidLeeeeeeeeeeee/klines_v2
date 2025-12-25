@@ -54,6 +54,9 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
   // 商品偏好时间范围
   const [symbolPreferenceTimeRange, setSymbolPreferenceTimeRange] = useState<TimeRangeType>('90');
   const [showSymbolPreferenceDropdown, setShowSymbolPreferenceDropdown] = useState(false);
+  // 交易统计时间范围
+  const [tradingStatsTimeRange, setTradingStatsTimeRange] = useState<TimeRangeType>('90');
+  const [showTradingStatsDropdown, setShowTradingStatsDropdown] = useState(false);
 
   // API 数据状态
   const [isLoading, setIsLoading] = useState(true);
@@ -115,16 +118,27 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
 
     try {
       const { startTime, endTime } = getTimeRange(timeRange);
-      const [equityLine, statistics] = await Promise.all([
-        getStrategyHistoryEquityLine(token, strategyName, startTime, endTime),
-        getStrategyCloseStatistics(token, strategyName, { startTime, endTime })
-      ]);
+      const equityLine = await getStrategyHistoryEquityLine(token, strategyName, startTime, endTime);
       setEquityLineData(equityLine);
-      setStatisticsData(statistics);
     } catch (error) {
       console.error('加载净值数据失败:', error);
     }
   }, [strategyName, timeRange, getTimeRange]);
+
+  // 加载交易统计数据（依赖 tradingStatsTimeRange）
+  const loadTradingStatsData = useCallback(async () => {
+    if (!strategyName) return;
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const { startTime, endTime } = getTimeRange(tradingStatsTimeRange);
+      const statistics = await getStrategyCloseStatistics(token, strategyName, { startTime, endTime });
+      setStatisticsData(statistics);
+    } catch (error) {
+      console.error('加载交易统计数据失败:', error);
+    }
+  }, [strategyName, tradingStatsTimeRange, getTimeRange]);
 
   // 加载商品排名数据（依赖 symbolRankingTimeRange）
   const loadSymbolRankingData = useCallback(async () => {
@@ -176,12 +190,13 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
         const { startTime: equityStart, endTime: equityEnd } = getTimeRange(timeRange);
         const { startTime: rankingStart, endTime: rankingEnd } = getTimeRange(symbolRankingTimeRange);
         const { startTime: prefStart, endTime: prefEnd } = getTimeRange(symbolPreferenceTimeRange);
+        const { startTime: statsStart, endTime: statsEnd } = getTimeRange(tradingStatsTimeRange);
 
         const [overview, dailyPnl, equityLine, statistics, symbolRanking, symbolLike] = await Promise.all([
           getStrategyPanelOverview(token, strategyName),
           getStrategyDailyProfitLoss(token, strategyName),
           getStrategyHistoryEquityLine(token, strategyName, equityStart, equityEnd),
-          getStrategyCloseStatistics(token, strategyName, { startTime: equityStart, endTime: equityEnd }),
+          getStrategyCloseStatistics(token, strategyName, { startTime: statsStart, endTime: statsEnd }),
           getStrategySymbolRanking(token, strategyName, { startTime: rankingStart, endTime: rankingEnd }),
           getStrategySymbolLike(token, strategyName, { startTime: prefStart, endTime: prefEnd })
         ]);
@@ -222,6 +237,13 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
       loadSymbolPreferenceData();
     }
   }, [symbolPreferenceTimeRange, loadSymbolPreferenceData]);
+
+  // 交易统计时间范围变化时重新加载
+  useEffect(() => {
+    if (initialLoadDone.current) {
+      loadTradingStatsData();
+    }
+  }, [tradingStatsTimeRange, loadTradingStatsData]);
 
   // 转换每日盈亏数据为图表格式
   // API返回格式: { amount: { lineX: string[], lineY: number[] }, rate: { lineX: string[], lineY: number[] } }
@@ -376,7 +398,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
               <ChevronLeft className="w-6 h-6 text-gray-600" />
             </button>
             <div className="flex-1">
-              <div className="flex items-center gap-3">
+              <div className="flex items-baseline gap-3">
                 <h1 className="text-2xl font-semibold text-gray-900">{strategyName}</h1>
                 {aiModel && (
                   <span className="text-gray-500 text-lg">{aiModel}</span>
@@ -784,7 +806,38 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
         {/* Trading Statistics */}
         <div className="mt-6">
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg text-gray-900 font-semibold mb-6">交易统计</h2>
+            <div className="flex items-start justify-between mb-6">
+              <h2 className="text-lg text-gray-900 font-semibold">交易统计</h2>
+              <div className="relative">
+                <button
+                  className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 transition-colors"
+                  onClick={() => setShowTradingStatsDropdown(!showTradingStatsDropdown)}
+                >
+                  {getTimeRangeLabel(tradingStatsTimeRange)}
+                  <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-600">
+                    <path d="M5 6L0 0h10L5 6z" />
+                  </svg>
+                </button>
+                {showTradingStatsDropdown && (
+                  <div className="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[100px] z-10">
+                    {TIME_RANGE_OPTIONS.map(option => (
+                      <button
+                        key={option.value}
+                        className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
+                          tradingStatsTimeRange === option.value ? 'bg-gray-100' : ''
+                        }`}
+                        onClick={() => {
+                          setTradingStatsTimeRange(option.value);
+                          setShowTradingStatsDropdown(false);
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">仓位总数</span>

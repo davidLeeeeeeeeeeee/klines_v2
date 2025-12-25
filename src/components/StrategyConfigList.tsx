@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Activity, DollarSign, Users, ArrowRight, Plus, Play, Pause, Settings, X, RefreshCw } from 'lucide-react';
-import { getStrategyModelList, switchStrategyModelStatus, StrategyModelListRes } from '../services/api';
+import { getStrategyModelList, switchStrategyModelStatus, getSystemDict, StrategyModelListRes, DictItem } from '../services/api';
 import { getToken } from '../utils/storage';
 
 interface Strategy {
@@ -14,7 +14,7 @@ interface Strategy {
   maxDrawdown: number;
   sharpeRatio: number;
   createDate: string;
-  status: 'active' | 'paused';
+  status: string; // 使用字符串类型，存储 API 返回的 status 值（-1, 0, 1）
   tags: string[];
   riskLevel: 'low' | 'medium' | 'high';
   totalFollowingCapital: string;
@@ -67,7 +67,7 @@ function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
     maxDrawdown: 0, // 最大回撤先写0
     sharpeRatio: profitLossRatio, // 盈亏比
     createDate: new Date().toISOString().split('T')[0],
-    status: apiData.status ? 'active' : 'paused',
+    status: String(apiData.status ?? 0), // 将状态值转为字符串："-1"=停止, "0"=暂停, "1"=运行中
     tags: apiData.tag ? apiData.tag.split(',').filter(t => t.trim()) : [],
     riskLevel: apiData.riskLevel?.toLowerCase() as 'low' | 'medium' | 'high',
     totalFollowingCapital: totalFund ? `¥${totalFund.toFixed(2)}` : '¥0',
@@ -84,7 +84,28 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedApi, setHasLoadedApi] = useState(false); // 标记是否已经加载过API
-  const [activeTab, setActiveTab] = useState<'active' | 'paused'>('active'); // Tab状态
+  const [activeTab, setActiveTab] = useState<string>('1'); // Tab状态，默认显示运行中（code="1"）
+  const [strategyStatusList, setStrategyStatusList] = useState<DictItem[]>([]); // 策略状态字典
+
+  // 加载系统字典
+  const loadSystemDict = async () => {
+    try {
+      const dictData = await getSystemDict();
+      if (dictData.StrategyStatus && dictData.StrategyStatus.length > 0) {
+        setStrategyStatusList(dictData.StrategyStatus);
+        // 默认选中第一个状态
+        setActiveTab(dictData.StrategyStatus[0].code);
+      }
+    } catch (err) {
+      console.error('加载系统字典失败:', err);
+      // 使用默认值
+      setStrategyStatusList([
+        { name: 'STOP', code: '-1', message: '停止' },
+        { name: 'PAUSE', code: '0', message: '暂停' },
+        { name: 'RUNNING', code: '1', message: '运行中' }
+      ]);
+    }
+  };
 
   // 加载策略列表
   const loadStrategies = async () => {
@@ -113,6 +134,7 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
 
   // 组件挂载时加载数据
   useEffect(() => {
+    loadSystemDict();
     loadStrategies();
   }, []);
 
@@ -120,13 +142,12 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
   const allStrategies = hasLoadedApi ? apiStrategies : strategies;
 
   // 根据当前Tab过滤策略
-  const displayStrategies = allStrategies.filter(strategy =>
-    activeTab === 'active' ? strategy.status === 'active' : strategy.status === 'paused'
-  );
+  const displayStrategies = allStrategies.filter(strategy => strategy.status === activeTab);
 
-  // 统计数量
-  const activeCount = allStrategies.filter(s => s.status === 'active').length;
-  const pausedCount = allStrategies.filter(s => s.status === 'paused').length;
+  // 计算每个状态的数量
+  const getStatusCount = (statusCode: string) => {
+    return allStrategies.filter(s => s.status === statusCode).length;
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -142,7 +163,8 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
     // 先乐观更新UI（立即更新本地状态）
     const currentStrategy = apiStrategies.find(s => s.id === strategyId);
     if (currentStrategy) {
-      const newStatus = currentStrategy.status === 'active' ? 'paused' : 'active';
+      // 状态切换逻辑：运行中(1) <-> 暂停(0)
+      const newStatus = currentStrategy.status === '1' ? '0' : '1';
 
       // 立即更新本地状态
       setApiStrategies(prev =>
@@ -200,7 +222,7 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
         maxDrawdown: 0,
         sharpeRatio: 0,
         createDate: new Date().toISOString().split('T')[0],
-        status: 'active',
+        status: '1', // 新创建的策略默认为运行中
         tags: strategyData.tags || [],
         riskLevel: strategyData.riskLevel || 'medium',
         totalFollowingCapital: '¥0',
@@ -266,46 +288,29 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
 
         {/* Tab Navigation */}
         <div className="flex gap-2 border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('active')}
-            className={`px-4 py-2 font-medium transition-colors relative ${
-              activeTab === 'active'
-                ? 'text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            运行中
-            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-              activeTab === 'active'
-                ? 'bg-blue-100 text-blue-600'
-                : 'bg-gray-100 text-gray-600'
-            }`}>
-              {activeCount}
-            </span>
-            {activeTab === 'active' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('paused')}
-            className={`px-4 py-2 font-medium transition-colors relative ${
-              activeTab === 'paused'
-                ? 'text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            已暂停
-            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-              activeTab === 'paused'
-                ? 'bg-blue-100 text-blue-600'
-                : 'bg-gray-100 text-gray-600'
-            }`}>
-              {pausedCount}
-            </span>
-            {activeTab === 'paused' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
-            )}
-          </button>
+          {strategyStatusList.map((status) => (
+            <button
+              key={status.code}
+              onClick={() => setActiveTab(status.code)}
+              className={`px-4 py-2 font-medium transition-colors relative ${
+                activeTab === status.code
+                  ? 'text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {status.message}
+              <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                activeTab === status.code
+                  ? 'bg-blue-100 text-blue-600'
+                  : 'bg-gray-100 text-gray-600'
+              }`}>
+                {getStatusCount(status.code)}
+              </span>
+              {activeTab === status.code && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -338,12 +343,10 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
               <Activity className="w-8 h-8 text-gray-400" />
             </div>
             <h3 className="text-gray-900 mb-2">
-              {activeTab === 'active' ? '暂无运行中的策略' : '暂无已暂停的策略'}
+              暂无{strategyStatusList.find(s => s.code === activeTab)?.message || '该状态'}的策略
             </h3>
             <p className="text-gray-600 text-sm">
-              {activeTab === 'active'
-                ? '点击右上角"创建策略"按钮开始配置新策略'
-                : '所有策略都在运行中'}
+              点击右上角"创建策略"按钮开始配置新策略
             </p>
           </div>
         )}
@@ -393,13 +396,13 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
                     <button
                       onClick={(e) => handleToggleStatus(strategy.id, e)}
                       className={`p-2 rounded-lg transition-colors ${
-                        strategy.status === 'active'
+                        strategy.status === '1'
                           ? 'bg-gray-700 hover:bg-gray-800 text-white'
                           : 'bg-green-600 hover:bg-green-700 text-white'
                       }`}
-                      title={strategy.status === 'active' ? '停止' : '启动'}
+                      title={strategy.status === '1' ? '暂停' : '启动'}
                     >
-                      {strategy.status === 'active' ? (
+                      {strategy.status === '1' ? (
                         <Pause className="w-4 h-4" />
                       ) : (
                         <Play className="w-4 h-4" />

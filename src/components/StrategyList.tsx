@@ -14,7 +14,7 @@ interface Strategy {
   maxDrawdown: number;
   sharpeRatio: number;
   createDate: string;
-  status: 'active' | 'paused';
+  status: string; // 使用字符串类型，存储 API 返回的 status 值（-1, 0, 1）
   tags: string[];
   riskLevel: 'low' | 'medium' | 'high';
   totalFollowingCapital: string;
@@ -66,7 +66,7 @@ function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
     maxDrawdown: 0, // 最大回撤先写0
     sharpeRatio: profitLossRatio, // 盈亏比
     createDate: new Date().toISOString().split('T')[0],
-    status: apiData.status ? 'active' : 'paused',
+    status: String(apiData.status ?? 0), // 将状态值转为字符串："-1"=停止, "0"=暂停, "1"=运行中
     tags: apiData.tag ? apiData.tag.split(',').filter(t => t.trim()) : [],
     riskLevel: riskLevel,
     totalFollowingCapital: totalFund ? `¥${totalFund.toFixed(2)}` : '¥0',
@@ -122,7 +122,8 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, onUpdateStrateg
 
   const handleToggleStatus = (strategyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    onUpdateStrategy(strategyId, { status: strategies.find(s => s.id === strategyId)?.status === 'active' ? 'paused' : 'active' });
+    // 状态切换逻辑：运行中(1) <-> 暂停(0)
+    onUpdateStrategy(strategyId, { status: strategies.find(s => s.id === strategyId)?.status === '1' ? '0' : '1' });
   };
 
   const handleSettings = (strategyId: string, e: React.MouseEvent) => {
@@ -154,10 +155,12 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, onUpdateStrateg
         maxDrawdown: 0,
         sharpeRatio: 0,
         createDate: new Date().toISOString().split('T')[0],
-        status: 'active',
+        status: '1', // 新创建的策略默认为运行中
         tags: strategyData.tags || [],
         riskLevel: strategyData.riskLevel || 'medium',
         totalFollowingCapital: '¥0',
+        runDays: 0,
+        aiModel: strategyData.aiModel || '',
         systemPrompt: strategyData.systemPrompt,
         userPrompt: strategyData.userPrompt,
         requestFrequency: strategyData.requestFrequency,

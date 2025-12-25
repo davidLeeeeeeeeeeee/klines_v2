@@ -134,6 +134,8 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
   const [symbolList, setSymbolList] = useState<DictItem[]>([]);
   // 策略列表 - 从系统字典API获取
   const [strategyModelList, setStrategyModelList] = useState<DictItem[]>([]);
+  // AI模型列表 - 从系统字典API获取
+  const [aiModelList, setAiModelList] = useState<DictItem[]>([]);
 
   // 获取对话列表
   const fetchChatList = async () => {
@@ -182,14 +184,16 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
     }
   };
 
-  // 获取系统字典（商品列表和策略列表）
+  // 获取系统字典（商品列表、策略列表和AI模型列表）
   const fetchSystemDict = async () => {
     try {
       const dictData = await getSystemDict();
       setSymbolList(dictData.SymbolType || []);
       setStrategyModelList(dictData.StrategyModel || []);
+      setAiModelList(dictData.AiModel || []);
       console.log('📊 获取到商品列表:', dictData.SymbolType);
       console.log('📊 获取到策略列表:', dictData.StrategyModel);
+      console.log('📊 获取到AI模型列表:', dictData.AiModel);
     } catch (err: any) {
       console.error('获取系统字典失败:', err);
     }
@@ -532,28 +536,20 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
               >
                 全部
               </button>
-              <button
-                onClick={() => {
-                  setSelectedModel('DEEPSEEK_R1');
-                  setShowModelDropdown(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedModel === 'DEEPSEEK_R1' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                DEEPSEEK_R1
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedModel('DEEPSEEK_V3');
-                  setShowModelDropdown(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedModel === 'DEEPSEEK_V3' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                DEEPSEEK_V3
-              </button>
+              {aiModelList.map((model) => (
+                <button
+                  key={model.code}
+                  onClick={() => {
+                    setSelectedModel(model.code);
+                    setShowModelDropdown(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                    selectedModel === model.code ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  }`}
+                >
+                  {model.name}
+                </button>
+              ))}
             </div>
           )}
         </div>

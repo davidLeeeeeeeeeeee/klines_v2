@@ -320,6 +320,7 @@ export interface ClosePnlVO {
   updateTime: string;
   userId: number;
   fundingFee?: number; // 资金费
+  marginPlRatio?: number; // 保证金盈亏比率
 }
 
 export interface PageResponse<T> {
@@ -1764,7 +1765,7 @@ export interface StrategyModelListRes {
   name: string;                 // 策略名称
   riskLevel: string;            // 风险等级
   runDays: number | null;       // 运行天数
-  status: boolean;              // 策略运行状态
+  status: number;               // 策略运行状态：-1=停止, 0=暂停, 1=运行中
   tag: string;                  // 标签
   overview: StrategyModelOverview | null; // 统计概览
   aiModel: string | null;       // AI模型
@@ -2119,6 +2120,7 @@ export interface SystemDictData {
   Indicator: DictItem[];
   ExchangeType: DictItem[];
   Interval: DictItem[];
+  StrategyStatus: DictItem[];
 }
 
 /**

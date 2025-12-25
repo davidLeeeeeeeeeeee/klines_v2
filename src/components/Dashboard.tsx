@@ -537,8 +537,10 @@ export function Dashboard() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="text-gray-600 text-sm mb-2">浮动盈亏</div>
-                    <div className="text-gray-900 text-2xl mb-2">
-                      {overviewData?.unrealisedPnl?.toLocaleString() || '0'}
+                    <div className={`text-2xl mb-2 ${
+                      (overviewData?.unrealisedPnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {Math.abs(overviewData?.unrealisedPnl || 0).toLocaleString()}
                     </div>
                     <div className={`flex items-center gap-1 text-sm ${
                       (overviewData?.unrealisedPnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
@@ -550,7 +552,7 @@ export function Dashboard() {
                       )}
                       <span>
                         {overviewData?.initEquity
-                          ? `${((overviewData.unrealisedPnl / overviewData.initEquity) * 100).toFixed(2)}%`
+                          ? `${Math.abs((overviewData.unrealisedPnl / overviewData.initEquity) * 100).toFixed(2)}%`
                           : '0%'
                         }
                       </span>
@@ -567,8 +569,10 @@ export function Dashboard() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="text-gray-600 text-sm mb-2">总收益额</div>
-                    <div className="text-gray-900 text-2xl mb-2">
-                      {overviewData?.totalClosePnl?.toLocaleString() || '0'}
+                    <div className={`text-2xl mb-2 ${
+                      (overviewData?.totalClosePnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {Math.abs(overviewData?.totalClosePnl || 0).toLocaleString()}
                     </div>
                     <div className={`flex items-center gap-1 text-sm ${
                       (overviewData?.totalClosePnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
@@ -580,7 +584,7 @@ export function Dashboard() {
                       )}
                       <span>
                         {overviewData?.initEquity
-                          ? `${((overviewData.totalClosePnl / overviewData.initEquity) * 100).toFixed(2)}%`
+                          ? `${Math.abs((overviewData.totalClosePnl / overviewData.initEquity) * 100).toFixed(2)}%`
                           : '0%'
                         }
                       </span>
