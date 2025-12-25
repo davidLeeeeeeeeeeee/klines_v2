@@ -240,7 +240,7 @@ export function CreateUserPage({ onBack, onSave }: CreateUserPageProps) {
               }}
               className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
-              创建用户
+              确定
             </button>
           </div>
         </div>

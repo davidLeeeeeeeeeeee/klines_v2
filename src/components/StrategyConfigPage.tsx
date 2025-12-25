@@ -1,17 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ChevronLeft, Sparkles, FileText, Tag, AlertCircle, Eye, X, Play, LineChart } from 'lucide-react';
-import {
-  createStrategyModel,
-  upgradeStrategyModel,
-  getStrategyModelDetail,
-  previewStrategyModel,
-  getSystemDict,
-  StrategyModelReq,
-  StrategyModelDetailRes,
-  DictItem
-} from '../services/api';
-import { getToken } from '../utils/storage';
-import { JsonViewer } from './JsonViewer';
 
 interface Strategy {
   id: string;
@@ -39,397 +27,101 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
     riskLevel: strategy?.riskLevel || 'medium' as 'low' | 'medium' | 'high',
     tags: strategy?.tags.join(', ') || '',
     systemPrompt: strategy?.systemPrompt || `【角色设定】
-- 以下是示例：
-你是严格执行规则的职业交易员，专注于 M15 周期交易，使用 EMA20/EMA60 双均线趋势回踩系统。
-三大铁律：禁止逆势、禁止震荡区交易、禁止追涨杀跌。
+示例：你是一名严格执行规则的职业交易员，只交易 M15 周期，使用 EMA20 / EMA60 双均线趋势回踩系统，禁止逆势、禁止震荡区交易。
 
 【核心思想】
-- 以下是示例：
-- H1 定趋势方向：过滤震荡，只做明确趋势
-- M15找点位：捕捉高概率反转入场点
-- ATR 动态风控：根据币种波动率自适应止损止盈
-- 只做高概率、带量能确认的顺势回踩，拒绝震荡与逆势。
+这里请用一两句话总结策略的核心思想。
 
 【策略逻辑】
-- 请在这里详细描述策略规则，指标相关的条件和分析要注意使用完整 JSON 路径 描述
-- 以下是示例：
-1. H1 趋势过滤
-    1) 做多条件：
-        - 
-    2) 做空条件：
-        - 
-
-2. M15 入场信号
-    1） 做多信号：
-        - 
-    2） 做空信号：
-        - 
-
-3. 风控参数
-    - entryPrice = lastPrice = m15.ohlc[19].close
-    1) 止损：
-        - 多单：
-        - 空单：
-    2) 止损：
-        - 多单：
-        - 空单：
-
-    3) 单笔风险估算：riskUsd = 1.2 × h1.indicators.atr[19]（按 1 合约估算）
+请在这里详细描述策略规则。
 
 【confidence 打分规则（0–1）】
-- 以下是示例：
-- 0.8–1.0：H1 趋势 + M15 信号全满足 + 放量确认
-- 0.6–0.7：H1 趋势明确，M15 信号完整但无放量
-- ≤0.5：返回 "side": "Wait"
-- 重要：若 H1 无趋势，或 M15 任一子条件不满足，必须返回 "Wait"。`,
+以下是示例：
+- 0.9–1.0: 趋势清晰 + 回踩命中 + 入场条件完全满足 + 成交量确认
+- 0.7–0.8: 趋势清晰 + 回踩命中 + 入场条件部分满足
+- 0.5–0.6: 趋势清晰 + 回踩未完全到位 + 入场条件部分满足
+- ≤0.4: 不交易`,
     userPrompt: strategy?.userPrompt || '',
     requestFrequency: strategy?.requestFrequency || 5,
     requestFrequencyUnit: strategy?.requestFrequencyUnit || 'minutes' as 'seconds' | 'minutes' | 'hours',
-    aiModel: strategy?.aiModel || 'DEEPSEEK_V3'
+    aiModel: strategy?.aiModel || 'gpt-3.5-turbo'
   });
 
-  const [timePeriod, setTimePeriod] = useState('m15');
+  const [timePeriod, setTimePeriod] = useState('15m');
   const [selectedIndicators, setSelectedIndicators] = useState<string[]>(['VOLUME', 'EMA10', 'MACD']);
   const [klineCount] = useState(20); // 固定为20，不可编辑
   const [showPreview, setShowPreview] = useState(false);
   const [expandedSystemPrompt, setExpandedSystemPrompt] = useState(true);
   const [expandedUserPrompt, setExpandedUserPrompt] = useState(true);
   const [expandedAIOutput, setExpandedAIOutput] = useState(true);
-  const [previewData, setPreviewData] = useState<{
-    systemPrompt: string;
-    userPrompt: any;
-    aiOutput: any;
-  } | null>(null);
+  const [aiOutput, setAiOutput] = useState('');
   const [isRunningTest, setIsRunningTest] = useState(false);
-  const [selectedPeriods, setSelectedPeriods] = useState<string[]>(['m15']);
+  const [selectedPeriods, setSelectedPeriods] = useState<string[]>(['15m']);
   const [includePositionData, setIncludePositionData] = useState(false);
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(['BTCUSDT']);
   const [currentVersion, setCurrentVersion] = useState(1);
   const [showVersionDropdown, setShowVersionDropdown] = useState(false);
-  const [versionHistory, setVersionHistory] = useState<Array<{ version: number; timestamp: string; id?: number }>>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [testDuration, setTestDuration] = useState<number | null>(null); // 测试耗时（秒）
 
-  // 字典数据状态
-  const [dictSymbols, setDictSymbols] = useState<DictItem[]>([]);
-  const [dictAiModels, setDictAiModels] = useState<DictItem[]>([]);
-  const [dictIndicators, setDictIndicators] = useState<DictItem[]>([]);
-  const [dictIntervals, setDictIntervals] = useState<DictItem[]>([]);
-  const [isDictLoading, setIsDictLoading] = useState(true);
+  // Mock version history data
+  const versionHistory = [
+    { version: 4, timestamp: '2020/12/12 12:12:12' },
+    { version: 3, timestamp: '2020/12/12 12:12:12' },
+    { version: 2, timestamp: '2020/12/12 12:12:12' },
+    { version: 1, timestamp: '2020/12/12 12:12:12' },
+  ];
 
-  // 加载系统字典
-  useEffect(() => {
-    const loadSystemDict = async () => {
-      try {
-        const dictData = await getSystemDict();
-        setDictSymbols(dictData.SymbolType || []);
-        setDictAiModels(dictData.AiModel || []);
-        setDictIndicators(dictData.Indicator || []);
-        setDictIntervals(dictData.Interval || []);
-      } catch (err) {
-        console.error('加载系统字典失败:', err);
-        // 使用默认值作为后备
-        setDictSymbols([]);
-        setDictAiModels([]);
-        setDictIndicators([]);
-        setDictIntervals([]);
-      } finally {
-        setIsDictLoading(false);
-      }
-    };
-    loadSystemDict();
-  }, []);
-
-  // 处理换行符 - 将转义的 \n 转换为真正的换行符
-  const unescapeNewlines = (text: string): string => {
-    if (!text) return text;
-    // 将字符串中的 \\n 替换为真正的换行符
-    return text.replace(/\\n/g, '\n');
+  const handleTextareaResize = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    e.target.style.height = 'auto';
+    e.target.style.height = e.target.scrollHeight + 'px';
   };
 
-  // 加载策略详情
-  useEffect(() => {
-    const loadStrategyDetail = async () => {
-      if (!strategy?.id) return;
-
-      setIsLoading(true);
-      try {
-        const token = getToken();
-        if (!token) {
-          throw new Error('未找到认证令牌，请重新登录');
-        }
-
-        const detail = await getStrategyModelDetail(token, parseInt(strategy.id));
-
-        // 更新表单数据（安全处理可能为null的字段）
-        setFormData({
-          name: detail.name || '',
-          description: detail.description || '',
-          riskLevel: (detail.riskLevel?.toLowerCase() || 'medium') as 'low' | 'medium' | 'high',
-          tags: detail.tag || '',
-          systemPrompt: detail.systemPrompt || '',
-          userPrompt: '', // API中没有userPrompt字段
-          requestFrequency: detail.frequency || 5,
-          requestFrequencyUnit: 'minutes',
-          aiModel: detail.aiModel || 'DEEPSEEK_V3'
-        });
-
-        // 更新其他状态（安全处理可能为null的字段）
-        setSelectedIndicators(detail.indicators || []);
-        setSelectedPeriods(detail.intervals || []);
-        setIncludePositionData(detail.needPosition ?? false);
-        setSelectedSymbols(detail.symbols || []);
-        setCurrentVersion(detail.version || 1);
-
-        // 更新版本历史（按版本倒序排列）
-        const currentVersionData = {
-          version: detail.version || 1,
-          timestamp: detail.createTime || new Date().toISOString(),
-          id: parseInt(strategy.id) // 使用当前策略的ID
-        };
-
-        if (detail.historyList && detail.historyList.length > 0) {
-          const history = detail.historyList.map(h => ({
-            version: h.version,
-            timestamp: h.createTime,
-            id: h.id
-          }));
-
-          // 检查当前版本是否已在历史列表中
-          const currentVersionExists = history.some(h => h.version === currentVersionData.version);
-
-          // 如果当前版本不在历史列表中，添加它
-          if (!currentVersionExists) {
-            history.push(currentVersionData);
-          }
-
-          // 按版本号倒序排列
-          history.sort((a, b) => b.version - a.version);
-          setVersionHistory(history);
-        } else {
-          // 如果没有历史列表，至少显示当前版本
-          setVersionHistory([currentVersionData]);
-        }
-      } catch (err) {
-        console.error('加载策略详情失败:', err);
-        alert(err instanceof Error ? err.message : '加载策略详情失败');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadStrategyDetail();
-  }, [strategy?.id]);
-
-  // 加载指定版本的策略数据
-  const loadStrategyVersion = async (version: number, versionId?: number) => {
-    if (!strategy?.id) return;
-
-    setIsLoading(true);
-    try {
-      const token = getToken();
-      if (!token) {
-        throw new Error('未找到认证令牌，请重新登录');
-      }
-
-      // 使用versionId（如果提供）或者使用当前策略ID
-      const idToUse = versionId || parseInt(strategy.id);
-      console.log(`🔄 加载版本 ${version}，使用ID: ${idToUse} (versionId: ${versionId}, strategy.id: ${strategy.id})`);
-
-      // 调用详情接口，传入id和version参数
-      const detail = await getStrategyModelDetail(token, idToUse, version);
-
-      console.log('📦 版本详情数据:', detail);
-
-      // 更新表单数据
-      setFormData({
-        name: detail.name || '',
-        description: detail.description || '',
-        riskLevel: (detail.riskLevel?.toLowerCase() || 'medium') as 'low' | 'medium' | 'high',
-        tags: detail.tag || '',
-        systemPrompt: detail.systemPrompt || '',
-        userPrompt: '',
-        requestFrequency: detail.frequency || 5,
-        requestFrequencyUnit: 'minutes',
-        aiModel: detail.aiModel || 'DEEPSEEK_V3'
-      });
-
-      // 更新其他状态
-      setSelectedIndicators(detail.indicators || []);
-      setSelectedPeriods(detail.intervals || []);
-      setIncludePositionData(detail.needPosition ?? false);
-      setSelectedSymbols(detail.symbols || []);
-      setCurrentVersion(detail.version || version);
-
-      // 更新版本历史（如果返回了新的历史列表，按版本倒序排列）
-      const currentVersionData = {
-        version: detail.version || version,
-        timestamp: detail.createTime || new Date().toISOString(),
-        id: versionId || parseInt(strategy.id)
-      };
-
-      if (detail.historyList && detail.historyList.length > 0) {
-        const history = detail.historyList.map(h => ({
-          version: h.version,
-          timestamp: h.createTime,
-          id: h.id
-        }));
-
-        // 检查当前版本是否已在历史列表中
-        const currentVersionExists = history.some(h => h.version === currentVersionData.version);
-
-        // 如果当前版本不在历史列表中，添加它
-        if (!currentVersionExists) {
-          history.push(currentVersionData);
-        }
-
-        // 按版本号倒序排列
-        history.sort((a, b) => b.version - a.version);
-        setVersionHistory(history);
-      } else {
-        // 如果没有历史列表，至少显示当前版本
-        setVersionHistory([currentVersionData]);
-      }
-    } catch (err) {
-      console.error('加载策略版本失败:', err);
-      alert(err instanceof Error ? err.message : '加载策略版本失败');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
-
-    try {
-      const token = getToken();
-      if (!token) {
-        throw new Error('未找到认证令牌，请重新登录');
-      }
-
-      // 构建API请求参数
-      const requestData: StrategyModelReq = {
-        name: formData.name,
-        description: formData.description,
-        riskLevel: formData.riskLevel.toUpperCase(), // 转换为大写：LOW, MEDIUM, HIGH
-        tag: formData.tags, // 将tags字符串作为tag
-        systemPrompt: formData.systemPrompt,
-        frequency: formData.requestFrequency,
-        aiModel: formData.aiModel,
-        indicators: selectedIndicators,
-        intervals: selectedPeriods,
-        klineNum: klineCount,
-        needPosition: includePositionData,
-        symbols: selectedSymbols
-      };
-
-      if (strategy?.id) {
-        // 更新现有策略
-        await upgradeStrategyModel(token, requestData);
-        alert('策略更新成功！');
-      } else {
-        // 创建新策略
-        await createStrategyModel(token, requestData);
-        alert('策略创建成功！');
-      }
-
-      // 调用父组件的保存回调
-      onSave({
-        ...formData,
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
-      });
-
-      // 返回列表页
-      onBack();
-    } catch (err) {
-      console.error('保存策略失败:', err);
-      alert(err instanceof Error ? err.message : '保存策略失败');
-    } finally {
-      setIsSaving(false);
-    }
+    onSave({
+      ...formData,
+      tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
+    });
   };
 
-  const handleRunAITest = async () => {
-    console.log('🚀 开始运行AI测试...');
+  const handleRunAITest = () => {
     setIsRunningTest(true);
     setExpandedAIOutput(true);
+    
+    // 模拟AI测试运行
+    setTimeout(() => {
+      setAiOutput(`📊 AI 测试输出结果
 
-    // 记录开始时间
-    const startTime = Date.now();
+模型: ${formData.aiModel}
+时间: ${new Date().toLocaleString('zh-CN')}
 
-    try {
-      const token = getToken();
-      if (!token) {
-        throw new Error('未找到认证令牌，请重新登录');
-      }
+===== 策略分析 =====
 
-      // 构建预览请求参数
-      const requestData: StrategyModelReq = {
-        name: formData.name,
-        description: formData.description,
-        riskLevel: formData.riskLevel.toUpperCase(), // 转换为大写：LOW, MEDIUM, HIGH
-        tag: formData.tags,
-        systemPrompt: formData.systemPrompt,
-        frequency: formData.requestFrequency,
-        aiModel: formData.aiModel,
-        indicators: selectedIndicators,
-        intervals: selectedPeriods,
-        klineNum: klineCount,
-        needPosition: includePositionData,
-        symbols: selectedSymbols
-      };
+基于当前配置的提示词和参数，AI 将执行以下策略分析：
 
-      console.log('📤 发送预览请求:', requestData);
+K线数量: ${klineCount}
+时间周期: ${timePeriod}
+技术指标: ${selectedIndicators.join(', ')}
 
-      // 调用预览API，设置超时时间为 300 秒
-      const response = await previewStrategyModel(token, requestData, 300000);
+市场分析：
+• 当前市场趋势：${Math.random() > 0.5 ? '上涨' : '下跌'}
+• 技术指标显示：${Math.random() > 0.5 ? '买入信号' : '观望信号'}
+• 风险评估：${formData.riskLevel === 'low' ? '低风险' : formData.riskLevel === 'medium' ? '中等风险' : '高风险'}
 
-      console.log('📥 收到预览响应:', response);
+交易建议：
+✅ 建议操作：${Math.random() > 0.5 ? '开多' : '观望'}
+💰 建议仓位：${Math.floor(Math.random() * 50 + 10)}%
+🎯 目标价位：待确认
+🛡️ 止损价位：待确认
 
-      // 计算耗时
-      const endTime = Date.now();
-      const duration = ((endTime - startTime) / 1000).toFixed(2); // 转换为秒，保留2位小数
-      setTestDuration(parseFloat(duration));
-
-      // 保存完整的预览数据
-      setPreviewData({
-        systemPrompt: unescapeNewlines(response.systemPrompt || formData.systemPrompt || ''),
-        userPrompt: response.userPrompt || '',
-        aiOutput: response.aiOutput || ''
-      });
-
-    } catch (err) {
-      console.error('❌ 运行AI测试失败:', err);
-
-      // 即使失败也计算耗时
-      const endTime = Date.now();
-      const duration = ((endTime - startTime) / 1000).toFixed(2);
-      setTestDuration(parseFloat(duration));
-
-      setPreviewData({
-        systemPrompt: unescapeNewlines(formData.systemPrompt || ''),
-        userPrompt: '',
-        aiOutput: `❌ 测试失败: ${err instanceof Error ? err.message : '未知错误'}`
-      });
-    } finally {
+风险提示：
+⚠️ 以上内容仅为测试输出，实际交易请谨慎决策
+⚠️ 请根据实时市场数据进行综合判断`);
       setIsRunningTest(false);
-      console.log('✅ AI测试完成');
-    }
+    }, 2000);
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-xl">
-            <div className="text-gray-700">加载中...</div>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -460,29 +152,29 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                 {showVersionDropdown && (
                   <>
                     {/* Backdrop */}
-                    <div
+                    <div 
                       className="fixed inset-0 z-10"
                       onClick={() => setShowVersionDropdown(false)}
                     />
-
+                    
                     {/* Dropdown Content */}
-                    <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-[380px] z-20">
+                    <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-[280px] z-20">
                       {versionHistory.map((version) => (
                         <button
                           key={version.version}
                           type="button"
-                          onClick={async () => {
+                          onClick={() => {
+                            setCurrentVersion(version.version);
                             setShowVersionDropdown(false);
-                            await loadStrategyVersion(version.version, version.id);
                           }}
-                          className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4 ${
+                          className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center justify-between ${
                             currentVersion === version.version ? 'bg-blue-50' : ''
                           }`}
                         >
-                          <span className={`font-medium whitespace-nowrap ${currentVersion === version.version ? 'text-blue-600' : 'text-gray-700'}`}>
+                          <span className={currentVersion === version.version ? 'text-blue-600' : 'text-gray-700'}>
                             Ver: {version.version}
                           </span>
-                          <span className={`text-sm whitespace-nowrap ${currentVersion === version.version ? 'text-blue-600' : 'text-gray-500'}`}>
+                          <span className={`text-sm ${currentVersion === version.version ? 'text-blue-600' : 'text-gray-500'}`}>
                             {version.timestamp}
                           </span>
                         </button>
@@ -520,15 +212,13 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                 <div>
                   <label className="block text-gray-700 mb-2">
                     策略名称 <span className="text-red-500">*</span>
-                    {strategy && <span className="text-gray-500 text-sm ml-2">(修改策略时不可更改名称)</span>}
                   </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 ${strategy ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                     placeholder="输入策略名称"
-                    disabled={!!strategy}
                     required
                   />
                 </div>
@@ -655,19 +345,19 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                     时间周期(3个以内) <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                    {dictIntervals.map((interval) => {
-                      const isSelected = selectedPeriods.includes(interval.code);
+                    {['3m', '5m', '15m', '30m', '1h', '4h', '6h', '12h', '1D', '1W'].map((period) => {
+                      const isSelected = selectedPeriods.includes(period);
                       const canSelect = !isSelected && selectedPeriods.length >= 3;
-
+                      
                       return (
                         <button
-                          key={interval.code}
+                          key={period}
                           type="button"
                           onClick={() => {
                             if (isSelected) {
-                              setSelectedPeriods(selectedPeriods.filter(p => p !== interval.code));
+                              setSelectedPeriods(selectedPeriods.filter(p => p !== period));
                             } else if (selectedPeriods.length < 3) {
-                              setSelectedPeriods([...selectedPeriods, interval.code]);
+                              setSelectedPeriods([...selectedPeriods, period]);
                             }
                           }}
                           disabled={canSelect}
@@ -679,7 +369,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                               : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                           }`}
                         >
-                          {interval.name}
+                          {period}
                         </button>
                       );
                     })}
@@ -695,19 +385,19 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                     技术指标(10个以内) <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {dictIndicators.map((indicator) => {
-                      const isSelected = selectedIndicators.includes(indicator.code);
+                    {['VOLUME', 'MACD', 'RSI', 'ATR', 'KDJ', 'EMA10', 'EMA20', 'EMA30', 'EMA60', 'EMA80', 'EMA100'].map((indicator) => {
+                      const isSelected = selectedIndicators.includes(indicator);
                       const canSelect = !isSelected && selectedIndicators.length >= 10;
-
+                      
                       return (
                         <button
-                          key={indicator.code}
+                          key={indicator}
                           type="button"
                           onClick={() => {
                             if (isSelected) {
-                              setSelectedIndicators(selectedIndicators.filter(i => i !== indicator.code));
+                              setSelectedIndicators(selectedIndicators.filter(i => i !== indicator));
                             } else if (selectedIndicators.length < 10) {
-                              setSelectedIndicators([...selectedIndicators, indicator.code]);
+                              setSelectedIndicators([...selectedIndicators, indicator]);
                             }
                           }}
                           disabled={canSelect}
@@ -719,7 +409,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                               : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                           }`}
                         >
-                          {indicator.name}
+                          {indicator}
                         </button>
                       );
                     })}
@@ -779,21 +469,106 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   <label className="block text-gray-700 mb-2">
                     AI MODEL <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2">
-                    {dictAiModels.map((model) => (
-                      <button
-                        key={model.code}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, aiModel: model.code })}
-                        className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                          formData.aiModel === model.code
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        {model.name}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-3 gap-3 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, aiModel: 'DEEPSEEK-LOCAL' })}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                        formData.aiModel === 'DEEPSEEK-LOCAL'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      DEEPSEEK-LOCAL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, aiModel: 'DEEPSEEK' })}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                        formData.aiModel === 'DEEPSEEK'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      DEEPSEEK
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, aiModel: 'GPT-3.5-TURBO' })}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                        formData.aiModel === 'GPT-3.5-TURBO'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      GPT-3.5-TURBO
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, aiModel: 'GPT-4' })}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                        formData.aiModel === 'GPT-4'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      GPT-4
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, aiModel: 'GPT-4-TURBO' })}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                        formData.aiModel === 'GPT-4-TURBO'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      GPT-4-TURBO
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, aiModel: 'GPT-5.1' })}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                        formData.aiModel === 'GPT-5.1'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      GPT-5.1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, aiModel: 'GROK-4' })}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                        formData.aiModel === 'GROK-4'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      GROK-4
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, aiModel: 'CLAUDE-3-OPUS' })}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                        formData.aiModel === 'CLAUDE-3-OPUS'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      CLAUDE-3-OPUS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, aiModel: 'CLAUDE-3-SONNET' })}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                        formData.aiModel === 'CLAUDE-3-SONNET'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      CLAUDE-3-SONNET
+                    </button>
                   </div>
                   <p className="text-gray-500 text-sm">
                     选择用于策略分析的 AI 模型
@@ -808,9 +583,10 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   <textarea
                     value={formData.systemPrompt}
                     onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-mono text-sm overflow-y-auto"
-                    rows={32}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-mono text-sm"
+                    rows={16}
                     placeholder="你是一个专业的量化交易分析师，擅长技术分析和市场趋势预测。你的任务是基于实时市场数据，为用户提供精准的交易建议..."
+                    onInput={handleTextareaResize}
                     required
                   />
                   <div className="text-gray-500 text-sm mt-2 space-y-1">
@@ -833,18 +609,18 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                     商品 <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                    {dictSymbols.map((symbol) => {
-                      const isSelected = selectedSymbols.includes(symbol.name);
-
+                    {['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'DOGEUSDT'].map((symbol) => {
+                      const isSelected = selectedSymbols.includes(symbol);
+                      
                       return (
                         <button
-                          key={symbol.code}
+                          key={symbol}
                           type="button"
                           onClick={() => {
                             if (isSelected) {
-                              setSelectedSymbols(selectedSymbols.filter(s => s !== symbol.name));
+                              setSelectedSymbols(selectedSymbols.filter(s => s !== symbol));
                             } else {
-                              setSelectedSymbols([...selectedSymbols, symbol.name]);
+                              setSelectedSymbols([...selectedSymbols, symbol]);
                             }
                           }}
                           className={`px-4 py-3 rounded-lg border-2 transition-all ${
@@ -853,7 +629,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                               : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                           }`}
                         >
-                          {symbol.name}
+                          {symbol}
                         </button>
                       );
                     })}
@@ -917,10 +693,9 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   form?.reportValidity();
                 }
               }}
-              disabled={isSaving || isLoading}
-              className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
-              {isSaving ? '保存中...' : '确定'}
+              确定
             </button>
           </div>
         </div>
@@ -938,16 +713,9 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
             {/* Modal Header */}
             <div className="mb-4 flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-xl font-semibold text-gray-900">
-                    {formData.name || '新策略'}-执行预览
-                  </h3>
-                  {testDuration !== null && (
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
-                      耗时: {testDuration}s
-                    </span>
-                  )}
-                </div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {formData.name || '新策略'}-执行预览
+                </h3>
                 <button
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                   onClick={() => setShowPreview(false)}
@@ -974,15 +742,12 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   )}
                   <span>SYSTEM_PROMPT</span>
                 </button>
-
+                
                 {expandedSystemPrompt && (
-                  <div className="mt-2">
-                    <textarea
-                      value={unescapeNewlines(previewData?.systemPrompt || formData.systemPrompt || '（未设置）')}
-                      readOnly
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 resize-none font-mono text-sm text-gray-700 cursor-default"
-                      rows={32}
-                    />
+                  <div className="mt-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="text-gray-700 text-sm whitespace-pre-wrap font-mono">
+                      {formData.systemPrompt || '（未设置）'}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1000,14 +765,12 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   )}
                   <span>USER_PROMPT</span>
                 </button>
-
+                
                 {expandedUserPrompt && (
-                  <div className="mt-2 bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                    {previewData?.userPrompt ? (
-                      <JsonViewer data={previewData.userPrompt} expandAll={true} />
-                    ) : (
-                      <div className="text-gray-500 text-sm">点击下方"运行 AI 测试"按钮查看用户提示词</div>
-                    )}
+                  <div className="mt-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="text-gray-700 text-sm whitespace-pre-wrap font-mono">
+                      {formData.userPrompt || '（未设置）'}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1025,14 +788,12 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   )}
                   <span>AI_OUTPUT</span>
                 </button>
-
+                
                 {expandedAIOutput && (
                   <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    {previewData?.aiOutput ? (
-                      <JsonViewer data={previewData.aiOutput} expandAll={true} />
-                    ) : (
-                      <div className="text-gray-500 text-sm">点击下方"运行 AI 测试"按钮查看AI输出结果</div>
-                    )}
+                    <div className="text-gray-700 text-sm whitespace-pre-line">
+                      {aiOutput || '点击下方"运行 AI 测试"按钮查看AI输出结果'}
+                    </div>
                   </div>
                 )}
               </div>

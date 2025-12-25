@@ -182,7 +182,7 @@ export function EditUserPage({ user, onBack, onSave }: EditUserPageProps) {
               }}
               className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
-              保存修改
+              确定
             </button>
           </div>
         </div>

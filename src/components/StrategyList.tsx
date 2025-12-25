@@ -16,6 +16,7 @@ interface Strategy {
   tags: string[];
   riskLevel: 'low' | 'medium' | 'high';
   totalFollowingCapital: string;
+  aiModel?: string;
   systemPrompt?: string;
   userPrompt?: string;
   requestFrequency?: number;
@@ -80,6 +81,7 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
         tags: strategyData.tags || [],
         riskLevel: strategyData.riskLevel || 'medium',
         totalFollowingCapital: '¥0',
+        aiModel: strategyData.aiModel,
         systemPrompt: strategyData.systemPrompt,
         userPrompt: strategyData.userPrompt,
         requestFrequency: strategyData.requestFrequency,
@@ -182,15 +184,15 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
                       总收益率
                     </div>
                     <div className={`${strategy.returns >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {strategy.returns >= 0 ? '+' : ''}{strategy.returns}%
+                      {Math.abs(strategy.returns)}%
                     </div>
                   </div>
                   <div>
                     <div className="text-gray-600 text-sm mb-1">
                       总收益额
                     </div>
-                    <div className={`${strategy.totalReturn.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-                      {strategy.totalReturn}
+                    <div className={`${strategy.totalReturn.startsWith('+') || !strategy.totalReturn.startsWith('-') ? 'text-green-600' : 'text-red-600'}`}>
+                      {strategy.totalReturn.replace(/^[\+\-]/, '')}
                     </div>
                   </div>
                   <div className="text-right">
@@ -198,7 +200,7 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
                       最大回撤
                     </div>
                     <div className="text-red-600">
-                      -{strategy.maxDrawdown}%
+                      {strategy.maxDrawdown}%
                     </div>
                   </div>
                   <div>
@@ -260,13 +262,11 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, strategies, onU
                 }`}>
                   <div className="flex items-center gap-2 text-gray-600">
                     <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
-                    <span>运行 {calculateRunningDays(strategy.createDate)}</span>
+                    <span>{strategy.aiModel || 'GPT-4'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Activity className="w-3.5 h-3.5" />
-                    <span>
-                      {strategy.status === 'active' ? '策略运行中' : '已暂停'}
-                    </span>
+                    <span>运行 {calculateRunningDays(strategy.createDate)}</span>
                   </div>
                 </div>
               </div>
