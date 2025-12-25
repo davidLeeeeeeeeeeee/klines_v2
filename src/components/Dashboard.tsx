@@ -100,16 +100,13 @@ export function Dashboard() {
     }
   };
 
-  // 格式化日期为 YYYY-MM-DD HH:mm:ss
-  const formatDateTime = (date: Date): string => {
+  // 格式化日期为 YYYY-MM-DD 00:00:00
+  const formatDateToMidnight = (date: Date): string => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
 
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    return `${year}-${month}-${day} 00:00:00`;
   };
 
   // 获取时间范围参数
@@ -118,15 +115,14 @@ export function Dashboard() {
     const startTime = new Date();
 
     if (range === '0') {
-      // 今日：从今天0点开始
-      startTime.setHours(0, 0, 0, 0);
+      // 今日：从今天0点开始，endTime 也是今天
     } else {
       startTime.setDate(startTime.getDate() - parseInt(range));
     }
 
     return {
-      startTime: formatDateTime(startTime),
-      endTime: formatDateTime(endTime)
+      startTime: formatDateToMidnight(startTime),
+      endTime: formatDateToMidnight(endTime)
     };
   };
 
@@ -743,7 +739,7 @@ export function Dashboard() {
                   className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 transition-colors"
                   onClick={() => setShowTimeRangeDropdown(!showTimeRangeDropdown)}
                 >
-                  {timeRange === '0' ? '今日' : timeRange === '180' ? '近半年' : `近 ${timeRange} 日`}
+                  {timeRange === '0' ? '今日' : timeRange === '180' ? '近 半年' : `近 ${timeRange} 日`}
                   <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-600">
                     <path d="M5 6L0 0h10L5 6z" />
                   </svg>
@@ -814,7 +810,7 @@ export function Dashboard() {
                         setShowTimeRangeDropdown(false);
                       }}
                     >
-                      近半年
+                      近 半年
                     </button>
                   </div>
                 )}
@@ -902,7 +898,7 @@ export function Dashboard() {
                     className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 transition-colors"
                     onClick={() => setShowStrategyTimeRangeDropdown(!showStrategyTimeRangeDropdown)}
                   >
-                    {strategyTimeRange === '0' ? '今日' : strategyTimeRange === '180' ? '近半年' : `近 ${strategyTimeRange} 日`}
+                    {strategyTimeRange === '0' ? '今日' : strategyTimeRange === '180' ? '近 半年' : `近 ${strategyTimeRange} 日`}
                     <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-600">
                       <path d="M5 6L0 0h10L5 6z" />
                     </svg>
@@ -973,7 +969,7 @@ export function Dashboard() {
                           setShowStrategyTimeRangeDropdown(false);
                         }}
                       >
-                        近半年
+                        近 半年
                       </button>
                     </div>
                   )}
@@ -1032,7 +1028,7 @@ export function Dashboard() {
                     className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 transition-colors"
                     onClick={() => setShowSymbolTimeRangeDropdown(!showSymbolTimeRangeDropdown)}
                   >
-                    {symbolTimeRange === '0' ? '今日' : symbolTimeRange === '180' ? '近半年' : `近 ${symbolTimeRange} 日`}
+                    {symbolTimeRange === '0' ? '今日' : symbolTimeRange === '180' ? '近 半年' : `近 ${symbolTimeRange} 日`}
                     <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-600">
                       <path d="M5 6L0 0h10L5 6z" />
                     </svg>
@@ -1103,7 +1099,7 @@ export function Dashboard() {
                           setShowSymbolTimeRangeDropdown(false);
                         }}
                       >
-                        近半年
+                        近 半年
                       </button>
                     </div>
                   )}
@@ -1165,7 +1161,7 @@ export function Dashboard() {
               <div className="relative">
                 <button
                   onClick={() => setShowSymbolLikeTimeRangeDropdown(!showSymbolLikeTimeRangeDropdown)}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
+                  className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
                 >
                   <span>
                     {symbolLikeTimeRange === '0' ? '今日' :
@@ -1256,7 +1252,7 @@ export function Dashboard() {
               <div className="relative">
                 <button
                   onClick={() => setShowStatisticsTimeRangeDropdown(!showStatisticsTimeRangeDropdown)}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
+                  className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
                 >
                   <span>
                     {statisticsTimeRange === '0' ? '今日' :

@@ -38,6 +38,9 @@ type MenuItem = {
 export function MainLayout({ onLogout }: MainLayoutProps) {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [selectedStrategyName, setSelectedStrategyName] = useState<string | null>(null);
+  const [selectedStrategyAiModel, setSelectedStrategyAiModel] = useState<string | undefined>(undefined);
+  const [selectedStrategyRunDays, setSelectedStrategyRunDays] = useState<number | undefined>(undefined);
+  const [selectedStrategyDescription, setSelectedStrategyDescription] = useState<string | undefined>(undefined);
   const [selectedStrategy, setSelectedStrategy] = useState<any | null>(null);
   const [strategyConfigSource, setStrategyConfigSource] = useState<'strategy-list' | 'strategy-config-list'>('strategy-list');
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['trading-monitor']);
@@ -137,7 +140,9 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
   const [btcPrice, setBtcPrice] = useState<number | null>(null);
   const [ethPrice, setEthPrice] = useState<number | null>(null);
   const [solPrice, setSolPrice] = useState<number | null>(null);
-  const [priceChangePercent, setPriceChangePercent] = useState<{ btc: number; eth: number; sol: number }>({ btc: 0, eth: 0, sol: 0 });
+  const [bnbPrice, setBnbPrice] = useState<number | null>(null);
+  const [zecPrice, setZecPrice] = useState<number | null>(null);
+  const [priceChangePercent, setPriceChangePercent] = useState<{ btc: number; eth: number; sol: number; bnb: number; zec: number }>({ btc: 0, eth: 0, sol: 0, bnb: 0, zec: 0 });
 
   // User dropdown ref for click outside detection
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -195,12 +200,14 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
     const fetchPrices = async () => {
       try {
         console.log('正在获取 Bybit 价格...');
-        const prices = await getCryptoPrices(['BTCUSDT', 'ETHUSDT', 'SOLUSDT']);
+        const prices = await getCryptoPrices(['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'ZECUSDT']);
         console.log('获取到的价格:', prices);
 
         const btc = prices.find(p => p.symbol === 'BTCUSDT');
         const eth = prices.find(p => p.symbol === 'ETHUSDT');
         const sol = prices.find(p => p.symbol === 'SOLUSDT');
+        const bnb = prices.find(p => p.symbol === 'BNBUSDT');
+        const zec = prices.find(p => p.symbol === 'ZECUSDT');
 
         if (btc) {
           const newBtcPrice = parseFloat(btc.price);
@@ -234,12 +241,36 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
             return newSolPrice;
           });
         }
+
+        if (bnb) {
+          const newBnbPrice = parseFloat(bnb.price);
+          setBnbPrice(prevPrice => {
+            if (prevPrice !== null) {
+              const change = ((newBnbPrice - prevPrice) / prevPrice) * 100;
+              setPriceChangePercent(prev => ({ ...prev, bnb: change }));
+            }
+            return newBnbPrice;
+          });
+        }
+
+        if (zec) {
+          const newZecPrice = parseFloat(zec.price);
+          setZecPrice(prevPrice => {
+            if (prevPrice !== null) {
+              const change = ((newZecPrice - prevPrice) / prevPrice) * 100;
+              setPriceChangePercent(prev => ({ ...prev, zec: change }));
+            }
+            return newZecPrice;
+          });
+        }
       } catch (error) {
         console.error('获取 Bybit 价格失败，详细错误:', error);
         // 如果获取失败，使用备用数据
         setBtcPrice(prev => prev === null ? 86000.00 : prev);
         setEthPrice(prev => prev === null ? 2900.00 : prev);
         setSolPrice(prev => prev === null ? 126.00 : prev);
+        setBnbPrice(prev => prev === null ? 650.00 : prev);
+        setZecPrice(prev => prev === null ? 55.00 : prev);
       }
     };
 
@@ -542,19 +573,28 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
   };
 
   // Strategy navigation
-  const handleViewStrategyDetail = (strategyName: string) => {
+  const handleViewStrategyDetail = (strategyName: string, aiModel?: string, runDays?: number, description?: string) => {
     setSelectedStrategyName(strategyName);
+    setSelectedStrategyAiModel(aiModel);
+    setSelectedStrategyRunDays(runDays);
+    setSelectedStrategyDescription(description);
     setCurrentPage('strategy-detail');
   };
 
   const handleBackToStrategyList = () => {
     setSelectedStrategyName(null);
+    setSelectedStrategyAiModel(undefined);
+    setSelectedStrategyRunDays(undefined);
+    setSelectedStrategyDescription(undefined);
     setSelectedStrategy(null);
     setCurrentPage('strategy-list');
   };
 
   const handleBackToStrategyConfigList = () => {
     setSelectedStrategyName(null);
+    setSelectedStrategyAiModel(undefined);
+    setSelectedStrategyRunDays(undefined);
+    setSelectedStrategyDescription(undefined);
     setSelectedStrategy(null);
     setCurrentPage('strategy-config-list');
   };
@@ -629,7 +669,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
           />
         );
       case 'strategy-detail':
-        return <StrategyDetail strategyName={selectedStrategyName} onBack={handleBackToStrategyList} />;
+        return <StrategyDetail strategyName={selectedStrategyName} aiModel={selectedStrategyAiModel} runDays={selectedStrategyRunDays} description={selectedStrategyDescription} onBack={handleBackToStrategyList} />;
       case 'strategy-config':
         return (
           <StrategyConfigPage
@@ -842,9 +882,33 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
               )}
             </div>
 
+            {/* BNB Price */}
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600 text-sm font-semibold">BNB</span>
+              {bnbPrice !== null ? (
+                <span className={priceChangePercent.bnb >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {bnbPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              ) : (
+                <span className="text-gray-400">加载中...</span>
+              )}
+            </div>
+
+            {/* ZEC Price */}
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600 text-sm font-semibold">ZEC</span>
+              {zecPrice !== null ? (
+                <span className={priceChangePercent.zec >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {zecPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              ) : (
+                <span className="text-gray-400">加载中...</span>
+              )}
+            </div>
+
             {/* Divider */}
             <div className="h-6 w-px bg-gray-300"></div>
-            
+
             {/* Exchange Links */}
             <a
               href="https://www.bybit.com"
@@ -869,14 +933,6 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
               className="px-1 py-2 text-sm font-semibold text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >
               欧易
-            </a>
-            <a
-              href="https://www.gate.io"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-1 py-2 text-sm font-semibold text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            >
-              GATE
             </a>
             
             {/* Divider */}

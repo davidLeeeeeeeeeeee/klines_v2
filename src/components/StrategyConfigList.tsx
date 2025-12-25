@@ -27,7 +27,7 @@ interface Strategy {
 }
 
 interface StrategyConfigListProps {
-  onViewDetail: (strategyName: string) => void;
+  onViewDetail: (strategyName: string, aiModel?: string, runDays?: number, description?: string) => void;
   onNavigateToConfig: (strategy: Strategy | null) => void;
   strategies: Strategy[];
   onUpdateStrategy: (strategyId: string, updates: Partial<Strategy>) => void;

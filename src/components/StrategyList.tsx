@@ -76,7 +76,7 @@ function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
 }
 
 interface StrategyListProps {
-  onViewDetail: (strategyName: string) => void;
+  onViewDetail: (strategyName: string, aiModel?: string, runDays?: number, description?: string) => void;
   onNavigateToConfig: (strategy: Strategy | null) => void;
   strategies?: Strategy[];
   onUpdateStrategy: (strategyId: string, updates: Partial<Strategy>) => void;
@@ -321,7 +321,7 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, onUpdateStrateg
                 {/* Action Buttons */}
                 <div className="flex gap-3 mb-4">
                   <button
-                    onClick={() => onViewDetail(strategy.name)}
+                    onClick={() => onViewDetail(strategy.name, strategy.aiModel, strategy.runDays, strategy.description)}
                     className="flex-1 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                   >
                     策略表现

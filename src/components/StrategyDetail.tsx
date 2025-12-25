@@ -19,6 +19,9 @@ import { getToken } from '../utils/storage';
 
 interface StrategyDetailProps {
   strategyName: string | null;
+  aiModel?: string;
+  runDays?: number;
+  description?: string;
   onBack: () => void;
 }
 
@@ -32,7 +35,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRangeType; label: string }[] = [
   { value: '7', label: '近 7 日' },
   { value: '30', label: '近 30 日' },
   { value: '90', label: '近 90 日' },
-  { value: '180', label: '近半年' },
+  { value: '180', label: '近 半年' },
 ];
 
 // 获取时间范围显示文本
@@ -40,7 +43,7 @@ const getTimeRangeLabel = (value: TimeRangeType) => {
   return TIME_RANGE_OPTIONS.find(opt => opt.value === value)?.label || '';
 };
 
-export function StrategyDetail({ strategyName, onBack }: StrategyDetailProps) {
+export function StrategyDetail({ strategyName, aiModel, runDays, description, onBack }: StrategyDetailProps) {
   const [weeklyChartType, setWeeklyChartType] = useState<'rate' | 'amount'>('rate');
   // 净值曲线时间范围
   const [timeRange, setTimeRange] = useState<TimeRangeType>('90');
@@ -374,7 +377,15 @@ export function StrategyDetail({ strategyName, onBack }: StrategyDetailProps) {
             </button>
             <div className="flex-1">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold text-gray-900">策略表现 - {strategyName}</h1>
+                <h1 className="text-2xl font-semibold text-gray-900">{strategyName}</h1>
+                {aiModel && (
+                  <span className="text-gray-500 text-lg">{aiModel}</span>
+                )}
+                {runDays !== undefined && (
+                  <span className="px-3 py-1 rounded-full text-sm bg-green-50 text-green-600 border border-green-200">
+                    运行 {runDays} 天
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -385,35 +396,41 @@ export function StrategyDetail({ strategyName, onBack }: StrategyDetailProps) {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Key Metrics Section */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          {/* Description */}
+          {description && (
+            <p className="text-gray-600 mb-6 pb-6 border-b border-gray-200">{description}</p>
+          )}
+
+          {/* Metrics Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
-              <div className="text-sm text-gray-500 mb-2">盈利交易</div>
-              <div className="text-green-600">
-                <span className="text-2xl">
-                  {overviewData?.winCount ?? 0} / ${(overviewData?.winAmount ?? 0).toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <div className="text-sm text-gray-500 mb-2">亏损交易</div>
-              <div className="text-red-600">
-                <span className="text-2xl">
-                  {overviewData?.lossCount ?? 0} / ${Math.abs(overviewData?.lossAmount ?? 0).toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <div className="text-sm text-gray-500 mb-2">总盈亏</div>
+              <div className="text-sm text-gray-500 mb-2">近90日盈亏</div>
               <div className={`text-2xl ${totalClosePnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {totalClosePnl >= 0 ? '+' : ''}${totalClosePnl.toLocaleString()}
+                {totalClosePnl >= 0 ? '' : '-'}{Math.abs(totalClosePnl).toLocaleString()}
               </div>
             </div>
 
             <div>
-              <div className="text-sm text-gray-500 mb-2">跟随账户 / 资金规模</div>
-              <div className="text-gray-900 text-2xl">{followAccountNum} / ${totalFund.toLocaleString()}</div>
+              <div className="text-sm text-gray-500 mb-2">胜率</div>
+              <div className="text-green-600 text-2xl">
+                {(() => {
+                  const winCount = overviewData?.winCount ?? 0;
+                  const lossCount = overviewData?.lossCount ?? 0;
+                  const total = winCount + lossCount;
+                  if (total === 0) return '0%';
+                  return ((winCount / total) * 100).toFixed(1) + '%';
+                })()}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm text-gray-500 mb-2">跟随账户</div>
+              <div className="text-gray-900 text-2xl">{followAccountNum}</div>
+            </div>
+
+            <div>
+              <div className="text-sm text-gray-500 mb-2">资金规模</div>
+              <div className="text-gray-900 text-2xl">{totalFund.toLocaleString()}</div>
             </div>
           </div>
         </div>
