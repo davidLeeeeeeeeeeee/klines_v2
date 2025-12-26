@@ -107,6 +107,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
       initStatus: apiAccount.init ? '已初始化' : '未初始化',
       netValue: formatNumber(apiAccount.equity),
       initialNetValue: formatNumber(apiAccount.initEquity),
+      profitRate: apiAccount.profitRate ?? 0,
       createdAt: apiAccount.createTime,
       username: '', // API响应中没有username字段
       strategyName: apiAccount.strategyTypeName || apiAccount.strategyType || undefined,
@@ -629,7 +630,12 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
               <div>
                 <div className="text-sm text-gray-500 mb-1">当前净值</div>
-                <div className="text-green-600">{account.netValue}</div>
+                <div className="flex items-center gap-2 text-green-600">
+                  <span>{account.netValue}</span>
+                  <span className={account.profitRate >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    ({formatNumber(Math.abs(account.profitRate) * 100)}%)
+                  </span>
+                </div>
               </div>
               <div>
                 <div className="text-sm text-gray-500 mb-1">初始净值</div>
