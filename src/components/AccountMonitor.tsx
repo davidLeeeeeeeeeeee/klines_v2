@@ -1350,7 +1350,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             <div className="mb-4 flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-baseline gap-2">
-                  <h2 className="text-xl font-semibold text-gray-900">{selectedAIChat.model || 'AI CHAT'}</h2>
+                  <h2 className="text-2xl font-semibold text-gray-900">{selectedAIChat.strategyType || '策略分析'}</h2>
+                  <span className="text-sm text-gray-500">{selectedAIChat.model || 'AI CHAT'}</span>
                 </div>
                 <button
                   className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -1386,29 +1387,13 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
                 return (
                   <>
-                    {/* Strategy Type and Time */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <span className="text-gray-900 font-semibold">{selectedAIChat.strategyType || '策略分析'}</span>
-                      </div>
-                      <div className="text-sm text-gray-500 ml-4 whitespace-nowrap">
-                        {new Date(selectedAIChat.createTime).toLocaleString('zh-CN', {
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                          hour12: false
-                        })}
-                      </div>
-                    </div>
-
                     {/* Symbol and Action */}
                     {tradeSignalArgs && (
                       <div className="mb-3">
-                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                          <span>{tradeSignalArgs.symbol || tradeSignalArgs.coin || selectedAIChat.symbol}</span>
-                          <span className={`px-2 py-0.5 rounded-2xl ${
+                        <div className="flex items-center justify-between gap-3 text-sm text-gray-600">
+                          <div className="flex items-center gap-1.5">
+                            <span>{tradeSignalArgs.symbol || tradeSignalArgs.coin || selectedAIChat.symbol}</span>
+                            <span className={`px-2 py-0.5 rounded-2xl ${
                               tradeSignalArgs.side === 'Wait' ? 'bg-gray-100 text-gray-600' :
                               isChatForClosing
                               ? (tradeSignalArgs.side === 'Sell' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600')
@@ -1420,6 +1405,17 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                               : (tradeSignalArgs.side === 'Buy' ? '开多' : '开空')
                             }
                           </span>
+                          </div>
+                          <div className="text-sm text-gray-500 whitespace-nowrap">
+                            {new Date(selectedAIChat.createTime).toLocaleString('zh-CN', {
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                              hour12: false
+                            })}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1455,7 +1451,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                                     )}
                                     {/* 操作描述 (原失效条件位置) */}
                                     {action.thought && (
-                                      <div>操作描述: <span className="font-semibold text-gray-700">{action.thought}</span></div>
+                                      <div>操作描述: <span className="font-semibold text-green-600">{action.thought}</span></div>
                                     )}
 
                                     {/* 账户操作详情 */}
