@@ -703,7 +703,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
               : 'text-gray-700 hover:text-gray-900'
             }`}
         >
-          历史仓位
+          历史
           {activeTab === 'history' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></div>
           )}
@@ -876,7 +876,6 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
         {/* Position Count Display */}
         <div className="ml-auto text-right">
-          <div className="text-sm text-gray-500">仓位数量</div>
           <div className="text-lg font-semibold text-gray-900">
             {activeTab === 'positions' ? currentPositions.length : filteredClosedPositions.length}
           </div>
@@ -884,7 +883,6 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
         {/* Total PnL Display */}
         <div className="text-right ml-6">
-          <div className="text-sm text-gray-500">总盈亏</div>
           <div className={`text-lg font-semibold ${activeTab === 'positions'
               ? (totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600')
               : (filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0) >= 0 ? 'text-green-600' : 'text-red-600')
@@ -1125,7 +1123,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       </div>
 
                       <div>
-                        <div className="text-sm text-gray-500 mb-1">持仓类型</div>
+                        <div className="text-sm text-gray-500 mb-1">平仓类似</div>
                         <div className="text-gray-900">{trade.closeType || '-'}</div>
                       </div>
                     </div>

@@ -60,7 +60,7 @@ function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
     name: apiData.name,
     description: apiData.description,
     returns: 0, // 总收益率先写0
-    totalReturn: totalClosePnl >= 0 ? `+${totalClosePnl.toFixed(2)}` : totalClosePnl.toFixed(2),
+    totalReturn: Math.abs(totalClosePnl).toFixed(2),
     followers: overview?.followAccountNum ?? 0,
     winRate: winRate,
     maxDrawdown: 0, // 最大回撤先写0
@@ -272,14 +272,14 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, onUpdateStrateg
                       总收益率
                     </div>
                     <div className={`${strategy.returns >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {strategy.returns >= 0 ? '+' : ''}{strategy.returns}%
+                      {strategy.returns}%
                     </div>
                   </div>
                   <div>
                     <div className="text-gray-600 text-sm mb-1">
                       总收益额
                     </div>
-                    <div className={`${strategy.totalReturn.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className={`${strategy.returns >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {strategy.totalReturn}
                     </div>
                   </div>
@@ -343,12 +343,16 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, onUpdateStrateg
                 </div>
 
                 {/* AI Model & Run Days Bar */}
-                <div className="py-2 px-3 rounded-lg flex items-center justify-between text-sm bg-green-50 border border-green-200">
+                <div className={`py-2 px-3 rounded-lg flex items-center justify-between text-sm ${
+                  strategy.status === '-1'
+                    ? 'bg-red-50 border border-red-200'
+                    : 'bg-green-50 border border-green-200'
+                }`}>
                   <div className="flex items-center gap-2 text-gray-700">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    <div className={`w-1.5 h-1.5 rounded-full ${strategy.status === '-1' ? 'bg-red-500' : 'bg-green-500'}`}></div>
                     <span>{strategy.aiModel || 'AI'}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-green-600">
+                  <div className={`flex items-center gap-1.5 ${strategy.status === '-1' ? 'text-red-600' : 'text-green-600'}`}>
                     <Activity className="w-3.5 h-3.5" />
                     <span>运行 {strategy.runDays}天</span>
                   </div>

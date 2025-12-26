@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, Sparkles, FileText, Tag, AlertCircle, Eye, X, Play, LineChart } from 'lucide-react';
+import { ChevronLeft, Sparkles, FileText, Tag, AlertCircle, Eye, X, Play, LineChart, Copy } from 'lucide-react';
 import {
   createStrategyModel,
   upgradeStrategyModel,
@@ -117,6 +117,34 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
   const [dictIndicators, setDictIndicators] = useState<DictItem[]>([]);
   const [dictIntervals, setDictIntervals] = useState<DictItem[]>([]);
   const [isDictLoading, setIsDictLoading] = useState(true);
+
+  // 复制到剪贴板
+  const formatClipboardText = (data: unknown) => {
+    if (data === null || data === undefined) return '';
+    if (typeof data === 'string') return data;
+    try {
+      return JSON.stringify(data, null, 2);
+    } catch {
+      return String(data);
+    }
+  };
+
+  const copyToClipboard = async (data: unknown) => {
+    const text = formatClipboardText(data);
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+  };
 
   // 加载系统字典
   useEffect(() => {
@@ -1011,17 +1039,27 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
             <div className="flex-1 overflow-y-auto pr-2">
               {/* SYSTEM PROMPT - Collapsible */}
               <div className="mb-4">
-                <button
-                  onClick={() => setExpandedSystemPrompt(!expandedSystemPrompt)}
-                  className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {expandedSystemPrompt ? (
-                    <Play className="w-3 h-3 rotate-90 fill-current" />
-                  ) : (
-                    <Play className="w-3 h-3 fill-current" />
-                  )}
-                  <span>SYSTEM_PROMPT</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setExpandedSystemPrompt(!expandedSystemPrompt)}
+                    className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    {expandedSystemPrompt ? (
+                      <Play className="w-3 h-3 rotate-90 fill-current" />
+                    ) : (
+                      <Play className="w-3 h-3 fill-current" />
+                    )}
+                    <span>SYSTEM_PROMPT</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(unescapeNewlines(previewData?.systemPrompt || formData.systemPrompt || ''))}
+                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Copy SYSTEM_PROMPT"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
 
                 {expandedSystemPrompt && (
                   <div className="mt-2">
@@ -1037,17 +1075,27 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
 
               {/* USER PROMPT - Collapsible */}
               <div className="mb-4">
-                <button
-                  onClick={() => setExpandedUserPrompt(!expandedUserPrompt)}
-                  className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {expandedUserPrompt ? (
-                    <Play className="w-3 h-3 rotate-90 fill-current" />
-                  ) : (
-                    <Play className="w-3 h-3 fill-current" />
-                  )}
-                  <span>USER_PROMPT</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setExpandedUserPrompt(!expandedUserPrompt)}
+                    className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    {expandedUserPrompt ? (
+                      <Play className="w-3 h-3 rotate-90 fill-current" />
+                    ) : (
+                      <Play className="w-3 h-3 fill-current" />
+                    )}
+                    <span>USER_PROMPT</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(previewData?.userPrompt)}
+                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Copy USER_PROMPT"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
 
                 {expandedUserPrompt && (
                   <div className="mt-2 bg-yellow-50 rounded-lg p-4 border border-yellow-200">
@@ -1062,17 +1110,27 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
 
               {/* AI OUTPUT - Collapsible */}
               <div>
-                <button
-                  onClick={() => setExpandedAIOutput(!expandedAIOutput)}
-                  className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {expandedAIOutput ? (
-                    <Play className="w-3 h-3 rotate-90 fill-current" />
-                  ) : (
-                    <Play className="w-3 h-3 fill-current" />
-                  )}
-                  <span>AI_OUTPUT</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setExpandedAIOutput(!expandedAIOutput)}
+                    className="flex items-center gap-2 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    {expandedAIOutput ? (
+                      <Play className="w-3 h-3 rotate-90 fill-current" />
+                    ) : (
+                      <Play className="w-3 h-3 fill-current" />
+                    )}
+                    <span>AI_OUTPUT</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(previewData?.aiOutput)}
+                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Copy AI_OUTPUT"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
 
                 {expandedAIOutput && (
                   <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">

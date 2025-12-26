@@ -310,8 +310,8 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
     lossTradesRate: lossRate,
     profitLossRatio: profitLossRatio,
     maxDrawdown: statisticsData?.maxDrawdownRate ? Number((statisticsData.maxDrawdownRate * 100).toFixed(2)) : 0,
-    totalVolume: `$${(statisticsData?.totalTradeAmount ?? 0).toLocaleString()}`,
-    totalFees: `$${(statisticsData?.totalFee ?? 0).toLocaleString()}`
+    totalVolume: `${(statisticsData?.totalTradeAmount ?? 0).toLocaleString()}`,
+    totalFees: `${(statisticsData?.totalFee ?? 0).toLocaleString()}`
   };
 
   // Custom Tooltip for Weekly Chart
@@ -330,14 +330,14 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
             <span className="text-gray-900">收益率:</span>
             {' '}
             <span className={isRatePositive ? 'text-green-600' : 'text-red-600'}>
-              {isRatePositive ? '+' : ''}{rateValue.toFixed(2)}%
+              {rateValue.toFixed(2)}%
             </span>
           </div>
           <div className="text-xs">
             <span className="text-gray-900">收益额:</span>
             {' '}
             <span className={isAmountPositive ? 'text-green-600' : 'text-red-600'}>
-              {isAmountPositive ? '+' : ''}${Math.abs(amountValue).toLocaleString()}
+              {Math.abs(amountValue).toLocaleString()}
             </span>
           </div>
         </div>
@@ -362,7 +362,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
             </span>
             {' '}
             <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
-              {isPositive ? '+' : ''}$${Math.abs(value).toLocaleString()}
+              {Math.abs(value).toLocaleString()}
             </span>
           </div>
         </div>
@@ -420,7 +420,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           {/* Description */}
           {description && (
-            <p className="text-gray-600 mb-6 pb-6 border-b border-gray-200">{description}</p>
+            <p className="text-gray-600 mb-6 pb-4 border-b border-gray-200">{description}</p>
           )}
 
           {/* Metrics Grid */}
@@ -428,7 +428,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
             <div>
               <div className="text-sm text-gray-500 mb-2">近90日盈亏</div>
               <div className={`text-2xl ${totalClosePnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {totalClosePnl >= 0 ? '' : '-'}{Math.abs(totalClosePnl).toLocaleString()}
+                {Math.abs(totalClosePnl).toLocaleString()}
               </div>
             </div>
 
@@ -502,8 +502,8 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
                   stroke="#9ca3af" 
                   tick={{ fill: '#6b7280', fontSize: 12 }}
                   axisLine={false}
-                  tickFormatter={(value) => 
-                    weeklyChartType === 'rate' ? `${value}%` : `$${Math.abs(value / 1000).toFixed(0)}k`
+                  tickFormatter={(value) =>
+                    weeklyChartType === 'rate' ? `${value}%` : `${Math.abs(value / 1000).toFixed(0)}k`
                   }
                   width={60}
                 />
@@ -514,10 +514,10 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
                     borderRadius: '8px',
                     padding: '8px 12px'
                   }}
-                  formatter={(value: number) => 
-                    weeklyChartType === 'rate' 
-                      ? `${value > 0 ? '+' : ''}${value.toFixed(2)}%` 
-                      : `${value > 0 ? '+' : ''}$${Math.abs(value).toLocaleString()}`
+                  formatter={(value: number) =>
+                    weeklyChartType === 'rate'
+                      ? `${value.toFixed(2)}%`
+                      : `${Math.abs(value).toLocaleString()}`
                   }
                   cursor={false}
                   content={<CustomWeeklyTooltip />}
@@ -582,7 +582,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
           <div className="flex items-start justify-between mb-4">
             <div>
               <div className="text-green-600 mb-1">
-                <span className="text-3xl font-semibold">+${currentAmount.toLocaleString()}</span>
+                <span className="text-3xl font-semibold">{currentAmount.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -607,7 +607,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
                   stroke="#9ca3af" 
                   tick={{ fill: '#6b7280', fontSize: 12 }}
                   axisLine={false}
-                  tickFormatter={(value) => `$${Math.abs(value / 1000).toFixed(0)}k`}
+                  tickFormatter={(value) => `${Math.abs(value / 1000).toFixed(0)}k`}
                   width={60}
                 />
                 <Tooltip 
@@ -617,7 +617,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
                     borderRadius: '8px',
                     padding: '8px 12px'
                   }}
-                  formatter={(value: number) => `+$${value.toLocaleString()}`}
+                  formatter={(value: number) => `${value.toLocaleString()}`}
                   labelFormatter={(label) => label}
                   content={<CustomNetValueTooltip />}
                 />
@@ -703,7 +703,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
                           ) : (
                             <TrendingDown className="w-4 h-4" />
                           )}
-                          <span>${Math.abs(symbol.amount).toLocaleString()}</span>
+                          <span>{Math.abs(symbol.amount).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
