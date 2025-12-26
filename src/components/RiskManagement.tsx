@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Shield, AlertTriangle, TrendingDown, TrendingUp, Activity, RefreshCw } from 'lucide-react';
+import { formatNumber } from '../utils/format';
 
 interface RiskManagementProps {
   onBack: () => void;
@@ -189,9 +190,9 @@ export function RiskManagement({ onBack }: RiskManagementProps) {
             <span className="text-sm text-gray-500">总风险敞口</span>
           </div>
           <div className="text-3xl text-gray-900">
-            {riskOverview.totalExposure.toLocaleString()}
+            {formatNumber(riskOverview.totalExposure)}
           </div>
-          <div className="text-sm text-gray-500 mt-1">限额: 500,000</div>
+          <div className="text-sm text-gray-500 mt-1">限额: {formatNumber(500000, 0)}</div>
         </div>
 
         {/* Max Drawdown */}
@@ -213,7 +214,7 @@ export function RiskManagement({ onBack }: RiskManagementProps) {
             <span className="text-sm text-gray-500">日均VaR</span>
           </div>
           <div className="text-3xl text-gray-900">
-            {riskOverview.varDaily.toLocaleString()}
+            {formatNumber(riskOverview.varDaily)}
           </div>
           <div className="text-sm text-gray-500 mt-1">95%置信度</div>
         </div>

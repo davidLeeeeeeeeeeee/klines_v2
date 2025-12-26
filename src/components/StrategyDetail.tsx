@@ -16,6 +16,7 @@ import {
   HistoryLineRes
 } from '../services/api';
 import { getToken } from '../utils/storage';
+import { formatNumber } from '../utils/format';
 
 interface StrategyDetailProps {
   strategyName: string | null;
@@ -310,8 +311,8 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
     lossTradesRate: lossRate,
     profitLossRatio: profitLossRatio,
     maxDrawdown: statisticsData?.maxDrawdownRate ? Number((statisticsData.maxDrawdownRate * 100).toFixed(2)) : 0,
-    totalVolume: `${(statisticsData?.totalTradeAmount ?? 0).toLocaleString()}`,
-    totalFees: `${(statisticsData?.totalFee ?? 0).toLocaleString()}`
+    totalVolume: formatNumber(statisticsData?.totalTradeAmount ?? 0),
+    totalFees: formatNumber(statisticsData?.totalFee ?? 0)
   };
 
   // Custom Tooltip for Weekly Chart
@@ -337,7 +338,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
             <span className="text-gray-900">收益额:</span>
             {' '}
             <span className={isAmountPositive ? 'text-green-600' : 'text-red-600'}>
-              {Math.abs(amountValue).toLocaleString()}
+              {formatNumber(Math.abs(amountValue))}
             </span>
           </div>
         </div>
@@ -362,7 +363,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
             </span>
             {' '}
             <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
-              {Math.abs(value).toLocaleString()}
+              {formatNumber(Math.abs(value))}
             </span>
           </div>
         </div>
@@ -428,7 +429,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
             <div>
               <div className="text-sm text-gray-500 mb-2">近90日盈亏</div>
               <div className={`text-2xl ${totalClosePnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {Math.abs(totalClosePnl).toLocaleString()}
+                {formatNumber(Math.abs(totalClosePnl))}
               </div>
             </div>
 
@@ -452,7 +453,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
 
             <div>
               <div className="text-sm text-gray-500 mb-2">资金规模</div>
-              <div className="text-gray-900 text-2xl">{totalFund.toLocaleString()}</div>
+              <div className="text-gray-900 text-2xl">{formatNumber(totalFund)}</div>
             </div>
           </div>
         </div>
@@ -517,7 +518,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
                   formatter={(value: number) =>
                     weeklyChartType === 'rate'
                       ? `${value.toFixed(2)}%`
-                      : `${Math.abs(value).toLocaleString()}`
+                      : formatNumber(Math.abs(value))
                   }
                   cursor={false}
                   content={<CustomWeeklyTooltip />}
@@ -582,7 +583,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
           <div className="flex items-start justify-between mb-4">
             <div>
               <div className="text-green-600 mb-1">
-                <span className="text-3xl font-semibold">{currentAmount.toLocaleString()}</span>
+                <span className="text-3xl font-semibold">{formatNumber(currentAmount)}</span>
               </div>
             </div>
           </div>
@@ -617,7 +618,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
                     borderRadius: '8px',
                     padding: '8px 12px'
                   }}
-                  formatter={(value: number) => `${value.toLocaleString()}`}
+                  formatter={(value: number) => formatNumber(value)}
                   labelFormatter={(label) => label}
                   content={<CustomNetValueTooltip />}
                 />
@@ -703,7 +704,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
                           ) : (
                             <TrendingDown className="w-4 h-4" />
                           )}
-                          <span>{Math.abs(symbol.amount).toLocaleString()}</span>
+                          <span>{formatNumber(Math.abs(symbol.amount))}</span>
                         </div>
                       </div>
                     </div>

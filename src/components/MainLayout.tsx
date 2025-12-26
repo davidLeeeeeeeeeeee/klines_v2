@@ -23,6 +23,7 @@ import { FundTransfer } from './FundTransfer';
 import type { TradingAccount } from './TradingAccounts';
 import { getCryptoPrices, getCurrentUserInfo } from '../services/api';
 import { getUserInfo, getToken, getUserType } from '../utils/storage';
+import { formatNumber } from '../utils/format';
 
 interface MainLayoutProps {
   onLogout: () => void;
@@ -190,7 +191,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       ? `ID: ${userInfo.id}`
       : 'N/A';
   const formattedEquity = typeof userInfo?.equity === 'number'
-    ? userInfo.equity.toLocaleString('zh-CN', { style: 'currency', currency: 'CNY' })
+    ? `¥${formatNumber(userInfo.equity)}`
     : 'N/A';
 
 
@@ -851,7 +852,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
               <span className="text-gray-600 text-sm font-semibold">BTC</span>
               {btcPrice !== null ? (
                 <span className={priceChangePercent.btc >= 0 ? 'text-green-600' : 'text-red-600'}>
-                  {btcPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatNumber(btcPrice)}
                 </span>
               ) : (
                 <span className="text-gray-400">加载中...</span>
@@ -863,7 +864,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
               <span className="text-gray-600 text-sm font-semibold">ETH</span>
               {ethPrice !== null ? (
                 <span className={priceChangePercent.eth >= 0 ? 'text-green-600' : 'text-red-600'}>
-                  {ethPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatNumber(ethPrice)}
                 </span>
               ) : (
                 <span className="text-gray-400">加载中...</span>
@@ -875,7 +876,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
               <span className="text-gray-600 text-sm font-semibold">SOL</span>
               {solPrice !== null ? (
                 <span className={priceChangePercent.sol >= 0 ? 'text-green-600' : 'text-red-600'}>
-                  {solPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatNumber(solPrice)}
                 </span>
               ) : (
                 <span className="text-gray-400">加载中...</span>
@@ -887,7 +888,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
               <span className="text-gray-600 text-sm font-semibold">BNB</span>
               {bnbPrice !== null ? (
                 <span className={priceChangePercent.bnb >= 0 ? 'text-green-600' : 'text-red-600'}>
-                  {bnbPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatNumber(bnbPrice)}
                 </span>
               ) : (
                 <span className="text-gray-400">加载中...</span>
@@ -899,7 +900,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
               <span className="text-gray-600 text-sm font-semibold">ZEC</span>
               {zecPrice !== null ? (
                 <span className={priceChangePercent.zec >= 0 ? 'text-green-600' : 'text-red-600'}>
-                  {zecPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatNumber(zecPrice)}
                 </span>
               ) : (
                 <span className="text-gray-400">加载中...</span>

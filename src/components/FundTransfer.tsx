@@ -3,6 +3,7 @@ import { ChevronLeft, ArrowLeftRight, AlertCircle, X, CheckCircle } from 'lucide
 import type { TradingAccount } from './TradingAccounts';
 import { transferAccount, AccountTransferReq, getAccountDetail, CommonIdRequest } from '../services/api';
 import { getToken } from '../utils/storage';
+import { formatNumber } from '../utils/format';
 
 interface FundTransferProps {
   account: TradingAccount;
@@ -53,7 +54,7 @@ export function FundTransfer({ account, parentAccount, onBack }: FundTransferPro
       const subAccountDetail = await getAccountDetail(token, { id: parseInt(account.id) });
       console.log('子账户详情响应:', subAccountDetail);
       if (subAccountDetail && typeof subAccountDetail.equity === 'number') {
-        setSubAccountBalance(subAccountDetail.equity.toFixed(2));
+        setSubAccountBalance(formatNumber(subAccountDetail.equity));
         console.log('子账户余额更新为:', subAccountDetail.equity);
       } else {
         console.warn('子账户equity字段无效:', subAccountDetail);
@@ -66,7 +67,7 @@ export function FundTransfer({ account, parentAccount, onBack }: FundTransferPro
         const mainAccountDetail = await getAccountDetail(token, { id: parseInt(mainAccId) });
         console.log('主账户详情响应:', mainAccountDetail);
         if (mainAccountDetail && typeof mainAccountDetail.equity === 'number') {
-          setMainAccountBalance(mainAccountDetail.equity.toFixed(2));
+          setMainAccountBalance(formatNumber(mainAccountDetail.equity));
           console.log('主账户余额更新为:', mainAccountDetail.equity);
         } else {
           console.warn('主账户equity字段无效:', mainAccountDetail);

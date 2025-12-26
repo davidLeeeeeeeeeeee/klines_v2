@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Activity, DollarSign, Users, ArrowRight, Plus, Play, Pause, Settings, X, RefreshCw } from 'lucide-react';
 import { getStrategyModelList, StrategyModelListRes } from '../services/api';
 import { getToken } from '../utils/storage';
+import { formatNumber } from '../utils/format';
 
 interface Strategy {
   id: string;
@@ -60,7 +61,7 @@ function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
     name: apiData.name,
     description: apiData.description,
     returns: 0, // 总收益率先写0
-    totalReturn: Math.abs(totalClosePnl).toFixed(2),
+    totalReturn: formatNumber(Math.abs(totalClosePnl)),
     followers: overview?.followAccountNum ?? 0,
     winRate: winRate,
     maxDrawdown: 0, // 最大回撤先写0
@@ -69,7 +70,7 @@ function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
     status: String(apiData.status ?? 0), // 将状态值转为字符串："-1"=停止, "0"=暂停, "1"=运行中
     tags: apiData.tag ? apiData.tag.split(',').filter(t => t.trim()) : [],
     riskLevel: riskLevel,
-    totalFollowingCapital: totalFund ? `${totalFund.toFixed(2)}` : '0',
+    totalFollowingCapital: totalFund ? formatNumber(totalFund) : '0',
     runDays: apiData.runDays ?? 0,
     aiModel: apiData.aiModel ?? '',
   };

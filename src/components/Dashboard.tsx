@@ -37,6 +37,7 @@ import {
   PanelDailyProfitLossRes
 } from '../services/api';
 import { getToken } from '../utils/storage';
+import { formatNumber } from '../utils/format';
 
 export function Dashboard() {
   const [weeklyChartType, setWeeklyChartType] = useState<'rate' | 'amount'>('rate');
@@ -451,7 +452,7 @@ export function Dashboard() {
             <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
               {weeklyChartType === 'rate'
                 ? `${isPositive ? '+' : ''}${value.toFixed(2)}%`
-                : `${isPositive ? '+' : ''}${Math.abs(value).toLocaleString()}`
+                : `${isPositive ? '+' : ''}${formatNumber(Math.abs(value))}`
               }
             </span>
           </div>
@@ -476,7 +477,7 @@ export function Dashboard() {
             </span>
             {' '}
             <span className="text-gray-900">
-              {value.toLocaleString()}
+              {formatNumber(value)}
             </span>
           </div>
         </div>
@@ -540,7 +541,7 @@ export function Dashboard() {
                     <div className={`text-2xl mb-2 ${
                       (overviewData?.unrealisedPnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {Math.abs(overviewData?.unrealisedPnl || 0).toLocaleString()}
+                      {formatNumber(Math.abs(overviewData?.unrealisedPnl || 0))}
                     </div>
                     <div className={`flex items-center gap-1 text-sm ${
                       (overviewData?.unrealisedPnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
@@ -572,7 +573,7 @@ export function Dashboard() {
                     <div className={`text-2xl mb-2 ${
                       (overviewData?.totalClosePnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {Math.abs(overviewData?.totalClosePnl || 0).toLocaleString()}
+                      {formatNumber(Math.abs(overviewData?.totalClosePnl || 0))}
                     </div>
                     <div className={`flex items-center gap-1 text-sm ${
                       (overviewData?.totalClosePnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
@@ -602,7 +603,7 @@ export function Dashboard() {
                   <div className="flex-1">
                     <div className="text-gray-600 text-sm mb-2">总净值</div>
                     <div className="text-gray-900 text-2xl mb-2">
-                      {overviewData?.equity?.toLocaleString() || '0'}
+                      {formatNumber(overviewData?.equity || 0)}
                     </div>
                     <div className={`flex items-center gap-1 text-sm ${
                       (overviewData?.equity || 0) >= (overviewData?.initEquity || 0) ? 'text-green-600' : 'text-red-600'
@@ -632,7 +633,7 @@ export function Dashboard() {
                   <div className="flex-1">
                     <div className="text-gray-600 text-sm mb-2">初始净值</div>
                     <div className="text-gray-900 text-2xl mb-2">
-                      {overviewData?.initEquity?.toLocaleString() || '0'}
+                      {formatNumber(overviewData?.initEquity || 0)}
                     </div>
                     <div className="flex items-center gap-1 text-gray-500 text-sm">
                       <span>基准值</span>
@@ -707,7 +708,7 @@ export function Dashboard() {
                     formatter={(value: number) =>
                       weeklyChartType === 'rate'
                         ? `${value > 0 ? '+' : ''}${value.toFixed(2)}%`
-                        : `${value > 0 ? '+' : ''}${Math.abs(value).toLocaleString()}`
+                        : `${value > 0 ? '+' : ''}${formatNumber(Math.abs(value))}`
                     }
                     cursor={false}
                     content={<CustomWeeklyTooltip />}
@@ -825,7 +826,7 @@ export function Dashboard() {
               <div>
                 <div className="text-gray-900 mb-1">
                   <span className="text-3xl font-semibold">
-                    {currentEquity.toLocaleString()}
+                    {formatNumber(currentEquity)}
                   </span>
                 </div>
               </div>
@@ -869,7 +870,7 @@ export function Dashboard() {
                       borderRadius: '8px',
                       padding: '8px 12px'
                     }}
-                    formatter={(value: number) => value.toLocaleString()}
+                    formatter={(value: number) => formatNumber(value)}
                     labelFormatter={(label) => label}
                     content={<CustomCumulativeTooltip />}
                   />
@@ -998,8 +999,8 @@ export function Dashboard() {
                             )}
                             <div className="text-lg leading-none">
                               {strategy.totalClosePnl >= 0
-                                ? strategy.totalClosePnl.toLocaleString()
-                                : Math.abs(strategy.totalClosePnl).toLocaleString()
+                                ? formatNumber(strategy.totalClosePnl)
+                                : formatNumber(Math.abs(strategy.totalClosePnl))
                               }
                             </div>
                           </div>
@@ -1140,7 +1141,7 @@ export function Dashboard() {
                             ) : (
                               <TrendingDown className="w-4 h-4" />
                             )}
-                            <span>{Math.abs(symbol.totalClosePnl).toLocaleString()}</span>
+                            <span>{formatNumber(Math.abs(symbol.totalClosePnl))}</span>
                           </div>
                         </div>
                       </div>
@@ -1325,25 +1326,25 @@ export function Dashboard() {
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">总交易量</span>
                 <span className="text-gray-900">
-                  {statisticsData?.totalTradeAmount?.toLocaleString() || '0'}
+                  {formatNumber(statisticsData?.totalTradeAmount || 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">总手续费</span>
                 <span className="text-gray-900">
-                  {statisticsData?.totalFee?.toLocaleString() || '0'}
+                  {formatNumber(statisticsData?.totalFee || 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">盈利金额</span>
                 <span className="text-green-600">
-                  {statisticsData?.winAmount?.toLocaleString() || '0'}
+                  {formatNumber(statisticsData?.winAmount || 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">亏损金额</span>
                 <span className="text-red-600">
-                  {Math.abs(statisticsData?.lossAmount || 0).toLocaleString()}
+                  {formatNumber(Math.abs(statisticsData?.lossAmount || 0))}
                 </span>
               </div>
             </div>

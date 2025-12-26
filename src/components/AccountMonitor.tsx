@@ -17,6 +17,7 @@ import {
   DictItem
 } from '../services/api';
 import { getToken } from '../utils/storage';
+import { formatNumber } from '../utils/format';
 import { JsonViewer } from './JsonViewer';
 import { useClickOutside } from '../hooks/useClickOutside';
 
@@ -947,7 +948,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                   <div className={`text-right ${position.unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     <div className="text-sm text-gray-500 mb-1">浮动盈亏</div>
                     <div>
-                      <span className="text-lg">{Math.abs(position.unrealizedPnL).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-lg">{formatNumber(Math.abs(position.unrealizedPnL))}</span>
                       <span className="text-sm ml-1">({Math.abs(position.unrealizedPnLPercent).toFixed(1)}%)</span>
                     </div>
                   </div>
@@ -957,17 +958,17 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div>
                     <div className="text-sm text-gray-500 mb-1">订单数量</div>
-                    <div className="text-gray-900">{position.quantity.toLocaleString()}</div>
+                    <div className="text-gray-900">{formatNumber(position.quantity)}</div>
                   </div>
 
                   <div>
                     <div className="text-sm text-gray-500 mb-1">入场价格</div>
-                    <div className="text-gray-900">{position.entryPrice.toLocaleString()}</div>
+                    <div className="text-gray-900">{formatNumber(position.entryPrice)}</div>
                   </div>
 
                   <div>
                     <div className="text-sm text-gray-500 mb-1">盈亏平衡价</div>
-                    <div className="text-gray-900">{position.plBalancePrice.toLocaleString()}</div>
+                    <div className="text-gray-900">{formatNumber(position.plBalancePrice)}</div>
                   </div>
                 </div>
 
@@ -980,18 +981,18 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     <span className="text-sm text-gray-500">止盈/止损</span>
                     <div className="flex items-center gap-0.5">
                       <span className="text-sm text-green-600">
-                        {position.takeProfit ? position.takeProfit.toLocaleString() : '-'}
+                        {position.takeProfit ? formatNumber(position.takeProfit) : '-'}
                       </span>
                       <span className="text-sm text-gray-400">/</span>
                       <span className="text-sm text-red-600">
-                        {position.stopLoss ? position.stopLoss.toLocaleString() : '-'}
+                        {position.stopLoss ? formatNumber(position.stopLoss) : '-'}
                       </span>
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-500">已结盈亏</span>
                     <span className={`text-sm ${position.curRealisedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {Math.abs(position.curRealisedPnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {formatNumber(Math.abs(position.curRealisedPnl))}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -1114,12 +1115,12 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
                       <div>
                         <div className="text-sm text-gray-500 mb-1">入场价格</div>
-                        <div className="text-gray-900">{trade.avgEntryPrice.toLocaleString()}</div>
+                        <div className="text-gray-900">{formatNumber(trade.avgEntryPrice)}</div>
                       </div>
 
                       <div>
                         <div className="text-sm text-gray-500 mb-1">出场价格</div>
-                        <div className="text-gray-900">{trade.avgExitPrice.toLocaleString()}</div>
+                        <div className="text-gray-900">{formatNumber(trade.avgExitPrice)}</div>
                       </div>
 
                       <div>
@@ -1269,32 +1270,32 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">入场价格</span>
-                  <span className="text-sm text-gray-900 font-medium">{selectedPosition.entryPrice.toLocaleString()}</span>
+                  <span className="text-sm text-gray-900 font-medium">{formatNumber(selectedPosition.entryPrice)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">市场价格</span>
-                  <span className="text-sm text-gray-900 font-medium">{selectedPosition.currentPrice.toLocaleString()}</span>
+                  <span className="text-sm text-gray-900 font-medium">{formatNumber(selectedPosition.currentPrice)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">数量</span>
-                  <span className="text-sm text-gray-900 font-medium">{selectedPosition.quantity}</span>
+                  <span className="text-sm text-gray-900 font-medium">{formatNumber(selectedPosition.quantity)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">止盈价格</span>
                   <span className="text-sm text-gray-900 font-medium">
-                    {selectedPosition.takeProfit ? `${selectedPosition.takeProfit.toLocaleString()}` : '未设置'}
+                    {selectedPosition.takeProfit ? formatNumber(selectedPosition.takeProfit) : '未设置'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">止损价格</span>
                   <span className="text-sm text-gray-900 font-medium">
-                    {selectedPosition.stopLoss ? `${selectedPosition.stopLoss.toLocaleString()}` : '未设置'}
+                    {selectedPosition.stopLoss ? formatNumber(selectedPosition.stopLoss) : '未设置'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                   <span className="text-sm text-gray-500">预计盈亏</span>
                   <span className={`text-sm font-semibold ${selectedPosition.unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {selectedPosition.unrealizedPnL >= 0 ? '+' : ''}{Math.abs(selectedPosition.unrealizedPnL).toFixed(2)} ({selectedPosition.unrealizedPnLPercent >= 0 ? '+' : ''}{Math.abs(selectedPosition.unrealizedPnLPercent).toFixed(2)}%)
+                    {selectedPosition.unrealizedPnL >= 0 ? '+' : ''}{formatNumber(Math.abs(selectedPosition.unrealizedPnL))} ({selectedPosition.unrealizedPnLPercent >= 0 ? '+' : ''}{Math.abs(selectedPosition.unrealizedPnLPercent).toFixed(2)}%)
                   </span>
                 </div>
               </div>

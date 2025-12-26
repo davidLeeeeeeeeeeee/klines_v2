@@ -3,6 +3,7 @@ import { Plus, Edit, Trash2, Eye, EyeOff, X, AlertCircle, Search, ChevronDown, R
 import { useClickOutside } from '../hooks/useClickOutside';
 import { getAccountList, AccountListReq, AccountRes, getStrategyModelList, StrategyModelListRes, bindAccountStrategy, StrategyModelBindReq, getSystemDict, DictItem } from '../services/api';
 import { getToken } from '../utils/storage';
+import { formatNumber } from '../utils/format';
 
 type InitStatus = '已初始化' | '未初始化' | '初始化失败';
 
@@ -103,8 +104,8 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
       apiKey: '', // API不返回敏感信息
       apiSecret: '', // API不返回敏感信息
       initStatus: apiAccount.init ? '已初始化' : '未初始化',
-      netValue: apiAccount.equity.toFixed(2),
-      initialNetValue: apiAccount.initEquity.toFixed(2),
+      netValue: formatNumber(apiAccount.equity),
+      initialNetValue: formatNumber(apiAccount.initEquity),
       createdAt: apiAccount.createTime,
       username: '', // API响应中没有username字段
       strategyName: apiAccount.strategyTypeName || apiAccount.strategyType || undefined,
@@ -814,7 +815,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
                       ? ((strategy.winCount / (strategy.winCount + strategy.lossCount)) * 100).toFixed(1)
                       : '0.0';
                     const totalPnl = strategy.totalClosePnl || 0;
-                    const profitRate = totalPnl >= 0 ? `+${totalPnl.toFixed(2)}` : totalPnl.toFixed(2);
+                    const profitRate = totalPnl >= 0 ? `+${formatNumber(totalPnl)}` : formatNumber(totalPnl);
 
                     return (
                       <div

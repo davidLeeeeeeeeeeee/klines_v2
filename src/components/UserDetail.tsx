@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, Key, Search, X, Edit, ChevronDown, RefreshCw } from 'lucide-react';
+import { formatNumber } from '../utils/format';
 
 type UserRole = 'admin' | 'trader' | 'viewer';
 type UserStatus = '启用' | '禁用';
@@ -335,7 +336,7 @@ export function UserDetail({ onNavigateToCreate, onNavigateToEdit, onNavigateToR
                 </div>
                 <div className="text-right">
                   <div className="text-sm text-gray-500 mb-1">总净值</div>
-                  <div className="text-lg text-green-600 font-semibold">{parseFloat(user.totalAssets).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="text-lg text-green-600 font-semibold">{formatNumber(parseFloat(user.totalAssets))}</div>
                 </div>
               </div>
               
