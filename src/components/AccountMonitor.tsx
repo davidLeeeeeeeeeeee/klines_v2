@@ -1124,7 +1124,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       </div>
 
                       <div>
-                        <div className="text-sm text-gray-500 mb-1">平仓类似</div>
+                        <div className="text-sm text-gray-500 mb-1">平仓类型</div>
                         <div className="text-gray-900">{trade.closeType || '-'}</div>
                       </div>
                     </div>
