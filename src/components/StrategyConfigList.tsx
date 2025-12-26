@@ -70,7 +70,7 @@ function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
     status: String(apiData.status ?? 0), // 将状态值转为字符串："-1"=停止, "0"=暂停, "1"=运行中
     tags: apiData.tag ? apiData.tag.split(',').filter(t => t.trim()) : [],
     riskLevel: apiData.riskLevel?.toLowerCase() as 'low' | 'medium' | 'high',
-    totalFollowingCapital: totalFund ? `¥${totalFund.toFixed(2)}` : '¥0',
+    totalFollowingCapital: totalFund ? `${totalFund.toFixed(2)}` : '0',
     runDays: runDays,
     aiModel: apiData.aiModel ?? '',
   };
@@ -225,7 +225,7 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
         status: '1', // 新创建的策略默认为运行中
         tags: strategyData.tags || [],
         riskLevel: strategyData.riskLevel || 'medium',
-        totalFollowingCapital: '¥0',
+        totalFollowingCapital: '0',
         runDays: 0,
         aiModel: strategyData.aiModel || '',
         systemPrompt: strategyData.systemPrompt,
@@ -254,9 +254,9 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
 
   // Mock trading accounts
   const tradingAccounts = [
-    { id: '1', name: '主账户 - Binance', balance: '¥125,680', uid: 'BN001' },
-    { id: '2', name: '备用账户 - OKX', balance: '¥86,420', uid: 'OKX002' },
-    { id: '3', name: '测试账户 - Huobi', balance: '¥45,230', uid: 'HB003' }
+    { id: '1', name: '主账户 - Binance', balance: '125,680', uid: 'BN001' },
+    { id: '2', name: '备用账户 - OKX', balance: '86,420', uid: 'OKX002' },
+    { id: '3', name: '测试账户 - Huobi', balance: '45,230', uid: 'HB003' }
   ];
 
   return (

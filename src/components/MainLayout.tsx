@@ -363,7 +363,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       status: 'active' as 'active' | 'paused',
       tags: ['趋势策略'],
       riskLevel: 'medium' as 'low' | 'medium' | 'high',
-      totalFollowingCapital: '¥2,450,000',
+      totalFollowingCapital: '2,450,000',
       runDays: 345,
       aiModel: 'GPT-4'
     },
@@ -381,7 +381,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       status: 'active' as 'active' | 'paused',
       tags: ['网格交易'],
       riskLevel: 'low' as 'low' | 'medium' | 'high',
-      totalFollowingCapital: '¥1,850,000',
+      totalFollowingCapital: '1,850,000',
       runDays: 318,
       aiModel: 'Claude-3'
     },
@@ -399,7 +399,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       status: 'active' as 'active' | 'paused',
       tags: ['套利'],
       riskLevel: 'low' as 'low' | 'medium' | 'high',
-      totalFollowingCapital: '¥3,120,000',
+      totalFollowingCapital: '3,120,000',
       runDays: 340,
       aiModel: 'GPT-4'
     },
@@ -417,7 +417,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       status: 'active' as 'active' | 'paused',
       tags: ['做市策略', '高频交易'],
       riskLevel: 'high' as 'low' | 'medium' | 'high',
-      totalFollowingCapital: '¥1,680,000',
+      totalFollowingCapital: '1,680,000',
       runDays: 385,
       aiModel: 'Gemini Pro'
     },
@@ -435,7 +435,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       status: 'paused' as 'active' | 'paused',
       tags: ['均值回归'],
       riskLevel: 'medium' as 'low' | 'medium' | 'high',
-      totalFollowingCapital: '¥2,050,000',
+      totalFollowingCapital: '2,050,000',
       runDays: 299,
       aiModel: 'Claude-3'
     },
@@ -453,7 +453,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       status: 'active' as 'active' | 'paused',
       tags: ['对冲策略', '市场中性'],
       riskLevel: 'low' as 'low' | 'medium' | 'high',
-      totalFollowingCapital: '¥2,750,000',
+      totalFollowingCapital: '2,750,000',
       runDays: 313,
       aiModel: 'GPT-4'
     }
@@ -628,7 +628,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
         sharpeRatio: 0,
         createDate: new Date().toISOString().split('T')[0],
         status: 'active' as 'active' | 'paused',
-        totalFollowingCapital: '¥0'
+        totalFollowingCapital: '0'
       };
       setStrategies([...strategies, newStrategy]);
       alert('策略已创建！');

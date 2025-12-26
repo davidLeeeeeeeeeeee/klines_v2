@@ -1172,7 +1172,7 @@ export function Dashboard() {
                      symbolLikeTimeRange === '3' ? '近 3 日' :
                      symbolLikeTimeRange === '7' ? '近 7 日' :
                      symbolLikeTimeRange === '30' ? '近 30 日' :
-                     symbolLikeTimeRange === '90' ? '近 90 日' : '近半年'}
+                     symbolLikeTimeRange === '90' ? '近 90 日' : '近 半年'}
                   </span>
                   <ChevronDown className="w-4 h-4" />
                 </button>
@@ -1183,7 +1183,7 @@ export function Dashboard() {
                     <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${symbolLikeTimeRange === '7' ? 'bg-gray-100' : ''}`} onClick={() => { setSymbolLikeTimeRange('7'); setShowSymbolLikeTimeRangeDropdown(false); }}>近 7 日</button>
                     <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${symbolLikeTimeRange === '30' ? 'bg-gray-100' : ''}`} onClick={() => { setSymbolLikeTimeRange('30'); setShowSymbolLikeTimeRangeDropdown(false); }}>近 30 日</button>
                     <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${symbolLikeTimeRange === '90' ? 'bg-gray-100' : ''}`} onClick={() => { setSymbolLikeTimeRange('90'); setShowSymbolLikeTimeRangeDropdown(false); }}>近 90 日</button>
-                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${symbolLikeTimeRange === '180' ? 'bg-gray-100' : ''}`} onClick={() => { setSymbolLikeTimeRange('180'); setShowSymbolLikeTimeRangeDropdown(false); }}>近半年</button>
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${symbolLikeTimeRange === '180' ? 'bg-gray-100' : ''}`} onClick={() => { setSymbolLikeTimeRange('180'); setShowSymbolLikeTimeRangeDropdown(false); }}>近 半年</button>
                   </div>
                 )}
               </div>
@@ -1263,7 +1263,7 @@ export function Dashboard() {
                      statisticsTimeRange === '3' ? '近 3 日' :
                      statisticsTimeRange === '7' ? '近 7 日' :
                      statisticsTimeRange === '30' ? '近 30 日' :
-                     statisticsTimeRange === '90' ? '近 90 日' : '近半年'}
+                     statisticsTimeRange === '90' ? '近 90 日' : '近 半年'}
                   </span>
                   <ChevronDown className="w-4 h-4" />
                 </button>
@@ -1274,7 +1274,7 @@ export function Dashboard() {
                     <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${statisticsTimeRange === '7' ? 'bg-gray-100' : ''}`} onClick={() => { setStatisticsTimeRange('7'); setShowStatisticsTimeRangeDropdown(false); }}>近 7 日</button>
                     <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${statisticsTimeRange === '30' ? 'bg-gray-100' : ''}`} onClick={() => { setStatisticsTimeRange('30'); setShowStatisticsTimeRangeDropdown(false); }}>近 30 日</button>
                     <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${statisticsTimeRange === '90' ? 'bg-gray-100' : ''}`} onClick={() => { setStatisticsTimeRange('90'); setShowStatisticsTimeRangeDropdown(false); }}>近 90 日</button>
-                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${statisticsTimeRange === '180' ? 'bg-gray-100' : ''}`} onClick={() => { setStatisticsTimeRange('180'); setShowStatisticsTimeRangeDropdown(false); }}>近半年</button>
+                    <button className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${statisticsTimeRange === '180' ? 'bg-gray-100' : ''}`} onClick={() => { setStatisticsTimeRange('180'); setShowStatisticsTimeRangeDropdown(false); }}>近 半年</button>
                   </div>
                 )}
               </div>

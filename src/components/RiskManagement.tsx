@@ -60,8 +60,8 @@ export function RiskManagement({ onBack }: RiskManagementProps) {
       name: '总持仓风险敞口限制',
       type: '风险敞口',
       status: 'active' as 'active' | 'inactive',
-      threshold: '¥500,000',
-      current: '¥285,000',
+      threshold: '500,000',
+      current: '285,000',
       description: '所有策略的总风险敞口不超过50万元'
     }
   ];
@@ -189,9 +189,9 @@ export function RiskManagement({ onBack }: RiskManagementProps) {
             <span className="text-sm text-gray-500">总风险敞口</span>
           </div>
           <div className="text-3xl text-gray-900">
-            ¥{riskOverview.totalExposure.toLocaleString()}
+            {riskOverview.totalExposure.toLocaleString()}
           </div>
-          <div className="text-sm text-gray-500 mt-1">限额: ¥500,000</div>
+          <div className="text-sm text-gray-500 mt-1">限额: 500,000</div>
         </div>
 
         {/* Max Drawdown */}
@@ -213,7 +213,7 @@ export function RiskManagement({ onBack }: RiskManagementProps) {
             <span className="text-sm text-gray-500">日均VaR</span>
           </div>
           <div className="text-3xl text-gray-900">
-            ¥{riskOverview.varDaily.toLocaleString()}
+            {riskOverview.varDaily.toLocaleString()}
           </div>
           <div className="text-sm text-gray-500 mt-1">95%置信度</div>
         </div>
