@@ -225,7 +225,7 @@ export interface PositionResponse {
   takeProfit: number;
   unrealisedPnl: number;
   curRealisedPnl: number; // 已结盈亏
-  plBalancePrice: number; // 盈亏平衡价
+  breakEvenPoint: number; // 盈亏平衡价
   marginPlRatio: number; // 保证金盈亏比率
   exchange?: string; // 交易所名称
   strategyType?: string; // 策略类型
@@ -685,6 +685,7 @@ export interface AccountRes {
   mainAccName: string; // 主账号名，主账号该值为空
   mainAccUid: string; // 主账号UID，主账号该值为空
   name: string; // 账户名
+  profitRate: number; // 收益率（百分比）
   strategyType: string; // 策略类型
   strategyTypeName: string; // 策略类型(名)
   subAccCount: number; // 子账户数 (当前为主账户时展示)

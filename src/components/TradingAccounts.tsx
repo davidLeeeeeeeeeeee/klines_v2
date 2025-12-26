@@ -39,6 +39,7 @@ export interface TradingAccount {
   initStatus: InitStatus;
   netValue: string;
   initialNetValue: string;
+  profitRate: number; // 收益率（百分比）
   createdAt: string;
   username: string;
   strategyName?: string;

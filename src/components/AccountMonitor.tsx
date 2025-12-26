@@ -34,7 +34,7 @@ interface Position {
   unrealizedPnL: number;
   unrealizedPnLPercent: number;
   curRealisedPnl: number; // 已结盈亏
-  plBalancePrice: number; // 盈亏平衡价
+  breakEvenPoint: number; // 盈亏平衡价
   quantity: number;
   entryPrice: number;
   currentPrice: number;
@@ -299,7 +299,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       unrealizedPnL: apiPos.unrealisedPnl,
       unrealizedPnLPercent: apiPos.marginPlRatio * 100, // 使用API返回的保证金盈亏比率
       curRealisedPnl: apiPos.curRealisedPnl || 0, // 已结盈亏
-      plBalancePrice: apiPos.plBalancePrice || 0, // 盈亏平衡价
+      breakEvenPoint: apiPos.breakEvenPoint || 0, // 盈亏平衡价
       quantity: apiPos.qty,
       entryPrice: apiPos.entryPrice,
       currentPrice: apiPos.lastPrice,
@@ -968,7 +968,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
                   <div>
                     <div className="text-sm text-gray-500 mb-1">盈亏平衡价</div>
-                    <div className="text-gray-900">{formatNumber(position.plBalancePrice)}</div>
+                    <div className="text-gray-900">{formatNumber(position.breakEvenPoint)}</div>
                   </div>
                 </div>
 
@@ -1493,7 +1493,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                               {/* 开仓CHAT: 显示原有字段 */}
                               {/* 信心度 - 直接从顶层获取 */}
                               {tradeSignalArgs.confidence !== undefined && (
-                                <div>信心度: <span className="font-semibold">{(tradeSignalArgs.confidence * 100).toFixed(0)}%</span></div>
+                                <div>置信度: <span className="font-semibold">{(tradeSignalArgs.confidence * 100).toFixed(0)}%</span></div>
                               )}
                               {/* 失效条件 */}
                               {tradeSignalArgs.invalidationCondition && (
@@ -1504,10 +1504,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                                 <div>入场价格: <span className="font-semibold">{tradeSignalArgs.entryPrice}</span></div>
                               )}
                               {tradeSignalArgs.takeProfit !== undefined && (
-                                <div>止盈: <span className="font-semibold text-green-600">{tradeSignalArgs.takeProfit}</span></div>
+                                <div>止盈价格: <span className="font-semibold text-green-600">{tradeSignalArgs.takeProfit}</span></div>
                               )}
                               {tradeSignalArgs.stopLoss !== undefined && (
-                                <div>止损: <span className="font-semibold text-red-600">{tradeSignalArgs.stopLoss}</span></div>
+                                <div>止损价格: <span className="font-semibold text-red-600">{tradeSignalArgs.stopLoss}</span></div>
                               )}
                               {tradeSignalArgs.riskUsd !== undefined && (
                                 <div>风险金额: <span className="font-semibold">{tradeSignalArgs.riskUsd}</span></div>
