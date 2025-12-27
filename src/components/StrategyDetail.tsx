@@ -76,9 +76,15 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day} 00:00:00`;
     };
-    const endTime = formatDate(new Date());
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(days));
+    const endDate = new Date();
+    // endTime 设置为明天0点，确保包含今天的所有数据
+    endDate.setDate(endDate.getDate() + 1);
+    const endTime = formatDate(endDate);
+    // 今日(days='1')时 startDate 不变，其他情况减去对应天数
+    if (days !== '1') {
+      startDate.setDate(startDate.getDate() - parseInt(days));
+    }
     const startTime = formatDate(startDate);
     return { startTime, endTime };
   }, []);

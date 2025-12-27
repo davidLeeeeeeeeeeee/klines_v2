@@ -143,7 +143,8 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
   const [solPrice, setSolPrice] = useState<number | null>(null);
   const [bnbPrice, setBnbPrice] = useState<number | null>(null);
   const [zecPrice, setZecPrice] = useState<number | null>(null);
-  const [priceChangePercent, setPriceChangePercent] = useState<{ btc: number; eth: number; sol: number; bnb: number; zec: number }>({ btc: 0, eth: 0, sol: 0, bnb: 0, zec: 0 });
+  const [hypePrice, setHypePrice] = useState<number | null>(null);
+  const [priceChangePercent, setPriceChangePercent] = useState<{ btc: number; eth: number; sol: number; bnb: number; zec: number; hype: number }>({ btc: 0, eth: 0, sol: 0, bnb: 0, zec: 0, hype: 0 });
 
   // User dropdown ref for click outside detection
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -191,7 +192,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       ? `ID: ${userInfo.id}`
       : 'N/A';
   const formattedEquity = typeof userInfo?.equity === 'number'
-    ? `¥${formatNumber(userInfo.equity)}`
+    ? `${formatNumber(userInfo.equity)}`
     : 'N/A';
 
 
@@ -201,7 +202,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
     const fetchPrices = async () => {
       try {
         console.log('正在获取 Bybit 价格...');
-        const prices = await getCryptoPrices(['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'ZECUSDT']);
+        const prices = await getCryptoPrices(['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'ZECUSDT', 'HYPEUSDT']);
         console.log('获取到的价格:', prices);
 
         const btc = prices.find(p => p.symbol === 'BTCUSDT');
@@ -209,6 +210,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
         const sol = prices.find(p => p.symbol === 'SOLUSDT');
         const bnb = prices.find(p => p.symbol === 'BNBUSDT');
         const zec = prices.find(p => p.symbol === 'ZECUSDT');
+        const hype = prices.find(p => p.symbol === 'HYPEUSDT');
 
         if (btc) {
           const newBtcPrice = parseFloat(btc.price);
@@ -264,6 +266,17 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
             return newZecPrice;
           });
         }
+
+        if (hype) {
+          const newHypePrice = parseFloat(hype.price);
+          setHypePrice(prevPrice => {
+            if (prevPrice !== null) {
+              const change = ((newHypePrice - prevPrice) / prevPrice) * 100;
+              setPriceChangePercent(prev => ({ ...prev, hype: change }));
+            }
+            return newHypePrice;
+          });
+        }
       } catch (error) {
         console.error('获取 Bybit 价格失败，详细错误:', error);
         // 如果获取失败，使用备用数据
@@ -272,6 +285,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
         setSolPrice(prev => prev === null ? 126.00 : prev);
         setBnbPrice(prev => prev === null ? 650.00 : prev);
         setZecPrice(prev => prev === null ? 55.00 : prev);
+        setHypePrice(prev => prev === null ? 25.00 : prev);
       }
     };
 
@@ -901,6 +915,18 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
               {zecPrice !== null ? (
                 <span className={priceChangePercent.zec >= 0 ? 'text-green-600' : 'text-red-600'}>
                   {formatNumber(zecPrice)}
+                </span>
+              ) : (
+                <span className="text-gray-400">加载中...</span>
+              )}
+            </div>
+
+            {/* HYPE Price */}
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600 text-sm font-semibold">HYPE</span>
+              {hypePrice !== null ? (
+                <span className={priceChangePercent.hype >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {formatNumber(hypePrice)}
                 </span>
               ) : (
                 <span className="text-gray-400">加载中...</span>

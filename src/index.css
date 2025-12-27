@@ -2452,3 +2452,10 @@ html {
     transform: rotate(360deg);
   }
 }
+
+/* 隐藏 number input 的上下箭头按钮 (Chrome) */
+.hide-spin-button::-webkit-outer-spin-button,
+.hide-spin-button::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

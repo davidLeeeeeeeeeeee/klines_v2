@@ -296,6 +296,7 @@ export interface PageRequest<T> {
 
 export interface ClosePnlVO {
   accountId: number;
+  accountName: string; // 账户名称
   avgEntryPrice: number;
   avgExitPrice: number;
   closeChatId: number;

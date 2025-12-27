@@ -353,6 +353,123 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
 
       {/* Exchange, Account Type, and Strategy Follow Filters */}
       <div className="mb-6 flex items-center gap-6">
+        {/* Strategy Follow Filter */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              setShowStrategyFollowDropdown(!showStrategyFollowDropdown);
+              setShowExchangeDropdown(false);
+              setShowAccountTypeDropdown(false);
+            }}
+            className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
+          >
+            <span>{filterStrategyFollow === 'all' ? '策略' : filterStrategyFollow}</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+              <path d="M5 6L0 0h10L5 6z" />
+            </svg>
+          </button>
+
+          {showStrategyFollowDropdown && (
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px] max-h-[300px] overflow-y-auto">
+              <button
+                onClick={() => {
+                  setFilterStrategyFollow('all');
+                  setShowStrategyFollowDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterStrategyFollow === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                全部
+              </button>
+              <button
+                onClick={() => {
+                  setFilterStrategyFollow('未跟随');
+                  setShowStrategyFollowDropdown(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterStrategyFollow === '未跟随' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                未跟随
+              </button>
+              {/* 策略模型选项 */}
+              {dictStrategyModels.map((strategy) => (
+                <button
+                  key={strategy.code}
+                  onClick={() => {
+                    setFilterStrategyFollow(strategy.name);
+                    setShowStrategyFollowDropdown(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                    filterStrategyFollow === strategy.name ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  }`}
+                >
+                  {strategy.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Account Type Filter */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              setShowAccountTypeDropdown(!showAccountTypeDropdown);
+              setShowExchangeDropdown(false);
+              setShowStrategyFollowDropdown(false);
+            }}
+            className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
+          >
+            <span>{filterAccountType === 'all' ? '类型' : filterAccountType}</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+              <path d="M5 6L0 0h10L5 6z" />
+            </svg>
+          </button>
+
+          {showAccountTypeDropdown && (
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
+              <button
+                onClick={() => {
+                  setFilterAccountType('all');
+                  setShowAccountTypeDropdown(false);
+                  setTimeout(() => fetchAccounts(), 100);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterAccountType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                全部
+              </button>
+              <button
+                onClick={() => {
+                  setFilterAccountType('主账户');
+                  setShowAccountTypeDropdown(false);
+                  setTimeout(() => fetchAccounts(), 100);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterAccountType === '主账户' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                主账户
+              </button>
+              <button
+                onClick={() => {
+                  setFilterAccountType('子账户');
+                  setShowAccountTypeDropdown(false);
+                  setTimeout(() => fetchAccounts(), 100);
+                }}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  filterAccountType === '子账户' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
+              >
+                子账户
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Exchange Filter */}
         <div className="relative" ref={exchangeDropdownRef}>
           <button
@@ -443,123 +560,6 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
               >
                 MEXC
               </button>
-            </div>
-          )}
-        </div>
-
-        {/* Account Type Filter */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setShowAccountTypeDropdown(!showAccountTypeDropdown);
-              setShowExchangeDropdown(false);
-              setShowStrategyFollowDropdown(false);
-            }}
-            className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
-          >
-            <span>{filterAccountType === 'all' ? '账户类型' : filterAccountType}</span>
-            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
-              <path d="M5 6L0 0h10L5 6z" />
-            </svg>
-          </button>
-
-          {showAccountTypeDropdown && (
-            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
-              <button
-                onClick={() => {
-                  setFilterAccountType('all');
-                  setShowAccountTypeDropdown(false);
-                  setTimeout(() => fetchAccounts(), 100);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  filterAccountType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                全部
-              </button>
-              <button
-                onClick={() => {
-                  setFilterAccountType('主账户');
-                  setShowAccountTypeDropdown(false);
-                  setTimeout(() => fetchAccounts(), 100);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  filterAccountType === '主账户' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                主账户
-              </button>
-              <button
-                onClick={() => {
-                  setFilterAccountType('子账户');
-                  setShowAccountTypeDropdown(false);
-                  setTimeout(() => fetchAccounts(), 100);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  filterAccountType === '子账户' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                子账户
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Strategy Follow Filter */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setShowStrategyFollowDropdown(!showStrategyFollowDropdown);
-              setShowExchangeDropdown(false);
-              setShowAccountTypeDropdown(false);
-            }}
-            className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
-          >
-            <span>{filterStrategyFollow === 'all' ? '策略跟随' : filterStrategyFollow}</span>
-            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
-              <path d="M5 6L0 0h10L5 6z" />
-            </svg>
-          </button>
-
-          {showStrategyFollowDropdown && (
-            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px] max-h-[300px] overflow-y-auto">
-              <button
-                onClick={() => {
-                  setFilterStrategyFollow('all');
-                  setShowStrategyFollowDropdown(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  filterStrategyFollow === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                全部
-              </button>
-              <button
-                onClick={() => {
-                  setFilterStrategyFollow('未跟随');
-                  setShowStrategyFollowDropdown(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  filterStrategyFollow === '未跟随' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                未跟随
-              </button>
-              {/* 策略模型选项 */}
-              {dictStrategyModels.map((strategy) => (
-                <button
-                  key={strategy.code}
-                  onClick={() => {
-                    setFilterStrategyFollow(strategy.name);
-                    setShowStrategyFollowDropdown(false);
-                  }}
-                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                    filterStrategyFollow === strategy.name ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                  }`}
-                >
-                  {strategy.name}
-                </button>
-              ))}
             </div>
           )}
         </div>

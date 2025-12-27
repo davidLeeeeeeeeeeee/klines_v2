@@ -112,13 +112,16 @@ export function Dashboard() {
 
   // 获取时间范围参数
   const getTimeRangeParams = (range: '0' | '3' | '7' | '30' | '90' | '180') => {
-    const endTime = new Date();
     const startTime = new Date();
+    const endTime = new Date();
 
     if (range === '0') {
-      // 今日：从今天0点开始，endTime 也是今天
+      // 今日：从今天0点开始，到明天0点结束
+      endTime.setDate(endTime.getDate() + 1);
     } else {
       startTime.setDate(startTime.getDate() - parseInt(range));
+      // 其他范围：endTime 也设置为明天0点
+      endTime.setDate(endTime.getDate() + 1);
     }
 
     return {

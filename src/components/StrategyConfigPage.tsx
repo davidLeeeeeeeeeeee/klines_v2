@@ -947,8 +947,8 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   <input
                     type="number"
                     value={formData.requestFrequency}
-                    onChange={(e) => setFormData({ ...formData, requestFrequency: parseInt(e.target.value) || 0 })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    onChange={(e) => setFormData({ ...formData, requestFrequency: parseInt(e.target.value) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 hide-spin-button"
                     min="1"
                     required
                   />
