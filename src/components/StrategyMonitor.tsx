@@ -442,7 +442,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
             onClick={() => setShowActionDropdown(!showActionDropdown)}
             className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
           >
-            <span>{selectedAction === 'all' ? '类型' : selectedAction}</span>
+            <span>{selectedAction === 'all' ? '方向' : selectedAction}</span>
             <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
               <path d="M5 6L0 0h10L5 6z" />
             </svg>

@@ -441,22 +441,24 @@ export function Dashboard() {
   const CustomWeeklyTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      const value = weeklyChartType === 'rate' ? data.rateChange : data.amountChange;
-      const isPositive = value >= 0;
+      const rateValue = data.rateChange;
+      const amountValue = data.amountChange;
+      const isRatePositive = rateValue >= 0;
+      const isAmountPositive = amountValue >= 0;
 
       return (
         <div className="bg-white border border-gray-200 rounded-lg p-2.5 shadow-lg">
           <div className="text-xs text-gray-900 mb-1">{data.displayDate}</div>
-          <div className="text-xs">
-            <span className="text-gray-900">
-              {weeklyChartType === 'rate' ? '收益率' : '收益额'}:
+          <div className="text-xs mb-1">
+            <span className="text-gray-900">收益率: </span>
+            <span className={isRatePositive ? 'text-green-600' : 'text-red-600'}>
+              {isRatePositive ? '+' : '-'}{Math.abs(rateValue).toFixed(2)}%
             </span>
-            {' '}
-            <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
-              {weeklyChartType === 'rate'
-                ? `${isPositive ? '+' : ''}${value.toFixed(2)}%`
-                : `${isPositive ? '+' : ''}${formatNumber(Math.abs(value))}`
-              }
+          </div>
+          <div className="text-xs">
+            <span className="text-gray-900">收益额: </span>
+            <span className={isAmountPositive ? 'text-green-600' : 'text-red-600'}>
+              {isAmountPositive ? '+' : '-'}{formatNumber(Math.abs(amountValue))}
             </span>
           </div>
         </div>
@@ -475,11 +477,11 @@ export function Dashboard() {
         <div className="bg-white border border-gray-200 rounded-lg p-2.5 shadow-lg">
           <div className="text-xs text-gray-900 mb-1">{data.displayDate}</div>
           <div className="text-xs">
-            <span className="text-gray-900">
+            <span className="text-green-600">
               净值:
             </span>
             {' '}
-            <span className="text-gray-900">
+            <span className="text-green-600">
               {formatNumber(value)}
             </span>
           </div>
@@ -618,7 +620,7 @@ export function Dashboard() {
                       )}
                       <span>
                         {overviewData?.initEquity
-                          ? `${(((overviewData.equity - overviewData.initEquity) / overviewData.initEquity) * 100).toFixed(2)}%`
+                          ? `${Math.abs(((overviewData.equity - overviewData.initEquity) / overviewData.initEquity) * 100).toFixed(2)}%`
                           : '0%'
                         }
                       </span>
@@ -827,7 +829,7 @@ export function Dashboard() {
 
             <div className="flex items-start justify-between mb-4">
               <div>
-                <div className="text-gray-900 mb-1">
+                <div className="text-green-600 mb-1">
                   <span className="text-3xl font-semibold">
                     {formatNumber(currentEquity)}
                   </span>
@@ -1310,10 +1312,10 @@ export function Dashboard() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">盈亏比</span>
-                <span className="text-gray-900">
+                <span className="text-blue-600">
                   {statisticsData?.winAmount && statisticsData?.lossAmount
-                    ? (Math.abs(statisticsData.winAmount / statisticsData.lossAmount)).toFixed(2)
-                    : '0'
+                    ? `${(Math.abs(statisticsData.winAmount / statisticsData.lossAmount)).toFixed(2)} : 1`
+                    : '0 : 1'
                   }
                 </span>
               </div>

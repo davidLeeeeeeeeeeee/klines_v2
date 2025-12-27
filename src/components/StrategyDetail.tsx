@@ -329,22 +329,20 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
       const amountValue = data.amountChange;
       const isRatePositive = rateValue >= 0;
       const isAmountPositive = amountValue >= 0;
-      
+
       return (
         <div className="bg-white border border-gray-200 rounded-lg p-2.5 shadow-lg">
           <div className="text-xs text-gray-900 mb-1">{data.displayDate}</div>
           <div className="text-xs mb-0.5">
-            <span className="text-gray-900">收益率:</span>
-            {' '}
+            <span className="text-gray-900">收益率: </span>
             <span className={isRatePositive ? 'text-green-600' : 'text-red-600'}>
-              {rateValue.toFixed(2)}%
+              {isRatePositive ? '+' : '-'}{Math.abs(rateValue).toFixed(2)}%
             </span>
           </div>
           <div className="text-xs">
-            <span className="text-gray-900">收益额:</span>
-            {' '}
+            <span className="text-gray-900">收益额: </span>
             <span className={isAmountPositive ? 'text-green-600' : 'text-red-600'}>
-              {formatNumber(Math.abs(amountValue))}
+              {isAmountPositive ? '+' : '-'}{formatNumber(Math.abs(amountValue))}
             </span>
           </div>
         </div>
@@ -435,7 +433,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
             <div>
               <div className="text-sm text-gray-500 mb-2">近90日盈亏</div>
               <div className={`text-2xl ${totalClosePnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatNumber(Math.abs(totalClosePnl))}
+                {totalClosePnl >= 0 ? formatNumber(totalClosePnl) : `-${formatNumber(Math.abs(totalClosePnl))}`}
               </div>
             </div>
 
@@ -468,7 +466,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-lg text-gray-900 font-semibold">
-              每日盈亏
+              每日盈亏(近2周)
             </h2>
             <div className="flex items-center gap-2">
               <button
@@ -860,7 +858,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">盈亏比</span>
-                <span className="text-gray-900">{tradingStats.profitLossRatio}</span>
+                <span className="text-blue-600">{tradingStats.profitLossRatio} : 1</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">最大回撤</span>
