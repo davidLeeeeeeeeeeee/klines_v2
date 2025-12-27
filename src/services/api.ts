@@ -322,6 +322,10 @@ export interface ClosePnlVO {
   userId: number;
   fundingFee?: number; // 资金费
   marginPlRatio?: number; // 保证金盈亏比率
+  maxProfit?: number; // 最大浮盈
+  maxProfitRate?: number; // 最大浮盈率
+  maxLoss?: number; // 最大浮亏
+  maxLossRate?: number; // 最大浮亏率
 }
 
 export interface PageResponse<T> {
@@ -333,16 +337,21 @@ export interface PageResponse<T> {
  * 获取用户持仓列表
  * @param token 用户token
  * @param symbol 可选的交易对筛选
+ * @param strategyType 可选的策略类型筛选
  * @returns 持仓列表
  */
 export async function getPositionList(
   token: string,
-  symbol?: string
+  symbol?: string,
+  strategyType?: string
 ): Promise<PositionResponse[]> {
   try {
     const url = new URL(`${API_BASE_URL}/alphanow-admin/api/trade/position/list`);
     if (symbol) {
       url.searchParams.append('symbol', symbol);
+    }
+    if (strategyType) {
+      url.searchParams.append('strategyType', strategyType);
     }
 
     console.log('获取持仓列表 - Token:', token);

@@ -304,7 +304,6 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
           onClick={handleCreateAccount}
           className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
         >
-          <Plus className="w-5 h-5" />
           绑定账户
         </button>
       </div>
@@ -323,7 +322,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
       )}
 
       {/* Filters */}
-      <div className="mb-6">
+      <div className="mb-4">
         {/* Search */}
         <div className="relative flex gap-2">
           <div className="relative flex-1">
@@ -338,13 +337,13 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
                   handleRefresh();
                 }
               }}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
             />
           </div>
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-400"
+            className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-400"
           >
             {loading ? '搜索中...' : '搜索'}
           </button>
@@ -363,7 +362,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
             }}
             className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
           >
-            <span>{filterStrategyFollow === 'all' ? '策略' : filterStrategyFollow}</span>
+            <span className={filterStrategyFollow === 'all' ? 'text-gray-700' : 'text-blue-600'}>策略</span>
             <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
               <path d="M5 6L0 0h10L5 6z" />
             </svg>

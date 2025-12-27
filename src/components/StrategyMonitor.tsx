@@ -231,7 +231,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
 
   // 策略列表 - 使用系统字典API获取的StrategyModel
   const strategies = [
-    { id: 'all', name: '所有策略' },
+    { id: 'all', name: '全部' },
     ...strategyModelList.map(item => ({ id: item.code, name: item.name }))
   ];
   console.log('📊 可用的策略列表:', strategies);
@@ -286,8 +286,6 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
       model: chat.model || ''
     };
   });
-
-  const selectedStrategyName = strategies.find(s => s.id === selectedStrategy)?.name || '';
 
   const togglePrompt = (messageId: string) => {
     setExpandedPrompt(prev => ({
@@ -365,9 +363,9 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
         <div className="relative" ref={strategyDropdownRef}>
           <button
             onClick={() => setShowStrategyDropdown(!showStrategyDropdown)}
-            className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
+            className="flex items-center gap-1.5 text-base hover:text-gray-900 transition-colors"
           >
-            <span>{selectedStrategy === 'all' ? '所有策略' : selectedStrategyName}</span>
+            <span className={selectedStrategy === 'all' ? 'text-gray-700' : 'text-blue-600'}>策略</span>
             <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
               <path d="M5 6L0 0h10L5 6z" />
             </svg>
@@ -503,9 +501,9 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
         {/* Time Range Button */}
         <button
           onClick={() => setShowTimeRangeModal(true)}
-          className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
+          className="flex items-center gap-1.5 text-base hover:text-gray-900 transition-colors"
         >
-          <span>{isCustomTimeRange ? '自定义时间' : '最近1天'}</span>
+          <span className={isCustomTimeRange ? 'text-blue-600' : 'text-gray-700'}>时间</span>
           <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
             <path d="M5 6L0 0h10L5 6z" />
           </svg>

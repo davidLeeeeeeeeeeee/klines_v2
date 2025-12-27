@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, X, Play, XCircle, RefreshCw, Loader2, Copy } from 'lucide-react';
+import { ChevronDown, X, Play, XCircle, RefreshCw, Loader2, Copy, Search } from 'lucide-react';
 import {
   getPositionList,
   getPositionChat,
@@ -66,6 +66,10 @@ interface HistoricalTrade {
   fundingFee: number;
   tradeType: string;
   tradeAction: '开仓买入' | '开仓卖出' | '平仓买入' | '平仓卖出';
+  maxProfit: number; // 最大浮盈
+  maxProfitRate: number; // 最大浮盈率
+  maxLoss: number; // 最大浮亏
+  maxLossRate: number; // 最大浮亏率
 }
 
 export function AccountMonitor({ onBack }: AccountMonitorProps) {
@@ -178,7 +182,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       }
 
       const symbol = selectedSymbol === 'all' ? undefined : selectedSymbol;
-      const data = await getPositionList(token, symbol);
+      const strategyType = selectedStrategy === 'all' ? undefined : selectedStrategy;
+      const data = await getPositionList(token, symbol, strategyType);
       setPositions(data);
     } catch (err: any) {
       setError(err.message || '获取持仓列表失败');
@@ -330,10 +335,10 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     fetchSystemDict();
   }, []);
 
-  // 加载持仓数据
+  // 加载持仓数据 - 筛选条件改变时重新请求
   useEffect(() => {
     fetchPositions();
-  }, [selectedSymbol]);
+  }, [selectedSymbol, selectedStrategy]);
 
   // 加载历史仓位数据 - 所有筛选条件改变都重新请求
   useEffect(() => {
@@ -508,7 +513,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
 
   // 策略列表 - 使用系统字典API获取的StrategyModel
   const strategies = [
-    { id: 'all', name: '策略' },
+    { id: 'all', name: '全部' },
     ...strategyModelList.map(item => ({ id: item.code, name: item.name }))
   ];
 
@@ -532,10 +537,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       if (selectedType === 'short' && position.type !== 'short') return false;
     }
 
-    // 按策略筛选
-    if (selectedStrategy !== 'all' && position.strategyType !== selectedStrategy) {
-      return false;
-    }
+    // 策略筛选已通过API请求实现，无需本地筛选
 
     return true;
   });
@@ -591,7 +593,11 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       closeFee: 15,
       fundingFee: 5,
       tradeType: 'AI平仓',
-      tradeAction: '平仓卖出'
+      tradeAction: '平仓卖出',
+      maxProfit: 2100.50,
+      maxProfitRate: 0.105,
+      maxLoss: -320.80,
+      maxLossRate: -0.016
     },
     {
       id: '2',
@@ -612,7 +618,11 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       closeFee: 10,
       fundingFee: 2,
       tradeType: '止损',
-      tradeAction: '平仓买入'
+      tradeAction: '平仓买入',
+      maxProfit: 150.20,
+      maxProfitRate: 0.0125,
+      maxLoss: -580.30,
+      maxLossRate: -0.0483
     },
     {
       id: '3',
@@ -633,11 +643,13 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       closeFee: 2,
       fundingFee: 0.5,
       tradeType: '止盈',
-      tradeAction: '平仓卖出'
+      tradeAction: '平仓卖出',
+      maxProfit: 180.50,
+      maxProfitRate: 0.22,
+      maxLoss: -25.30,
+      maxLossRate: -0.031
     }
   ];
-
-  const selectedStrategyName = strategies.find(s => s.id === selectedStrategy)?.name || '';
 
   return (
     <div className="flex flex-col h-full">
@@ -667,14 +679,25 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
         </div>
 
         {/* Search Filter */}
-        <div className="mb-6">
-          <input
-            type="text"
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            placeholder="输入用户名、交易账户UID"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-          />
+        <div className="mb-4">
+          <div className="relative flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                placeholder="输入用户名、交易账户UID"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              />
+            </div>
+            <button
+              onClick={() => {/* 搜索已实时生效，此按钮可用于刷新数据 */}}
+              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              搜索
+            </button>
+          </div>
         </div>
 
       {/* Tab Navigation with Filters */}
@@ -719,7 +742,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             }}
             className="flex items-center gap-1.5 pb-3 text-base text-gray-700 hover:text-gray-900 transition-colors"
           >
-            <span>{selectedStrategy === 'all' ? '策略' : selectedStrategyName}</span>
+            <span className={selectedStrategy === 'all' ? 'text-gray-700' : 'text-blue-600'}>策略</span>
             <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
               <path d="M5 6L0 0h10L5 6z" />
             </svg>
@@ -1142,7 +1165,19 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         <span className="text-sm text-gray-500">平仓手续费</span>
                         <span className="text-sm text-gray-900">{trade.closeFee} USDT</span>
                       </div>
-                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">最大浮盈</span>
+                        <span className={`text-sm ${(trade.maxProfit ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatNumber(Math.abs(trade.maxProfit ?? 0))} ({(Math.abs(trade.maxProfitRate ?? 0) * 100).toFixed(2)}%)
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">最大浮亏</span>
+                        <span className={`text-sm ${(trade.maxLoss ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatNumber(Math.abs(trade.maxLoss ?? 0))} ({(Math.abs(trade.maxLossRate ?? 0) * 100).toFixed(2)}%)
+                        </span>
+                      </div>
+
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">持仓时间</span>
                         <span className="text-sm text-gray-900">
@@ -1468,11 +1503,11 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                                         <div>平仓价格: <span className="font-semibold">{selectedClosePrice ?? '-'}</span></div>
                                         {/* 止盈(新) */}
                                         {action.takeProfit !== undefined && (
-                                          <div>止盈(新): <span className="font-semibold text-green-600">{action.takeProfit}</span></div>
+                                          <div>止盈: <span className="font-semibold text-green-600">{action.takeProfit}</span></div>
                                         )}
                                         {/* 止损(新) */}
                                         {action.stopLoss !== undefined && (
-                                          <div>止损(新): <span className="font-semibold text-red-600">{action.stopLoss}</span></div>
+                                          <div>止损: <span className="font-semibold text-red-600">{action.stopLoss}</span></div>
                                         )}
                                         {/* 止盈(旧) */}
                                         {action.oldTakeProfit !== undefined && (
