@@ -215,6 +215,7 @@ export async function logout(token: string): Promise<boolean> {
 export interface PositionResponse {
   accountId: number;
   accountName: string;
+  userId: number; // 账户UID
   entryPrice: number;
   lastPrice: number;
   leverage: number;
@@ -298,6 +299,7 @@ export interface PageRequest<T> {
 
 export interface ClosePnlVO {
   accountId: number;
+  accountUid: string; // 账户UID
   accountName: string; // 账户名称
   avgEntryPrice: number;
   avgExitPrice: number;

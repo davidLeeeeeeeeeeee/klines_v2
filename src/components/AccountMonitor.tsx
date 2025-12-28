@@ -34,6 +34,7 @@ interface AccountMonitorProps {
 interface Position {
   id: string;
   accountUid: string;
+  userId: number; // 账户UID
   accountName: string;
   type: 'long' | 'short';
   symbol: string;
@@ -301,6 +302,7 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
     return {
       id: `${apiPos.accountId}-${apiPos.symbol}-${apiPos.side}`,
       accountUid: apiPos.accountId.toString(),
+      userId: apiPos.userId,
       accountName: apiPos.accountName,
       type: apiPos.side === 'Buy' ? 'long' : 'short',
       symbol: apiPos.symbol,
@@ -393,27 +395,6 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
     }
   };
 
-  // Function to calculate duration from a past time to now
-  const calculateDurationToNow = (startTime: string) => {
-    const start = new Date(startTime);
-    const now = new Date();
-    const diffMs = now.getTime() - start.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
-
-    if (diffDays > 0) {
-      return `${diffDays}天${diffHours}小时${diffMinutes}分${diffSeconds}秒`;
-    } else if (diffHours > 0) {
-      return `${diffHours}小时${diffMinutes}分${diffSeconds}秒`;
-    } else if (diffMinutes > 0) {
-      return `${diffMinutes}分${diffSeconds}秒`;
-    } else {
-      return `${diffSeconds}秒`;
-    }
-  };
-
   // Function to format time as MM/DD HH:mm:ss
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -425,17 +406,41 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
     return `${month}/${day} ${hours}:${minutes}:${seconds}`;
   };
 
+  // Function to calculate duration from a past time to now
+  const calculateDurationToNow = (startTime: string) => {
+    const start = new Date(startTime);
+    const now = new Date();
+    const diffMs = now.getTime() - start.getTime();
+    const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+    return `${totalHours}时${diffMinutes}分${diffSeconds}秒`;
+  };
+
   // Function to format position time with open/close time and duration
-  const formatPositionTime = (openTime: string, closeTime: string) => {
-    const open = new Date(openTime);
-    const close = new Date(closeTime);
+  const formatPositionTime = (openTime: string | number, closeTime: string | number) => {
+    const open = typeof openTime === 'number' ? new Date(openTime) : new Date(openTime);
+    const close = typeof closeTime === 'number' ? new Date(closeTime) : new Date(closeTime);
     const diffMs = close.getTime() - open.getTime();
-    const totalMinutes = Math.floor(diffMs / (1000 * 60));
-    const remainingSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+    // 格式化时间显示
+    const formatDateTime = (date: Date) => {
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const seconds = date.getSeconds().toString().padStart(2, '0');
+      return `${month}/${day} ${hours}:${minutes}:${seconds}`;
+    };
+
     return {
-      openTimeFormatted: formatTime(openTime),
-      closeTimeFormatted: formatTime(closeTime),
-      durationFormatted: `${totalMinutes}分${remainingSeconds}秒`
+      openTimeFormatted: formatDateTime(open),
+      closeTimeFormatted: formatDateTime(close),
+      durationFormatted: `${totalHours}时${diffMinutes}分${diffSeconds}秒`
     };
   };
 
@@ -834,7 +839,7 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
           >
             <span>
               {selectedType === 'all'
-                ? '类型'
+                ? '方向'
                 : activeTab === 'positions'
                   ? (selectedType === 'long' ? '多单' : '空单')
                   : (selectedType === 'closeLong' ? '平多' : '平空')
@@ -913,16 +918,17 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
           )}
         </div>
 
-        {/* Position Count Display */}
-        <div className="ml-auto text-right">
-          <div className="text-lg font-semibold text-gray-900">
-            {activeTab === 'positions' ? currentPositions.length : filteredClosedPositions.length}
-          </div>
-        </div>
+      </div>
 
-        {/* Total PnL Display */}
-        <div className="text-right ml-6">
-          <div className={`text-lg font-semibold ${activeTab === 'positions'
+        {/* Stats Display - After Type Filter */}
+        <div className="flex items-center gap-6 text-base pb-3">
+          {/* Position Count Display */}
+          <div className="text-blue-600 font-semibold">
+            {activeTab === 'positions' ? currentPositions.length : filteredClosedPositions.length}条
+          </div>
+
+          {/* Total PnL Display */}
+          <div className={`font-semibold ${activeTab === 'positions'
               ? (totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600')
               : (filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0) >= 0 ? 'text-green-600' : 'text-red-600')
             }`}>
@@ -932,7 +938,6 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
             }
           </div>
         </div>
-      </div>
       </div>
 
       {/* Scrollable List Content */}
@@ -979,7 +984,7 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                       </span>
                     </div>
                     <div className="text-sm text-gray-500">
-                      {position.exchange}: {position.accountName}
+                      {position.exchange}: {position.accountName}（{position.userId}）
                     </div>
                   </div>
 
@@ -1040,8 +1045,10 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">持仓时间</span>
-                    <span className="text-sm text-gray-900">{position.createdAt || '-'}</span>
+                    <span className="text-sm text-gray-500">持仓时长</span>
+                    <span className="text-sm text-gray-900">
+                      {position.createdAt ? `${formatTime(position.createdAt)}  ${calculateDurationToNow(position.createdAt)}` : '-'}
+                    </span>
                   </div>
                 </div>
 
@@ -1075,7 +1082,7 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                           加载中...
                         </>
                       ) : (
-                        'AI CHAT'
+                        'AI-O'
                       )}
                     </button>
                     <button
@@ -1137,7 +1144,7 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                           </span>
                         </div>
                         <div className="text-sm text-gray-600">
-                          {trade.exchange}: {trade.accountName}
+                          {trade.exchange}: {trade.accountName}（{trade.userId}）
                         </div>
                       </div>
 
@@ -1180,29 +1187,28 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                     <div className="grid grid-cols-1 gap-3 mb-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">开仓手续费</span>
-                        <span className="text-sm text-gray-900">{trade.openFee} USDT</span>
+                        <span className="text-sm text-gray-900">{Number(trade.openFee).toFixed(8)}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">平仓手续费</span>
-                        <span className="text-sm text-gray-900">{trade.closeFee} USDT</span>
+                        <span className="text-sm text-gray-900">{Number(trade.closeFee).toFixed(8)}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">最大浮盈</span>
-                        <span className={`text-sm ${(trade.maxProfit ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatNumber(Math.abs(trade.maxProfit ?? 0))} ({(Math.abs(trade.maxProfitRate ?? 0) * 100).toFixed(2)}%)
+                        <span className="text-sm text-gray-500">最大盈利</span>
+                        <span className="text-sm text-green-600">
+                          {(trade.maxProfit ?? 0) < 0 ? '-' : ''}{formatNumber(Math.abs(trade.maxProfit ?? 0))} ({(Math.abs(trade.maxProfitRate ?? 0) * 100).toFixed(2)}%)
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">最大浮亏</span>
-                        <span className={`text-sm ${(trade.maxLoss ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatNumber(Math.abs(trade.maxLoss ?? 0))} ({(Math.abs(trade.maxLossRate ?? 0) * 100).toFixed(2)}%)
+                        <span className="text-sm text-gray-500">最大亏损</span>
+                        <span className="text-sm text-red-600">
+                          {(trade.maxLoss ?? 0) < 0 ? '-' : ''}{formatNumber(Math.abs(trade.maxLoss ?? 0))} ({(Math.abs(trade.maxLossRate ?? 0) * 100).toFixed(2)}%)
                         </span>
                       </div>
-
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">持仓时间</span>
+                        <span className="text-sm text-gray-500">持仓时长</span>
                         <span className="text-sm text-gray-900">
-                          {formatPositionTime(trade.openTime, trade.orderCreateTime).openTimeFormatted} - {formatPositionTime(trade.openTime, trade.orderCreateTime).closeTimeFormatted} {formatPositionTime(trade.openTime, trade.orderCreateTime).durationFormatted}
+                          {formatPositionTime(trade.openTime, trade.orderCreateTime).openTimeFormatted} - {formatPositionTime(trade.openTime, trade.orderCreateTime).closeTimeFormatted}  {formatPositionTime(trade.openTime, trade.orderCreateTime).durationFormatted}
                         </span>
                       </div>
                     </div>
@@ -1225,7 +1231,7 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                                 加载中...
                               </>
                             ) : (
-                              '开仓CHAT'
+                              'AI-O'
                             )}
                           </button>
                         )}
@@ -1241,7 +1247,7 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                                 加载中...
                               </>
                             ) : (
-                              '平仓CHAT'
+                              'AI-C'
                             )}
                           </button>
                         )}

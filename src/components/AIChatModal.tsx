@@ -300,6 +300,22 @@ export function AIChatModal({
 
 // 开仓CHAT内容
 function OpeningChatContent({ tradeSignalArgs }: { tradeSignalArgs: any }) {
+  // 计算保证金收益率
+  const calculateMarginReturn = (targetPrice: number, entryPrice: number, leverage: number = 1) => {
+    if (!entryPrice || entryPrice === 0) return null;
+    const priceChange = (targetPrice - entryPrice) / entryPrice;
+    return (priceChange * leverage * 100).toFixed(2);
+  };
+
+  const leverage = tradeSignalArgs.leverage || 1;
+  const entryPrice = tradeSignalArgs.entryPrice;
+  const takeProfitReturn = tradeSignalArgs.takeProfit && entryPrice
+    ? calculateMarginReturn(tradeSignalArgs.takeProfit, entryPrice, leverage)
+    : null;
+  const stopLossReturn = tradeSignalArgs.stopLoss && entryPrice
+    ? calculateMarginReturn(tradeSignalArgs.stopLoss, entryPrice, leverage)
+    : null;
+
   return (
     <>
       {tradeSignalArgs.confidence !== undefined && (
@@ -312,10 +328,16 @@ function OpeningChatContent({ tradeSignalArgs }: { tradeSignalArgs: any }) {
         <div>入场价格: <span className="font-semibold">{tradeSignalArgs.entryPrice}</span></div>
       )}
       {tradeSignalArgs.takeProfit !== undefined && (
-        <div>止盈价格: <span className="font-semibold text-green-600">{tradeSignalArgs.takeProfit}</span></div>
+        <div>止盈价格: <span className="font-semibold text-green-600">
+          {tradeSignalArgs.takeProfit}
+          {takeProfitReturn !== null && <span className="ml-1">({takeProfitReturn}%)</span>}
+        </span></div>
       )}
       {tradeSignalArgs.stopLoss !== undefined && (
-        <div>止损价格: <span className="font-semibold text-red-600">{tradeSignalArgs.stopLoss}</span></div>
+        <div>止损价格: <span className="font-semibold text-red-600">
+          {tradeSignalArgs.stopLoss}
+          {stopLossReturn !== null && <span className="ml-1">({stopLossReturn}%)</span>}
+        </span></div>
       )}
       {tradeSignalArgs.riskUsd !== undefined && (
         <div>风险金额: <span className="font-semibold">{tradeSignalArgs.riskUsd}</span></div>
@@ -351,32 +373,48 @@ function ClosingChatContent({
   if (filteredActions.length === 0) return null;
   const action = filteredActions[0];
 
+  // 计算保证金收益率
+  const calculateMarginReturn = (targetPrice: number, entryPrice: number, leverage: number = 1) => {
+    if (!entryPrice || entryPrice === 0) return null;
+    const priceChange = (targetPrice - entryPrice) / entryPrice;
+    return (priceChange * leverage * 100).toFixed(2);
+  };
+
+  const leverage = action.leverage || 1;
+  const takeProfitReturn = action.takeProfit && selectedEntryPrice
+    ? calculateMarginReturn(action.takeProfit, selectedEntryPrice, leverage)
+    : null;
+  const stopLossReturn = action.stopLoss && selectedEntryPrice
+    ? calculateMarginReturn(action.stopLoss, selectedEntryPrice, leverage)
+    : null;
+
   return (
     <>
       {action.action && (
-        <div>操作类型: <span className={`font-semibold ${
-          action.action === 'close_long' || action.action === 'close_short'
-            ? 'text-orange-600'
-            : 'text-blue-600'
-        }`}>{action.action}</span></div>
+        <div>操作类型: <span className="font-bold text-blue-600">{action.action}</span></div>
       )}
       {action.thought && (
-        <div>操作描述: <span className="font-semibold text-green-600">{action.thought}</span></div>
+        <div>操作描述: <span className="font-bold text-blue-600">{action.thought}</span></div>
       )}
 
       <div className="mt-3 pt-3 border-t border-gray-200">
-        <div className="font-medium mb-2">账户操作:</div>
-        <div className="space-y-1.5 ml-2">
+        <div className="space-y-1.5">
           <div>仓位方向: <span className={`font-semibold ${
             selectedPositionSide === 'Buy' ? 'text-green-600' : 'text-red-600'
           }`}>{selectedPositionSide || '-'}</span></div>
           <div>开仓价格: <span className="font-semibold">{selectedEntryPrice ?? '-'}</span></div>
           <div>平仓价格: <span className="font-semibold">{selectedClosePrice ?? '-'}</span></div>
           {action.takeProfit !== undefined && (
-            <div>止盈: <span className="font-semibold text-green-600">{action.takeProfit}</span></div>
+            <div>止盈价格: <span className="font-semibold text-green-600">
+              {action.takeProfit}
+              {takeProfitReturn !== null && <span className="ml-1">({takeProfitReturn}%)</span>}
+            </span></div>
           )}
           {action.stopLoss !== undefined && (
-            <div>止损: <span className="font-semibold text-red-600">{action.stopLoss}</span></div>
+            <div>止损价格: <span className="font-semibold text-red-600">
+              {action.stopLoss}
+              {stopLossReturn !== null && <span className="ml-1">({stopLossReturn}%)</span>}
+            </span></div>
           )}
           {action.oldTakeProfit !== undefined && (
             <div>止盈(旧): <span className="font-semibold text-gray-500">{action.oldTakeProfit}</span></div>
