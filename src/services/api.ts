@@ -281,6 +281,7 @@ export interface ClosePnlListReq {
   accountId?: number;
   exchange?: string;
   side?: string;
+  strategyType?: string;
   symbol?: string;
 }
 

@@ -223,6 +223,7 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
         param: {
           symbol: selectedSymbol === 'all' ? undefined : selectedSymbol,
           side: sideParam,
+          strategyType: selectedStrategy === 'all' ? undefined : selectedStrategy,
         }
       };
 
@@ -715,7 +716,11 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
         <button
           onClick={() => {
             setActiveTab('positions');
-            setSelectedType('all'); // 切换Tab时重置类型筛选
+            // 切换Tab时重置所有筛选条件
+            setSelectedType('all');
+            setSelectedSymbol('all');
+            setSelectedStrategy('all');
+            setSearchFilter('');
           }}
           className={`pb-3 text-base transition-colors relative ${activeTab === 'positions'
               ? 'text-gray-900 font-semibold'
@@ -730,7 +735,11 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
         <button
           onClick={() => {
             setActiveTab('history');
-            setSelectedType('all'); // 切换Tab时重置类型筛选
+            // 切换Tab时重置所有筛选条件
+            setSelectedType('all');
+            setSelectedSymbol('all');
+            setSelectedStrategy('all');
+            setSearchFilter('');
           }}
           className={`pb-3 text-base transition-colors relative ${activeTab === 'history'
               ? 'text-gray-900 font-semibold'
@@ -918,10 +927,8 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
           )}
         </div>
 
-      </div>
-
-        {/* Stats Display - After Type Filter */}
-        <div className="flex items-center gap-6 text-base pb-3">
+        {/* Stats Display - 与筛选条件在同一行 */}
+        <div className="flex items-center gap-6 text-base pb-3 ml-auto">
           {/* Position Count Display */}
           <div className="text-blue-600 font-semibold">
             {activeTab === 'positions' ? currentPositions.length : filteredClosedPositions.length}条
@@ -938,6 +945,7 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
             }
           </div>
         </div>
+      </div>
       </div>
 
       {/* Scrollable List Content */}
@@ -1026,14 +1034,14 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                       <span className="text-sm text-green-600">
                         {position.takeProfit ? formatNumber(position.takeProfit) : '-'}
                         {position.takeProfitRatio !== null && (
-                          <span className="text-xs ml-0.5">({position.takeProfitRatio.toFixed(2)}%)</span>
+                          <span className="text-xs ml-0.5">({(position.takeProfitRatio * 100).toFixed(2)}%)</span>
                         )}
                       </span>
                       <span className="text-sm text-gray-400">/</span>
                       <span className="text-sm text-red-600">
                         {position.stopLoss ? formatNumber(position.stopLoss) : '-'}
                         {position.stopLossRatio !== null && (
-                          <span className="text-xs ml-0.5">({position.stopLossRatio.toFixed(2)}%)</span>
+                          <span className="text-xs ml-0.5">({(position.stopLossRatio * 100).toFixed(2)}%)</span>
                         )}
                       </span>
                     </div>
