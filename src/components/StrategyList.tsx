@@ -246,7 +246,7 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, onUpdateStrateg
                           ? 'bg-yellow-100 text-yellow-700'
                           : 'bg-red-100 text-red-700'
                       }`}>
-                        {strategy.riskLevel === 'low' ? '低风险' : strategy.riskLevel === 'medium' ? '中等风险' : '高风险'}
+                        {strategy.riskLevel === 'low' ? '低风险' : strategy.riskLevel === 'medium' ? '中风险' : '高风险'}
                       </span>
                     </div>
                     {/* Strategy Tags */}

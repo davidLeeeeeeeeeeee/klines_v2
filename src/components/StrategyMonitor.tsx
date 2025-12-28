@@ -363,16 +363,18 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
         <div className="relative" ref={strategyDropdownRef}>
           <button
             onClick={() => setShowStrategyDropdown(!showStrategyDropdown)}
-            className="flex items-center gap-1.5 text-base hover:text-gray-900 transition-colors"
+            className={`flex items-center gap-1.5 text-base hover:text-gray-900 transition-colors whitespace-nowrap ${
+              selectedStrategy === 'all' ? 'text-gray-700' : 'text-blue-600'
+            }`}
           >
-            <span className={selectedStrategy === 'all' ? 'text-gray-700' : 'text-blue-600'}>策略</span>
-            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+            <span>策略</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className={selectedStrategy === 'all' ? 'text-gray-500' : 'text-blue-600'}>
               <path d="M5 6L0 0h10L5 6z" />
             </svg>
           </button>
 
           {showStrategyDropdown && (
-            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[180px]">
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 max-h-[300px] overflow-y-auto">
               {strategies.map((strategy) => (
                 <button
                   key={strategy.id}
@@ -382,7 +384,7 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
                     setCurrentPage(1); // 重置页码
                     // 触发新的API请求会在useEffect中自动执行
                   }}
-                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors whitespace-nowrap ${
                     selectedStrategy === strategy.id ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
                   }`}
                 >

@@ -39,7 +39,8 @@ export interface TradingAccount {
   initStatus: InitStatus;
   netValue: string;
   initialNetValue: string;
-  profitRate: number; // 收益率（百分比）
+  equity: number; // 当前净值（原始数值）
+  initEquity: number; // 初始净值（原始数值）
   createdAt: string;
   username: string;
   strategyName?: string;
@@ -81,6 +82,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
   const [strategiesLoading, setStrategiesLoading] = useState(false);
   const [bindingStrategy, setBindingStrategy] = useState(false);
   const [dictStrategyModels, setDictStrategyModels] = useState<DictItem[]>([]);
+  const [dictExchangeTypes, setDictExchangeTypes] = useState<DictItem[]>([]);
 
   // Refs for click outside detection
   const exchangeDropdownRef = useRef<HTMLDivElement>(null);
@@ -107,7 +109,8 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
       initStatus: apiAccount.init ? '已初始化' : '未初始化',
       netValue: formatNumber(apiAccount.equity),
       initialNetValue: formatNumber(apiAccount.initEquity),
-      profitRate: apiAccount.profitRate ?? 0,
+      equity: apiAccount.equity,
+      initEquity: apiAccount.initEquity,
       createdAt: apiAccount.createTime,
       username: '', // API响应中没有username字段
       strategyName: apiAccount.strategyTypeName || apiAccount.strategyType || undefined,
@@ -131,15 +134,20 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
         throw new Error('未登录，请先登录');
       }
 
-      // 构建请求参数 - 所有参数都必须传递，使用默认值表示不筛选
+      // 构建请求参数
       const request: AccountListReq = {
-        accType: filterAccountType === 'all' ? 0 : (filterAccountType === '主账户' ? 0 : 1),
         exchange: filterExchange === 'all' ? '' : filterExchange,
         search: searchTerm || '',
         strategyType: (filterStrategyFollow === 'all' || filterStrategyFollow === '未跟随')
           ? ''
           : filterStrategyFollow
       };
+      // accType: 0=主账户，1=子账户，全部时不传
+      if (filterAccountType === '主账户') {
+        request.accType = 0;
+      } else if (filterAccountType === '子账户') {
+        request.accType = 1;
+      }
 
       const data = await getAccountList(token, request);
       const convertedAccounts = data.map(convertApiDataToTradingAccount);
@@ -164,18 +172,25 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
     }
   }, [filterStrategyFollow]);
 
-  // 加载策略模型字典
+  // 当类型或交易所筛选变化时刷新列表
   useEffect(() => {
-    const loadStrategyModels = async () => {
+    fetchAccounts();
+  }, [filterAccountType, filterExchange]);
+
+  // 加载策略模型和交易所类型字典
+  useEffect(() => {
+    const loadDictData = async () => {
       try {
         const dictData = await getSystemDict();
         setDictStrategyModels(dictData.StrategyModel || []);
+        setDictExchangeTypes(dictData.ExchangeType || []);
       } catch (err) {
-        console.error('加载策略模型字典失败:', err);
+        console.error('加载字典数据失败:', err);
         setDictStrategyModels([]);
+        setDictExchangeTypes([]);
       }
     };
-    loadStrategyModels();
+    loadDictData();
   }, []);
 
   const handleRefresh = () => {
@@ -302,7 +317,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
         </div>
         <button
           onClick={handleCreateAccount}
-          className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+          className="w-28 flex items-center justify-center gap-2 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors"
         >
           绑定账户
         </button>
@@ -343,7 +358,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-400"
+            className="w-28 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-400"
           >
             {loading ? '搜索中...' : '搜索'}
           </button>
@@ -360,22 +375,24 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
               setShowExchangeDropdown(false);
               setShowAccountTypeDropdown(false);
             }}
-            className="flex items-center gap-1.5 text-base text-gray-700 hover:text-gray-900 transition-colors"
+            className={`flex items-center gap-1.5 text-base hover:text-gray-900 transition-colors whitespace-nowrap ${
+              filterStrategyFollow === 'all' ? 'text-gray-700' : 'text-blue-600'
+            }`}
           >
-            <span className={filterStrategyFollow === 'all' ? 'text-gray-700' : 'text-blue-600'}>策略</span>
-            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+            <span>策略</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className={filterStrategyFollow === 'all' ? 'text-gray-500' : 'text-blue-600'}>
               <path d="M5 6L0 0h10L5 6z" />
             </svg>
           </button>
 
           {showStrategyFollowDropdown && (
-            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px] max-h-[300px] overflow-y-auto">
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 max-h-[300px] overflow-y-auto">
               <button
                 onClick={() => {
                   setFilterStrategyFollow('all');
                   setShowStrategyFollowDropdown(false);
                 }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors whitespace-nowrap ${
                   filterStrategyFollow === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
                 }`}
               >
@@ -386,7 +403,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
                   setFilterStrategyFollow('未跟随');
                   setShowStrategyFollowDropdown(false);
                 }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors whitespace-nowrap ${
                   filterStrategyFollow === '未跟随' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
                 }`}
               >
@@ -400,7 +417,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
                     setFilterStrategyFollow(strategy.name);
                     setShowStrategyFollowDropdown(false);
                   }}
-                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors whitespace-nowrap ${
                     filterStrategyFollow === strategy.name ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
                   }`}
                 >
@@ -433,7 +450,6 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
                 onClick={() => {
                   setFilterAccountType('all');
                   setShowAccountTypeDropdown(false);
-                  setTimeout(() => fetchAccounts(), 100);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
                   filterAccountType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
@@ -445,7 +461,6 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
                 onClick={() => {
                   setFilterAccountType('主账户');
                   setShowAccountTypeDropdown(false);
-                  setTimeout(() => fetchAccounts(), 100);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
                   filterAccountType === '主账户' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
@@ -457,7 +472,6 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
                 onClick={() => {
                   setFilterAccountType('子账户');
                   setShowAccountTypeDropdown(false);
-                  setTimeout(() => fetchAccounts(), 100);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
                   filterAccountType === '子账户' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
@@ -491,7 +505,6 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
                 onClick={() => {
                   setFilterExchange('all');
                   setShowExchangeDropdown(false);
-                  setTimeout(() => fetchAccounts(), 100);
                 }}
                 className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
                   filterExchange === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
@@ -499,66 +512,21 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
               >
                 全部
               </button>
-              <button
-                onClick={() => {
-                  setFilterExchange('Binance');
-                  setShowExchangeDropdown(false);
-                  setTimeout(() => fetchAccounts(), 100);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  filterExchange === 'Binance' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                Binance
-              </button>
-              <button
-                onClick={() => {
-                  setFilterExchange('Bybit');
-                  setShowExchangeDropdown(false);
-                  setTimeout(() => fetchAccounts(), 100);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  filterExchange === 'Bybit' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                Bybit
-              </button>
-              <button
-                onClick={() => {
-                  setFilterExchange('OKX');
-                  setShowExchangeDropdown(false);
-                  setTimeout(() => fetchAccounts(), 100);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  filterExchange === 'OKX' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                OKX
-              </button>
-              <button
-                onClick={() => {
-                  setFilterExchange('Gate');
-                  setShowExchangeDropdown(false);
-                  setTimeout(() => fetchAccounts(), 100);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  filterExchange === 'Gate' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                Gate
-              </button>
-              <button
-                onClick={() => {
-                  setFilterExchange('MEXC');
-                  setShowExchangeDropdown(false);
-                  setTimeout(() => fetchAccounts(), 100);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  filterExchange === 'MEXC' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                MEXC
-              </button>
+              {/* 交易所类型选项 */}
+              {dictExchangeTypes.map((exchange) => (
+                <button
+                  key={exchange.code}
+                  onClick={() => {
+                    setFilterExchange(exchange.name);
+                    setShowExchangeDropdown(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                    filterExchange === exchange.name ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  }`}
+                >
+                  {exchange.name}
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -629,12 +597,20 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
               <div>
                 <div className="text-sm text-gray-500 mb-1">当前净值</div>
-                <div className="flex items-center gap-2 text-green-600">
-                  <span>{account.netValue}</span>
-                  <span className={account.profitRate >= 0 ? 'text-green-600' : 'text-red-600'}>
-                    ({formatNumber(Math.abs(account.profitRate) * 100)}%)
-                  </span>
-                </div>
+                {(() => {
+                  // 计算收益率：(当前净值 - 初始净值) / 初始净值 * 100
+                  const profitRate = account.initEquity > 0
+                    ? ((account.equity - account.initEquity) / account.initEquity) * 100
+                    : 0;
+                  return (
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-900">{account.netValue}</span>
+                      <span className={profitRate >= 0 ? 'text-green-600' : 'text-red-600'}>
+                        ({profitRate >= 0 ? '+' : ''}{profitRate.toFixed(2)}%)
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
               <div>
                 <div className="text-sm text-gray-500 mb-1">初始净值</div>
@@ -789,7 +765,7 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
             {/* Modal Header */}
             <div className="mb-6 flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">选择策��</h2>
+                <h2 className="text-xl font-semibold text-gray-900">选择策略</h2>
                 <button
                   onClick={() => {
                     setShowStrategyModal(false);
@@ -817,11 +793,13 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {strategies.map((strategy) => {
-                    const winRate = strategy.winCount && strategy.lossCount
-                      ? ((strategy.winCount / (strategy.winCount + strategy.lossCount)) * 100).toFixed(1)
+                    const overview = strategy.overview;
+                    const winCount = overview?.winCount || 0;
+                    const lossCount = overview?.lossCount || 0;
+                    const winRate = (winCount + lossCount) > 0
+                      ? ((winCount / (winCount + lossCount)) * 100).toFixed(1)
                       : '0.0';
-                    const totalPnl = strategy.totalClosePnl || 0;
-                    const profitRate = totalPnl >= 0 ? `+${formatNumber(totalPnl)}` : formatNumber(totalPnl);
+                    const totalPnl = overview?.totalClosePnl || 0;
 
                     return (
                       <div
@@ -835,13 +813,6 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
                       >
                         <div className="flex items-start justify-between mb-3">
                           <h3 className="text-lg font-semibold text-gray-900">{strategy.name}</h3>
-                          <span className={`px-2 py-1 text-xs rounded ${
-                            strategy.status
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            {strategy.status ? '运行中' : '已停止'}
-                          </span>
                         </div>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
@@ -849,21 +820,17 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
                             <span className={`text-sm font-semibold ${
                               totalPnl >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
-                              {profitRate} USDT
+                              {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-500">胜率</span>
                             <span className="text-sm font-semibold text-gray-900">{winRate}%</span>
                           </div>
-                          {strategy.maxDrawdownRate !== null && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-500">最大回撤</span>
-                              <span className="text-sm font-semibold text-red-600">
-                                {(strategy.maxDrawdownRate * 100).toFixed(2)}%
-                              </span>
-                            </div>
-                          )}
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-500">最大回撤</span>
+                            <span className="text-sm font-semibold text-red-600">-</span>
+                          </div>
                         </div>
                       </div>
                     );

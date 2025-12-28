@@ -230,6 +230,8 @@ export interface PositionResponse {
   exchange?: string; // 交易所名称
   strategyType?: string; // 策略类型
   createdTime?: string; // 创建时间
+  takeProfitRatio?: number; // 止盈收益率
+  stopLossRatio?: number; // 止损收益率
 }
 
 export interface PositionChatRequest {
@@ -677,7 +679,7 @@ export async function getChatList(
 
 // 账户管理相关接口类型定义
 export interface AccountListReq {
-  accType: number; // 账号类型：0=主账号，1=子账号，传0表示不筛选
+  accType?: number; // 账号类型：0=主账号，1=子账号，不传表示全部
   exchange: string; // 交易所类型：BYBIT，传空字符串表示不筛选
   search: string; // 搜索关键字，传空字符串表示不搜索
   strategyType: string; // 策略类型，传空字符串表示不筛选

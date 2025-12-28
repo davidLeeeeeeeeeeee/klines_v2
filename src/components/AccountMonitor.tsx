@@ -47,6 +47,8 @@ interface Position {
   leverage: number;
   takeProfit: number | null;
   stopLoss: number | null;
+  takeProfitRatio: number | null; // 止盈收益率
+  stopLossRatio: number | null; // 止损收益率
   createdAt: string;
   strategyType: string;
   exchange: string;
@@ -312,6 +314,8 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
       leverage: apiPos.leverage,
       takeProfit: apiPos.takeProfit || null,
       stopLoss: apiPos.stopLoss || null,
+      takeProfitRatio: apiPos.takeProfitRatio ?? null, // 止盈收益率
+      stopLossRatio: apiPos.stopLossRatio ?? null, // 止损收益率
       createdAt: apiPos.createdTime || '',
       strategyType: apiPos.strategyType || '',
       exchange: apiPos.exchange || 'BYBIT',
@@ -741,16 +745,18 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
               setShowStrategyDropdown(!showStrategyDropdown);
               setShowSymbolDropdown(false);
             }}
-            className="flex items-center gap-1.5 pb-3 text-base text-gray-700 hover:text-gray-900 transition-colors"
+            className={`flex items-center gap-1.5 pb-3 text-base hover:text-gray-900 transition-colors whitespace-nowrap ${
+              selectedStrategy === 'all' ? 'text-gray-700' : 'text-blue-600'
+            }`}
           >
-            <span className={selectedStrategy === 'all' ? 'text-gray-700' : 'text-blue-600'}>策略</span>
-            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+            <span>策略</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className={selectedStrategy === 'all' ? 'text-gray-500' : 'text-blue-600'}>
               <path d="M5 6L0 0h10L5 6z" />
             </svg>
           </button>
 
           {showStrategyDropdown && (
-            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 max-h-[300px] overflow-y-auto">
               {strategies.map((strategy) => (
                 <button
                   key={strategy.id}
@@ -758,8 +764,9 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                     setSelectedStrategy(strategy.id);
                     setShowStrategyDropdown(false);
                   }}
-                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedStrategy === strategy.id ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                    }`}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors whitespace-nowrap ${
+                    selectedStrategy === strategy.id ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  }`}
                 >
                   {strategy.name}
                 </button>
@@ -791,8 +798,9 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                   setSelectedSymbol('all');
                   setShowSymbolDropdown(false);
                 }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedSymbol === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                  }`}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  selectedSymbol === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
               >
                 全部
               </button>
@@ -803,8 +811,9 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                     setSelectedSymbol(symbol);
                     setShowSymbolDropdown(false);
                   }}
-                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedSymbol === symbol ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                    }`}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                    selectedSymbol === symbol ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  }`}
                 >
                   {symbol}
                 </button>
@@ -843,8 +852,9 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                   setSelectedType('all');
                   setShowTypeDropdown(false);
                 }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                  }`}
+                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                  selectedType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                }`}
               >
                 全部
               </button>
@@ -855,8 +865,9 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                       setSelectedType('long');
                       setShowTypeDropdown(false);
                     }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'long' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                      }`}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                      selectedType === 'long' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
                   >
                     多单
                   </button>
@@ -865,8 +876,9 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                       setSelectedType('short');
                       setShowTypeDropdown(false);
                     }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'short' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                      }`}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                      selectedType === 'short' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
                   >
                     空单
                   </button>
@@ -878,8 +890,9 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                       setSelectedType('closeLong');
                       setShowTypeDropdown(false);
                     }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'closeLong' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                      }`}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                      selectedType === 'closeLong' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
                   >
                     平多
                   </button>
@@ -888,8 +901,9 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                       setSelectedType('closeShort');
                       setShowTypeDropdown(false);
                     }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'closeShort' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                      }`}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                      selectedType === 'closeShort' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
                   >
                     平空
                   </button>
@@ -1006,10 +1020,16 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                     <div className="flex items-center gap-0.5">
                       <span className="text-sm text-green-600">
                         {position.takeProfit ? formatNumber(position.takeProfit) : '-'}
+                        {position.takeProfitRatio !== null && (
+                          <span className="text-xs ml-0.5">({position.takeProfitRatio.toFixed(2)}%)</span>
+                        )}
                       </span>
                       <span className="text-sm text-gray-400">/</span>
                       <span className="text-sm text-red-600">
                         {position.stopLoss ? formatNumber(position.stopLoss) : '-'}
+                        {position.stopLossRatio !== null && (
+                          <span className="text-xs ml-0.5">({position.stopLossRatio.toFixed(2)}%)</span>
+                        )}
                       </span>
                     </div>
                   </div>
