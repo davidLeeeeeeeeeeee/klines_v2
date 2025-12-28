@@ -2488,3 +2488,92 @@ export async function getStrategySymbolRanking(
     throw new ApiError(error instanceof Error ? error.message : '网络请求失败');
   }
 }
+
+// 策略操作实例响应类型
+export interface StrategyInstanceRes {
+  accountId: number;
+  chatId: number;
+  confidence: number;
+  createTime: string;
+  entryPrice: number | null;
+  failureReason: string | null;
+  id: number;
+  isSuccess: boolean;
+  orderId: string | null;
+  qty: number | null;
+  side: string;
+  status: boolean;
+  stopLoss: number | null;
+  strategyId: number;
+  strategyType: string;
+  suggestEntryPrice: number | null;
+  symbol: string;
+  takeProfit: number | null;
+  updateTime: string;
+  userId: number;
+}
+
+/**
+ * 获取仓位操作实例列表
+ * @param token 用户token
+ * @param id 平仓记录ID
+ * @returns 策略实例列表
+ */
+export async function getPositionStrategyInstance(
+  token: string,
+  id: number
+): Promise<StrategyInstanceRes[]> {
+  try {
+    console.log('获取策略操作实例 - Token:', token);
+    console.log('获取策略操作实例 - ID:', id);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/trade/position/strategy/instance`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify({ id }),
+    });
+
+    console.log('策略操作实例响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let errorMessage = errorData.description || errorData.message || `获取策略操作实例失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
+      throw new ApiError(
+        errorMessage,
+        response.status,
+        errorData
+      );
+    }
+
+    const apiResponse: ApiResponse<StrategyInstanceRes[]> = await response.json();
+    console.log('策略操作实例完整响应:', apiResponse);
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取策略操作实例失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
+      throw new ApiError(
+        errorMessage,
+        apiResponse.code,
+        apiResponse
+      );
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '获取策略操作实例失败'
+    );
+  }
+}

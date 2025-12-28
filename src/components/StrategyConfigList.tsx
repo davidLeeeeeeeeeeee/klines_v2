@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Activity, DollarSign, Users, ArrowRight, Plus, Play, Pause, Settings, X, RefreshCw } from 'lucide-react';
 import { getStrategyModelList, switchStrategyModelStatus, getSystemDict, StrategyModelListRes, DictItem } from '../services/api';
 import { getToken } from '../utils/storage';
+import { formatNumber } from '../utils/format';
 
 interface Strategy {
   id: string;
   name: string;
   description: string;
   returns: number;
-  totalReturn: string;
+  totalReturn: number; // 总收益额，保留原始正负值
   followers: number;
   winRate: number;
   maxDrawdown: number;
@@ -51,9 +52,9 @@ function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
     ? Number(((winCount / (winCount + lossCount)) * 100).toFixed(1))
     : 0;
 
-  // 盈亏比 = winAmount / |lossAmount|
+  // 盈亏比 = winAmount / |lossAmount|，精确到小数点2位
   const profitLossRatio = lossAmount !== 0
-    ? Number((winAmount / Math.abs(lossAmount)).toFixed(1))
+    ? Number((winAmount / Math.abs(lossAmount)).toFixed(2))
     : 0;
 
   return {
@@ -61,7 +62,7 @@ function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
     name: apiData.name,
     description: apiData.description,
     returns: 0, // 总收益率先写0
-    totalReturn: Math.abs(totalClosePnl).toFixed(2),
+    totalReturn: totalClosePnl, // 保留原始正负值
     followers: overview?.followAccountNum ?? 0,
     winRate: winRate,
     maxDrawdown: 0, // 最大回撤先写0
@@ -216,7 +217,7 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
         name: strategyData.name || '',
         description: strategyData.description || '',
         returns: 0,
-        totalReturn: '+0',
+        totalReturn: 0,
         followers: 0,
         winRate: 0,
         maxDrawdown: 0,
@@ -428,15 +429,15 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
                       总收益率
                     </div>
                     <div className={`${strategy.returns >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {strategy.returns}%
+                      {strategy.returns >= 0 ? '' : '-'}{Math.abs(strategy.returns).toFixed(2)}%
                     </div>
                   </div>
                   <div>
                     <div className="text-gray-600 text-sm mb-1">
                       总收益额
                     </div>
-                    <div className={`${strategy.returns >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {strategy.totalReturn}
+                    <div className={`${strategy.totalReturn >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {strategy.totalReturn >= 0 ? '' : '-'}{formatNumber(Math.abs(strategy.totalReturn))}
                     </div>
                   </div>
                   <div className="text-right">
@@ -444,7 +445,7 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
                       最大回撤
                     </div>
                     <div className="text-red-600">
-                      -{strategy.maxDrawdown}%
+                      {Math.abs(strategy.maxDrawdown).toFixed(2)}%
                     </div>
                   </div>
                   <div>
@@ -457,7 +458,7 @@ export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategie
                     <div className="text-gray-600 text-sm mb-1">
                       盈亏比
                     </div>
-                    <div className="text-blue-600">{strategy.sharpeRatio}:1</div>
+                    <div className="text-blue-600">{strategy.sharpeRatio.toFixed(2)}:1</div>
                   </div>
                   <div className="text-right">
                     <div className="text-gray-600 text-sm mb-1">

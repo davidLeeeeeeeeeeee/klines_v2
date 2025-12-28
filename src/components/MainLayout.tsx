@@ -20,6 +20,7 @@ import { EditTradingAccountPage } from './EditTradingAccountPage';
 import { InitAccountPage } from './InitAccountPage';
 import { RiskManagement } from './RiskManagement';
 import { FundTransfer } from './FundTransfer';
+import { OperationInstance } from './OperationInstance';
 import type { TradingAccount } from './TradingAccounts';
 import { getCryptoPrices, getCurrentUserInfo } from '../services/api';
 import { getUserInfo, getToken, getUserType } from '../utils/storage';
@@ -55,6 +56,14 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
 
   // User management state
   const [selectedUser, setSelectedUser] = useState<any>(null);
+
+  // Operation instance state
+  const [operationInstanceData, setOperationInstanceData] = useState<{
+    id: number;
+    strategyType: string;
+    exchange: string;
+    accountName: string;
+  } | null>(null);
 
   // Trading account state
   const [selectedTradingAccount, setSelectedTradingAccount] = useState<any>(null);
@@ -717,7 +726,15 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       case 'strategy-monitor':
         return <StrategyMonitor onBack={() => setCurrentPage('dashboard')} />;
       case 'account-monitor':
-        return <AccountMonitor onBack={() => setCurrentPage('dashboard')} />;
+        return (
+          <AccountMonitor
+            onBack={() => setCurrentPage('dashboard')}
+            onNavigateToInstance={(data) => {
+              setOperationInstanceData(data);
+              setCurrentPage('operation-instance');
+            }}
+          />
+        );
       case 'user-create':
         return <CreateUserPage onBack={handleBackToUserList} />;
       case 'user-edit':
@@ -751,6 +768,16 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
         );
       case 'risk-management':
         return <RiskManagement onBack={() => setCurrentPage('dashboard')} />;
+      case 'operation-instance':
+        return operationInstanceData ? (
+          <OperationInstance
+            onBack={() => {
+              setCurrentPage('account-monitor');
+              setOperationInstanceData(null);
+            }}
+            tradeData={operationInstanceData}
+          />
+        ) : <Dashboard />;
       default:
         return <Dashboard />;
     }
@@ -768,7 +795,8 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
     'trading-account-create',
     'trading-account-edit',
     'trading-account-init',
-    'fund-transfer'
+    'fund-transfer',
+    'operation-instance'
   ].includes(currentPage);
 
   if (isSecondaryPage) {
