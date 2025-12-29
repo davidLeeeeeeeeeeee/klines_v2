@@ -23,12 +23,6 @@ import { AIChatModal } from './AIChatModal';
 
 interface AccountMonitorProps {
   onBack: () => void;
-  onNavigateToInstance?: (data: {
-    id: number;
-    strategyType: string;
-    exchange: string;
-    accountName: string;
-  }) => void;
 }
 
 interface Position {
@@ -81,7 +75,7 @@ interface HistoricalTrade {
   maxLossRate: number; // 最大浮亏率
 }
 
-export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorProps) {
+export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const formatClipboardText = (data: unknown) => {
     if (data === null || data === undefined) return '';
     if (typeof data === 'string') return data;
@@ -1262,14 +1256,15 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                         <button
                           className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
                           onClick={() => {
-                            if (onNavigateToInstance) {
-                              onNavigateToInstance({
-                                id: trade.id,
-                                strategyType: trade.strategyType || '-',
-                                exchange: trade.exchange || '-',
-                                accountName: trade.accountName || '-'
-                              });
-                            }
+                            // 在新标签页中打开实例页面
+                            const params = new URLSearchParams({
+                              page: 'instance',
+                              id: trade.id.toString(),
+                              strategyType: trade.strategyType || '-',
+                              exchange: trade.exchange || '-',
+                              accountName: trade.accountName || '-',
+                            });
+                            window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
                           }}
                         >
                           实例

@@ -671,18 +671,15 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
         return <Dashboard />;
       case 'strategy-list':
         return (
-          <StrategyList 
-            onViewDetail={handleViewStrategyDetail}
+          <StrategyList
             onNavigateToConfig={handleNavigateToStrategyConfig}
-            strategies={strategies}
             onUpdateStrategy={handleUpdateStrategy}
             onNavigateToAccounts={() => setCurrentPage('account-management')}
           />
         );
       case 'strategy-config-list':
         return (
-          <StrategyConfigList 
-            onViewDetail={handleViewStrategyDetail}
+          <StrategyConfigList
             onNavigateToConfig={(strategy) => {
               setStrategyConfigSource('strategy-config-list');
               handleNavigateToStrategyConfig(strategy);
@@ -708,31 +705,19 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
         return <ChangePasswordPage onBack={() => setCurrentPage('dashboard')} />;
       case 'user-management':
         return (
-          <UserDetail 
-            onNavigateToCreate={handleNavigateToCreateUser}
+          <UserDetail
             onNavigateToEdit={handleNavigateToEditUser}
             onNavigateToResetPassword={handleNavigateToResetPassword}
           />
         );
       case 'account-management':
-        return (
-          <TradingAccounts
-            onNavigateToCreate={handleNavigateToCreateTradingAccount}
-            onNavigateToEdit={handleNavigateToEditTradingAccount}
-            onNavigateToInit={handleNavigateToInitAccount}
-            onNavigateToTransfer={handleNavigateToTransfer}
-          />
-        );
+        return <TradingAccounts />;
       case 'strategy-monitor':
         return <StrategyMonitor onBack={() => setCurrentPage('dashboard')} />;
       case 'account-monitor':
         return (
           <AccountMonitor
             onBack={() => setCurrentPage('dashboard')}
-            onNavigateToInstance={(data) => {
-              setOperationInstanceData(data);
-              setCurrentPage('operation-instance');
-            }}
           />
         );
       case 'user-create':
@@ -1045,18 +1030,22 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
                     <button
                       onClick={() => {
                         setShowUserDropdown(false);
-                        setCurrentPage('profile');
+                        // 在新标签页中打开个人资料页面
+                        const params = new URLSearchParams({ page: 'profile' });
+                        window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900"
                     >
                       <User className="w-4 h-4" />
                       个人资料
                     </button>
-                    
+
                     <button
                       onClick={() => {
                         setShowUserDropdown(false);
-                        setCurrentPage('change-password');
+                        // 在新标签页中打开修改密码页面
+                        const params = new URLSearchParams({ page: 'change-password' });
+                        window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900"
                     >

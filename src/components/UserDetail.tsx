@@ -17,12 +17,11 @@ export interface User {
 }
 
 interface UserDetailProps {
-  onNavigateToCreate?: () => void;
   onNavigateToEdit?: (user: User) => void;
   onNavigateToResetPassword?: (user: User) => void;
 }
 
-export function UserDetail({ onNavigateToCreate, onNavigateToEdit, onNavigateToResetPassword }: UserDetailProps) {
+export function UserDetail({ onNavigateToEdit, onNavigateToResetPassword }: UserDetailProps) {
   const [users, setUsers] = useState<User[]>([
     {
       id: '1',
@@ -87,9 +86,9 @@ export function UserDetail({ onNavigateToCreate, onNavigateToEdit, onNavigateToR
   };
 
   const handleCreateUser = () => {
-    if (onNavigateToCreate) {
-      onNavigateToCreate();
-    }
+    // 在新标签页中打开创建用户页面
+    const params = new URLSearchParams({ page: 'user-create' });
+    window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
   };
 
   const handleEditUser = (user: User) => {

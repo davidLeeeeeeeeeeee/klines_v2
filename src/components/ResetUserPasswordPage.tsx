@@ -8,7 +8,7 @@ interface ResetUserPasswordPageProps {
     email: string;
   };
   onBack: () => void;
-  onSave: (data: any) => void;
+  onSave?: (data: any) => void;
 }
 
 export function ResetUserPasswordPage({ user, onBack, onSave }: ResetUserPasswordPageProps) {
@@ -41,7 +41,9 @@ export function ResetUserPasswordPage({ user, onBack, onSave }: ResetUserPasswor
       return;
     }
     
-    onSave({ newPassword: formData.newPassword });
+    if (onSave) {
+      onSave({ newPassword: formData.newPassword });
+    }
     onBack();
   };
 

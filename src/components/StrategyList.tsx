@@ -77,14 +77,13 @@ function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
 }
 
 interface StrategyListProps {
-  onViewDetail: (strategyName: string, aiModel?: string, runDays?: number, description?: string) => void;
   onNavigateToConfig: (strategy: Strategy | null) => void;
   strategies?: Strategy[];
   onUpdateStrategy: (strategyId: string, updates: Partial<Strategy>) => void;
   onNavigateToAccounts?: () => void;
 }
 
-export function StrategyList({ onViewDetail, onNavigateToConfig, onUpdateStrategy, onNavigateToAccounts }: StrategyListProps) {
+export function StrategyList({ onNavigateToConfig, onUpdateStrategy, onNavigateToAccounts }: StrategyListProps) {
   const [showFollowModal, setShowFollowModal] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -325,7 +324,17 @@ export function StrategyList({ onViewDetail, onNavigateToConfig, onUpdateStrateg
                 {/* Action Buttons */}
                 <div className="flex gap-3 mb-4">
                   <button
-                    onClick={() => onViewDetail(strategy.name, strategy.aiModel, strategy.runDays, strategy.description)}
+                    onClick={() => {
+                      // 在新标签页中打开策略表现页面
+                      const params = new URLSearchParams({
+                        page: 'strategy-detail',
+                        strategyName: strategy.name,
+                        aiModel: strategy.aiModel || '',
+                        runDays: (strategy.runDays ?? '').toString(),
+                        description: strategy.description || '',
+                      });
+                      window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
+                    }}
                     className="flex-1 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                   >
                     策略表现

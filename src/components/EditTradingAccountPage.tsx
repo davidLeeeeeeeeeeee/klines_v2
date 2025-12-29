@@ -18,7 +18,7 @@ interface EditTradingAccountPageProps {
     accountType?: '主账户' | '子账户';
   };
   onBack: () => void;
-  onSave: (data: any) => void;
+  onSave?: (data: any) => void;
 }
 
 export function EditTradingAccountPage({ account, onBack, onSave }: EditTradingAccountPageProps) {

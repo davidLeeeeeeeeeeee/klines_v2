@@ -262,7 +262,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
     return {
       date: formattedDate,
       displayDate: formattedDate,
-      rateChange: dailyProfitLossData.rate.lineY[index] ?? 0,
+      rateChange: (dailyProfitLossData.rate.lineY[index] ?? 0) * 100, // 转换为百分比
       amountChange: dailyProfitLossData.amount?.lineY[index] ?? 0
     };
   }) || [];

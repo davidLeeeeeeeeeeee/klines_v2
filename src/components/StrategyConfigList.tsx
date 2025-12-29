@@ -28,7 +28,6 @@ interface Strategy {
 }
 
 interface StrategyConfigListProps {
-  onViewDetail: (strategyName: string, aiModel?: string, runDays?: number, description?: string) => void;
   onNavigateToConfig: (strategy: Strategy | null) => void;
   strategies: Strategy[];
   onUpdateStrategy: (strategyId: string, updates: Partial<Strategy>) => void;
@@ -77,7 +76,7 @@ function convertApiToStrategy(apiData: StrategyModelListRes): Strategy {
   };
 }
 
-export function StrategyConfigList({ onViewDetail, onNavigateToConfig, strategies, onUpdateStrategy, onNavigateToAccounts }: StrategyConfigListProps) {
+export function StrategyConfigList({ onNavigateToConfig, strategies, onUpdateStrategy, onNavigateToAccounts }: StrategyConfigListProps) {
   const [showFollowModal, setShowFollowModal] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);

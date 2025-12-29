@@ -6,7 +6,7 @@ type UserStatus = '启用' | '停用';
 
 interface CreateUserPageProps {
   onBack: () => void;
-  onSave: (data: any) => void;
+  onSave?: (data: any) => void;
 }
 
 export function CreateUserPage({ onBack, onSave }: CreateUserPageProps) {
@@ -28,19 +28,21 @@ export function CreateUserPage({ onBack, onSave }: CreateUserPageProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setErrors({ ...errors, confirmPassword: '密码和确认密码不一致' });
       return;
     }
-    
+
     if (formData.password.length < 6) {
       setErrors({ ...errors, password: '密码至少需要6个字符' });
       return;
     }
-    
-    onSave(formData);
+
+    if (onSave) {
+      onSave(formData);
+    }
     onBack();
   };
 

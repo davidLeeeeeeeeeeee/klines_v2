@@ -52,14 +52,7 @@ export interface TradingAccount {
   mainAccUid?: string;
 }
 
-interface TradingAccountsProps {
-  onNavigateToCreate?: () => void;
-  onNavigateToEdit?: (account: TradingAccount) => void;
-  onNavigateToInit?: (account: TradingAccount, subAccountCount: number) => void;
-  onNavigateToTransfer?: (account: TradingAccount) => void;
-}
-
-export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNavigateToInit, onNavigateToTransfer }: TradingAccountsProps) {
+export function TradingAccounts() {
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -239,15 +232,25 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
   }, [showStrategyModal]);
 
   const handleCreateAccount = () => {
-    if (onNavigateToCreate) {
-      onNavigateToCreate();
-    }
+    // 在新标签页中打开绑定账户页面
+    const params = new URLSearchParams({ page: 'trading-account-create' });
+    window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
   };
 
   const handleEditAccount = (account: TradingAccount) => {
-    if (onNavigateToEdit) {
-      onNavigateToEdit(account);
-    }
+    // 在新标签页中打开编辑账户页面
+    const params = new URLSearchParams({
+      page: 'trading-account-edit',
+      accountId: account.id,
+      exchange: account.exchange,
+      uid: account.uid,
+      accountName: account.accountName,
+      apiKey: account.apiKey || '',
+      apiSecret: account.apiSecret || '',
+      initStatus: account.initStatus,
+      accountType: account.accountType || '主账户',
+    });
+    window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
   };
 
   const handleDeleteAccount = (accountId: string) => {
@@ -638,13 +641,24 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
               {account.accountType === '子账户' && (
                 <>
                   <div className="flex-1 text-sm text-gray-600">
-                    主账户: {getParentAccountName(account.parentAccountId)}
+                    主账户: {account.mainAccName || getParentAccountName(account.parentAccountId)}
                   </div>
                   <button
                     onClick={() => {
-                      if (onNavigateToTransfer) {
-                        onNavigateToTransfer(account);
-                      }
+                      // 在新标签页中打开划转页面
+                      const params = new URLSearchParams({
+                        page: 'fund-transfer',
+                        accountId: account.id,
+                        exchange: account.exchange,
+                        uid: account.uid,
+                        accountName: account.accountName,
+                        netValue: account.netValue || '0.00',
+                        mainAccId: account.mainAccId || '',
+                        mainAccName: account.mainAccName || '',
+                        mainAccUid: account.mainAccUid || '',
+                        mainNetValue: '', // 主账户余额将在页面内获取
+                      });
+                      window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
                     }}
                     className="px-4 py-1.5 text-sm border border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
                   >
@@ -659,9 +673,17 @@ export function TradingAccounts({ onNavigateToCreate, onNavigateToEdit, onNaviga
                   </div>
                   <button
                     onClick={() => {
-                      if (onNavigateToInit) {
-                        onNavigateToInit(account, getSubAccountCount(account.id));
-                      }
+                      // 在新标签页中打开子账户页面
+                      const params = new URLSearchParams({
+                        page: 'trading-account-init',
+                        accountId: account.id,
+                        exchange: account.exchange,
+                        accountName: account.accountName,
+                        uid: account.uid,
+                        netValue: account.netValue || '0.00',
+                        subAccountCount: getSubAccountCount(account.id).toString(),
+                      });
+                      window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
                     }}
                     className="px-4 py-1.5 text-sm border border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
                   >

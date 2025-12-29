@@ -543,25 +543,10 @@ export function Dashboard() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="text-gray-600 text-sm mb-2">浮动盈亏</div>
-                    <div className={`text-2xl mb-2 ${
+                    <div className={`text-2xl ${
                       (overviewData?.unrealisedPnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
                       {formatNumber(Math.abs(overviewData?.unrealisedPnl || 0))}
-                    </div>
-                    <div className={`flex items-center gap-1 text-sm ${
-                      (overviewData?.unrealisedPnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {(overviewData?.unrealisedPnl || 0) >= 0 ? (
-                        <TrendingUp className="w-3.5 h-3.5" />
-                      ) : (
-                        <TrendingDown className="w-3.5 h-3.5" />
-                      )}
-                      <span>
-                        {overviewData?.initEquity
-                          ? `${Math.abs((overviewData.unrealisedPnl / overviewData.initEquity) * 100).toFixed(2)}%`
-                          : '0%'
-                        }
-                      </span>
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -996,7 +981,7 @@ export function Dashboard() {
                       </div>
                       <div className="text-right">
                         <div className={`${strategy.totalClosePnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          <div className="flex items-center gap-1 justify-end mb-0.5">
+                          <div className="flex items-center gap-1 justify-end">
                             {strategy.totalClosePnl >= 0 ? (
                               <TrendingUp className="w-4 h-4" />
                             ) : (
@@ -1008,12 +993,6 @@ export function Dashboard() {
                                 : formatNumber(Math.abs(strategy.totalClosePnl))
                               }
                             </div>
-                          </div>
-                          <div className="text-xs leading-none">
-                            {overviewData?.initEquity
-                              ? `${((strategy.totalClosePnl / overviewData.initEquity) * 100).toFixed(2)}%`
-                              : '-'
-                            }
                           </div>
                         </div>
                       </div>

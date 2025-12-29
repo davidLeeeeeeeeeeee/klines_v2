@@ -15,7 +15,7 @@ interface EditUserPageProps {
     bio?: string;
   };
   onBack: () => void;
-  onSave: (data: any) => void;
+  onSave?: (data: any) => void;
 }
 
 export function EditUserPage({ user, onBack, onSave }: EditUserPageProps) {
@@ -30,7 +30,9 @@ export function EditUserPage({ user, onBack, onSave }: EditUserPageProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    if (onSave) {
+      onSave(formData);
+    }
     onBack();
   };
 
