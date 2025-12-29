@@ -388,10 +388,23 @@ function ClosingChatContent({
     ? calculateMarginReturn(action.stopLoss, selectedEntryPrice, leverage)
     : null;
 
+  // 格式化操作类型显示，Close 时根据 originPositionSide 添加（平多）或（平空）
+  const formatActionType = (actionType: string, originPositionSide: string | undefined) => {
+    if (actionType?.toLowerCase() === 'close' && originPositionSide) {
+      const sideLower = originPositionSide.toLowerCase();
+      if (sideLower === 'buy') {
+        return `${actionType}(平多)`;
+      } else if (sideLower === 'sell') {
+        return `${actionType}(平空)`;
+      }
+    }
+    return actionType;
+  };
+
   return (
     <>
       {action.action && (
-        <div>操作类型: <span className="font-bold text-blue-600">{action.action}</span></div>
+        <div>操作类型: <span className="font-bold text-blue-600">{formatActionType(action.action, action.originPositionSide)}</span></div>
       )}
       {action.thought && (
         <div>操作描述: <span className="font-bold text-blue-600">{action.thought}</span></div>
@@ -400,9 +413,9 @@ function ClosingChatContent({
       <div className="mt-3 pt-3 border-t border-gray-200">
         <div className="space-y-1.5">
           <div>仓位方向: <span className={`font-semibold ${
-            selectedPositionSide === 'Buy' ? 'text-green-600' : 'text-red-600'
-          }`}>{selectedPositionSide || '-'}</span></div>
-          <div>开仓价格: <span className="font-semibold">{selectedEntryPrice ?? '-'}</span></div>
+            (action.originPositionSide || selectedPositionSide) === 'Buy' ? 'text-green-600' : 'text-red-600'
+          }`}>{action.originPositionSide || selectedPositionSide || '-'}</span></div>
+          <div>开仓价格: <span className="font-semibold">{action.entryPrice ?? selectedEntryPrice ?? '-'}</span></div>
           <div>平仓价格: <span className="font-semibold">{selectedClosePrice ?? '-'}</span></div>
           {action.takeProfit !== undefined && (
             <div>止盈价格: <span className="font-semibold text-green-600">

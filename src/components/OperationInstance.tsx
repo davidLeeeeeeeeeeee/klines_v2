@@ -21,6 +21,7 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatData, setChatData] = useState<ChatResponse | null>(null);
   const [loadingChatId, setLoadingChatId] = useState<number | null>(null);
+  const [isChatForClosing, setIsChatForClosing] = useState(false);
 
   // 获取操作标签颜色
   const getActionColor = (action: string) => {
@@ -64,7 +65,8 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
   }, [tradeData.id]);
 
   // 获取 CHAT 数据
-  const fetchChat = async (chatId: number) => {
+  // side: PLMODIFY, CLOSE 显示平仓CHAT (AI-C)，BUY 显示开仓CHAT (AI-O)
+  const fetchChat = async (chatId: number, side: string) => {
     const token = getToken();
     if (!token) return;
 
@@ -72,6 +74,10 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
       setLoadingChatId(chatId);
       const data = await getChatDetail(token, chatId);
       setChatData(data);
+      // 判断是否为平仓CHAT: Plmodify 或 Close 显示 AI-C 页面（不区分大小写）
+      const sideLower = side.toLowerCase();
+      const isClosingChat = sideLower === 'plmodify' || sideLower === 'close';
+      setIsChatForClosing(isClosingChat);
       setShowChatModal(true);
       setExpandedReasoning(false);
       setExpandedPrompt(false);
@@ -152,7 +158,7 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
                   getActionColor={getActionColor}
                   formatTime={formatTime}
                   formatValue={formatValue}
-                  onChatClick={() => fetchChat(instance.chatId)}
+                  onChatClick={() => fetchChat(instance.chatId, instance.side)}
                   loadingChatId={loadingChatId}
                 />
               ))}
@@ -166,7 +172,7 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
         <AIChatModal
           chatData={chatData}
           onClose={() => setShowChatModal(false)}
-          isChatForClosing={false}
+          isChatForClosing={isChatForClosing}
         />
       )}
     </div>
