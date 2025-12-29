@@ -283,6 +283,7 @@ export interface ClosePnlListReq {
   side?: string;
   strategyType?: string;
   symbol?: string;
+  closeType?: string; // 平仓类型: MANUAL(手动平仓), PROFIT_LOSS(止盈止损), STRATEGY(策略平仓)
 }
 
 // 一键平仓请求参数

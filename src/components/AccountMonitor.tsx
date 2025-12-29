@@ -129,6 +129,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const strategyDropdownRef = useRef<HTMLDivElement>(null);
   const symbolDropdownRef = useRef<HTMLDivElement>(null);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
+  const closeTypeDropdownRef = useRef<HTMLDivElement>(null);
   const closeModalRef = useRef<HTMLDivElement>(null);
   const batchCloseModalRef = useRef<HTMLDivElement>(null);
 
@@ -136,6 +137,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   useClickOutside(strategyDropdownRef, () => setShowStrategyDropdown(false));
   useClickOutside(symbolDropdownRef, () => setShowSymbolDropdown(false));
   useClickOutside(typeDropdownRef, () => setShowTypeDropdown(false));
+  useClickOutside(closeTypeDropdownRef, () => setShowCloseTypeDropdown(false));
   useClickOutside(closeModalRef, () => {
     if (showCloseModal) {
       setShowCloseModal(false);
@@ -160,6 +162,11 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [symbolList, setSymbolList] = useState<DictItem[]>([]);
   // 策略列表 - 从系统字典API获取
   const [strategyModelList, setStrategyModelList] = useState<DictItem[]>([]);
+  // 平仓类型列表 - 从系统字典API获取
+  const [closeTypeList, setCloseTypeList] = useState<DictItem[]>([]);
+  // 平仓类型筛选
+  const [selectedCloseType, setSelectedCloseType] = useState('all');
+  const [showCloseTypeDropdown, setShowCloseTypeDropdown] = useState(false);
 
   // 历史仓位相关状态
   const [closedPositions, setClosedPositions] = useState<ClosePnlVO[]>([]);
@@ -218,6 +225,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
           symbol: selectedSymbol === 'all' ? undefined : selectedSymbol,
           side: sideParam,
           strategyType: selectedStrategy === 'all' ? undefined : selectedStrategy,
+          closeType: selectedCloseType === 'all' ? undefined : selectedCloseType,
         }
       };
 
@@ -319,14 +327,16 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     };
   };
 
-  // 获取系统字典（商品列表和策略列表）
+  // 获取系统字典（商品列表、策略列表和平仓类型列表）
   const fetchSystemDict = async () => {
     try {
       const dictData = await getSystemDict();
       setSymbolList(dictData.SymbolType || []);
       setStrategyModelList(dictData.StrategyModel || []);
+      setCloseTypeList(dictData.OrderCloseType || []);
       console.log('📊 获取到商品列表:', dictData.SymbolType);
       console.log('📊 获取到策略列表:', dictData.StrategyModel);
+      console.log('📊 获取到平仓类型列表:', dictData.OrderCloseType);
     } catch (err: any) {
       console.error('获取系统字典失败:', err);
     }
@@ -348,7 +358,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       fetchClosedPositions(1); // 筛选条件改变时重置到第一页
       setCurrentPage(1);
     }
-  }, [activeTab, selectedSymbol, selectedType, selectedStrategy]);
+  }, [activeTab, selectedSymbol, selectedType, selectedStrategy, selectedCloseType]);
 
   // 分页改变时重新请求
   useEffect(() => {
@@ -714,6 +724,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             setSelectedType('all');
             setSelectedSymbol('all');
             setSelectedStrategy('all');
+            setSelectedCloseType('all');
             setSearchFilter('');
           }}
           className={`pb-3 text-base transition-colors relative ${activeTab === 'positions'
@@ -733,6 +744,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             setSelectedType('all');
             setSelectedSymbol('all');
             setSelectedStrategy('all');
+            setSelectedCloseType('all');
             setSearchFilter('');
           }}
           className={`pb-3 text-base transition-colors relative ${activeTab === 'history'
@@ -920,6 +932,63 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             </div>
           )}
         </div>
+
+        {/* Close Type Filter - 仅在历史标签页显示 */}
+        {activeTab === 'history' && (
+          <div className="relative" ref={closeTypeDropdownRef}>
+            <button
+              onClick={() => {
+                setShowCloseTypeDropdown(!showCloseTypeDropdown);
+                setShowStrategyDropdown(false);
+                setShowSymbolDropdown(false);
+                setShowTypeDropdown(false);
+              }}
+              className={`flex items-center gap-1.5 pb-3 text-base hover:text-gray-900 transition-colors whitespace-nowrap ${
+                selectedCloseType === 'all' ? 'text-gray-700' : 'text-blue-600'
+              }`}
+            >
+              <span>
+                {selectedCloseType === 'all'
+                  ? '平仓类型'
+                  : closeTypeList.find(item => item.code === selectedCloseType)?.message || selectedCloseType
+                }
+              </span>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className={selectedCloseType === 'all' ? 'text-gray-500' : 'text-blue-600'}>
+                <path d="M5 6L0 0h10L5 6z" />
+              </svg>
+            </button>
+
+            {showCloseTypeDropdown && (
+              <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
+                <button
+                  onClick={() => {
+                    setSelectedCloseType('all');
+                    setShowCloseTypeDropdown(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                    selectedCloseType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  }`}
+                >
+                  全部
+                </button>
+                {closeTypeList.map((closeType) => (
+                  <button
+                    key={closeType.code}
+                    onClick={() => {
+                      setSelectedCloseType(closeType.code);
+                      setShowCloseTypeDropdown(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
+                      selectedCloseType === closeType.code ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
+                  >
+                    {closeType.message}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Stats Display - 与筛选条件在同一行 */}
         <div className="flex items-center gap-6 text-base pb-3 ml-auto">
