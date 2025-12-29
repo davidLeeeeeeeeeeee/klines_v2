@@ -102,6 +102,9 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
   const [expandedOutput, setExpandedOutput] = useState<{ [key: string]: boolean }>({});
   const [startTime, setStartTime] = useState(getDefaultStartTime());
   const [endTime, setEndTime] = useState(getDefaultEndTime());
+  // 临时时间状态，用于在弹窗中编辑
+  const [tempStartTime, setTempStartTime] = useState(getDefaultStartTime());
+  const [tempEndTime, setTempEndTime] = useState(getDefaultEndTime());
   // 追踪用户是否手动设置了时间范围
   const [isCustomTimeRange, setIsCustomTimeRange] = useState(false);
 
@@ -502,7 +505,12 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
 
         {/* Time Range Button */}
         <button
-          onClick={() => setShowTimeRangeModal(true)}
+          onClick={() => {
+            // 打开弹窗时，初始化临时时间为当前实际时间
+            setTempStartTime(startTime);
+            setTempEndTime(endTime);
+            setShowTimeRangeModal(true);
+          }}
           className="flex items-center gap-1.5 text-base hover:text-gray-900 transition-colors"
         >
           <span className={isCustomTimeRange ? 'text-blue-600' : 'text-gray-700'}>时间</span>
@@ -796,8 +804,8 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
                 <input
                   type="datetime-local"
                   step="1"
-                  value={convertToInputFormat(startTime)}
-                  onChange={(e) => setStartTime(convertToApiFormat(e.target.value))}
+                  value={convertToInputFormat(tempStartTime)}
+                  onChange={(e) => setTempStartTime(convertToApiFormat(e.target.value))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                 />
               </div>
@@ -809,8 +817,8 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
                 <input
                   type="datetime-local"
                   step="1"
-                  value={convertToInputFormat(endTime)}
-                  onChange={(e) => setEndTime(convertToApiFormat(e.target.value))}
+                  value={convertToInputFormat(tempEndTime)}
+                  onChange={(e) => setTempEndTime(convertToApiFormat(e.target.value))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                 />
               </div>
@@ -831,6 +839,9 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
                 <button
                   className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                   onClick={() => {
+                    // 点击确认时，将临时时间更新到实际时间状态
+                    setStartTime(tempStartTime);
+                    setEndTime(tempEndTime);
                     setIsCustomTimeRange(true);
                     setShowTimeRangeModal(false);
                   }}
@@ -841,9 +852,13 @@ export function StrategyMonitor({ onBack }: StrategyMonitorProps) {
               <button
                 className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 onClick={() => {
+                  const defaultStart = getDefaultStartTime();
+                  const defaultEnd = getDefaultEndTime();
+                  setTempStartTime(defaultStart);
+                  setTempEndTime(defaultEnd);
+                  setStartTime(defaultStart);
+                  setEndTime(defaultEnd);
                   setIsCustomTimeRange(false);
-                  setStartTime(getDefaultStartTime());
-                  setEndTime(getDefaultEndTime());
                   setShowTimeRangeModal(false);
                 }}
               >

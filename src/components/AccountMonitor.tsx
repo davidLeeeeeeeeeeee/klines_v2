@@ -704,9 +704,9 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
             </div>
             <button
               onClick={() => {/* 搜索已实时生效，此按钮可用于刷新数据 */}}
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors whitespace-nowrap"
             >
-              搜索
+              &nbsp;&nbsp;搜索&nbsp;&nbsp;
             </button>
           </div>
         </div>
@@ -1029,22 +1029,22 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                 {/* Additional Information */}
                 <div className="grid grid-cols-1 gap-3 mb-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">止盈/止损</span>
-                    <div className="flex items-center gap-0.5">
-                      <span className="text-sm text-green-600">
-                        {position.takeProfit ? formatNumber(position.takeProfit) : '-'}
-                        {position.takeProfitRatio !== null && (
-                          <span className="text-xs ml-0.5">({(position.takeProfitRatio * 100).toFixed(2)}%)</span>
-                        )}
-                      </span>
-                      <span className="text-sm text-gray-400">/</span>
-                      <span className="text-sm text-red-600">
-                        {position.stopLoss ? formatNumber(position.stopLoss) : '-'}
-                        {position.stopLossRatio !== null && (
-                          <span className="text-xs ml-0.5">({(position.stopLossRatio * 100).toFixed(2)}%)</span>
-                        )}
-                      </span>
-                    </div>
+                    <span className="text-sm text-gray-500">止盈价格</span>
+                    <span className="text-sm text-green-600">
+                      {position.takeProfit ? formatNumber(position.takeProfit) : '-'}
+                      {position.takeProfitRatio !== null && (
+                        <span className="text-xs ml-0.5">({(position.takeProfitRatio * 100).toFixed(2)}%)</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">止损价格</span>
+                    <span className="text-sm text-red-600">
+                      {position.stopLoss ? formatNumber(position.stopLoss) : '-'}
+                      {position.stopLossRatio !== null && (
+                        <span className="text-xs ml-0.5">({(position.stopLossRatio * 100).toFixed(2)}%)</span>
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-500">已结盈亏</span>
@@ -1194,14 +1194,6 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                     {/* Fee Information */}
                     <div className="grid grid-cols-1 gap-3 mb-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">开仓手续费</span>
-                        <span className="text-sm text-gray-900">{Number(trade.openFee).toFixed(8)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">平仓手续费</span>
-                        <span className="text-sm text-gray-900">{Number(trade.closeFee).toFixed(8)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">最大盈利</span>
                         <span className="text-sm text-green-600">
                           {(trade.maxProfit ?? 0) < 0 ? '-' : ''}{formatNumber(Math.abs(trade.maxProfit ?? 0))} ({(Math.abs(trade.maxProfitRate ?? 0) * 100).toFixed(2)}%)
@@ -1212,6 +1204,14 @@ export function AccountMonitor({ onBack, onNavigateToInstance }: AccountMonitorP
                         <span className="text-sm text-red-600">
                           {(trade.maxLoss ?? 0) < 0 ? '-' : ''}{formatNumber(Math.abs(trade.maxLoss ?? 0))} ({(Math.abs(trade.maxLossRate ?? 0) * 100).toFixed(2)}%)
                         </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">开仓手续费</span>
+                        <span className="text-sm text-gray-900">{Number(trade.openFee).toFixed(8)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">平仓手续费</span>
+                        <span className="text-sm text-gray-900">{Number(trade.closeFee).toFixed(8)}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">持仓时长</span>
