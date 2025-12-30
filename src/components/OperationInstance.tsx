@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { getPositionStrategyInstance, getChatDetail, StrategyInstanceRes, ChatResponse } from '../services/api';
+import { getPositionStrategyInstance, getChatDetail, StrategyInstanceRes, ChatResponse, PositionInstanceRequest } from '../services/api';
 import { getToken } from '../utils/storage';
 import { AIChatModal } from './AIChatModal';
 
 interface OperationInstanceProps {
   onBack: () => void;
   tradeData: {
-    id: number;
+    // 历史仓位模式：传 id（closePnlId）
+    id?: number;
+    // 当前仓位模式：传以下四个参数
+    accountId?: number;
+    side?: string;
+    symbol?: string;
+    // 共用字段
     strategyType: string;
     exchange: string;
     accountName: string;
@@ -52,7 +58,25 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
       try {
         setLoading(true);
         setError(null);
-        const data = await getPositionStrategyInstance(token, tradeData.id);
+
+        // 根据传入参数决定调用方式
+        let data: StrategyInstanceRes[];
+        if (tradeData.id !== undefined) {
+          // 历史仓位模式：传 closePnlId
+          data = await getPositionStrategyInstance(token, tradeData.id);
+        } else if (tradeData.accountId && tradeData.side && tradeData.symbol && tradeData.strategyType !== undefined) {
+          // 当前仓位模式：传仓位参数（strategyType 可以为空字符串）
+          const params: PositionInstanceRequest = {
+            accountId: tradeData.accountId,
+            side: tradeData.side,
+            strategyType: tradeData.strategyType,
+            symbol: tradeData.symbol,
+          };
+          data = await getPositionStrategyInstance(token, params);
+        } else {
+          throw new Error('缺少必要参数');
+        }
+
         setInstances(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : '获取操作实例失败');
@@ -62,7 +86,7 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
     };
 
     fetchInstances();
-  }, [tradeData.id]);
+  }, [tradeData.id, tradeData.accountId, tradeData.side, tradeData.symbol, tradeData.strategyType]);
 
   // 获取 CHAT 数据
   // side: PLMODIFY, CLOSE 显示平仓CHAT (AI-C)，BUY 显示开仓CHAT (AI-O)

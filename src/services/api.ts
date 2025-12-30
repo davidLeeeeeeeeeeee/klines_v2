@@ -2519,19 +2519,37 @@ export interface StrategyInstanceRes {
   userId: number;
 }
 
+// 仓位实例请求参数（用于当前仓位）
+export interface PositionInstanceRequest {
+  accountId: number;
+  side: string;
+  strategyType: string;
+  symbol: string;
+}
+
 /**
  * 获取仓位操作实例列表
  * @param token 用户token
- * @param id 平仓记录ID
+ * @param params 平仓记录ID 或 仓位参数对象
  * @returns 策略实例列表
  */
 export async function getPositionStrategyInstance(
   token: string,
-  id: number
+  params: number | PositionInstanceRequest
 ): Promise<StrategyInstanceRes[]> {
   try {
+    // 根据参数类型构建请求体
+    const requestBody = typeof params === 'number'
+      ? { closePnlId: params }
+      : {
+          accountId: params.accountId,
+          side: params.side,
+          strategyType: params.strategyType,
+          symbol: params.symbol,
+        };
+
     console.log('获取策略操作实例 - Token:', token);
-    console.log('获取策略操作实例 - ID:', id);
+    console.log('获取策略操作实例 - 请求参数:', requestBody);
 
     const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/trade/position/strategy/instance`, {
       method: 'POST',
@@ -2540,7 +2558,7 @@ export async function getPositionStrategyInstance(
         'Authorization': `Bearer ${token}`,
         'alphatoken': token,
       },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify(requestBody),
     });
 
     console.log('策略操作实例响应状态:', response.status);

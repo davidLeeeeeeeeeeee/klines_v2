@@ -1157,6 +1157,29 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       )}
                     </button>
                     <button
+                      className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
+                      onClick={() => {
+                        // 在新标签页中打开实例页面（当前仓位模式）
+                        const apiPosition = positions.find(p =>
+                          `${p.accountId}-${p.symbol}-${p.side}` === position.id
+                        );
+                        if (apiPosition) {
+                          const params = new URLSearchParams({
+                            page: 'instance',
+                            accountId: apiPosition.accountId.toString(),
+                            side: apiPosition.side,
+                            symbol: apiPosition.symbol,
+                            strategyType: apiPosition.strategyType || '',
+                            exchange: position.exchange || '-',
+                            accountName: position.accountName || '-',
+                          });
+                          window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
+                        }
+                      }}
+                    >
+                      实例
+                    </button>
+                    <button
                       className="px-3 py-1.5 text-sm border border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
                       onClick={() => handleClosePosition(position)}
                     >

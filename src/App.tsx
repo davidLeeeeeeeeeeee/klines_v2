@@ -23,6 +23,8 @@ function getUrlParams() {
     strategyType: params.get('strategyType'),
     exchange: params.get('exchange'),
     accountName: params.get('accountName'),
+    side: params.get('side'),
+    symbol: params.get('symbol'),
     // 策略表现页面参数
     strategyName: params.get('strategyName'),
     aiModel: params.get('aiModel'),
@@ -85,12 +87,16 @@ export default function App() {
     switch (urlParams.page) {
       // 实例页面
       case 'instance':
-        if (urlParams.id) {
+        // 支持两种模式：历史仓位（传id）或当前仓位（传accountId,side,symbol,strategyType）
+        if (urlParams.id || urlParams.accountId) {
           return (
             <OperationInstance
               onBack={() => window.close()}
               tradeData={{
-                id: parseInt(urlParams.id, 10),
+                id: urlParams.id ? parseInt(urlParams.id, 10) : undefined,
+                accountId: urlParams.accountId ? parseInt(urlParams.accountId, 10) : undefined,
+                side: urlParams.side || undefined,
+                symbol: urlParams.symbol || undefined,
                 strategyType: urlParams.strategyType || '-',
                 exchange: urlParams.exchange || '-',
                 accountName: urlParams.accountName || '-',
