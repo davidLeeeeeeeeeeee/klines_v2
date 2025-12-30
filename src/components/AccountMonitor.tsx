@@ -1055,7 +1055,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       </span>
                     </div>
                     <div className="text-sm text-gray-500">
-                      {position.exchange}: {position.accountName}（{position.userId}）
+                      {position.exchange}: {position.accountName}（{position.accountUid}）
                     </div>
                   </div>
 
@@ -1215,7 +1215,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                           </span>
                         </div>
                         <div className="text-sm text-gray-600">
-                          {trade.exchange}: {trade.accountName}（{trade.userId}）
+                          {trade.exchange}: {trade.accountName}（{trade.accountUid}）
                         </div>
                       </div>
 

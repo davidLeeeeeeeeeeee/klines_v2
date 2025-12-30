@@ -686,7 +686,7 @@ export interface AccountListReq {
   accType?: number; // 账号类型：0=主账号，1=子账号，不传表示全部
   exchange: string; // 交易所类型：BYBIT，传空字符串表示不筛选
   search: string; // 搜索关键字，传空字符串表示不搜索
-  strategyType: string; // 策略类型，传空字符串表示不筛选
+  strategyType?: string; // 策略类型，不传表示全部，传空字符串表示未跟随，传具体名称表示筛选该策略
 }
 
 export interface AccountRes {

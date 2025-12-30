@@ -560,34 +560,26 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
               setCurrentPage(item.id);
             }
           }}
-          className={`w-full flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} px-4 py-3 rounded-lg transition-all duration-300 ease-in-out ${
+          className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${
             level === 0 ? 'mb-1' : 'mb-0.5'
           } ${
             isActive
               ? 'bg-blue-500 text-white'
               : 'text-gray-700 hover:bg-gray-100'
-          } ${level > 0 && isSidebarOpen ? 'ml-4' : ''}`}
+          } ${level > 0 ? 'ml-4' : ''}`}
         >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex-shrink-0">
-              {item.icon}
-            </div>
-            <span className={`transition-all duration-300 ease-in-out whitespace-nowrap ${
-              isSidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 w-0 overflow-hidden'
-            }`}>
-              {item.label}
-            </span>
+          <div className="flex items-center gap-3">
+            {item.icon}
+            <span>{item.label}</span>
           </div>
           {hasChildren && (
-            <div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'rotate-0' : '-rotate-90'} ${
-              isSidebarOpen ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'
-            }`}>
+            <div className={`transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}>
               <ChevronDown className="w-4 h-4" />
             </div>
           )}
         </button>
 
-        {hasChildren && isExpanded && isSidebarOpen && (
+        {hasChildren && isExpanded && (
           <div className="mt-1 space-y-0.5">
             {item.children!.map((child) => renderMenuItem(child, level + 1))}
           </div>
@@ -795,25 +787,15 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
       {/* Sidebar */}
-      <aside
-        className={`${
-          isSidebarOpen ? 'w-64' : 'w-16'
-        } bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex-shrink-0`}
-      >
+      {isSidebarOpen && (
+        <aside className="w-52 bg-white border-r border-gray-200 flex-shrink-0">
+
         <div className="h-full flex flex-col">
-          {/* Logo with Toggle Button */}
-          <div className="h-16 border-b border-gray-200 flex items-center px-3 sticky top-0 bg-white z-10 overflow-hidden">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="w-10 h-10 flex items-center justify-center hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"
-            >
-              <Menu className="w-5 h-5 text-gray-600" />
-            </button>
-            <div className={`ml-3 flex items-center gap-2.5 transition-all duration-300 ease-in-out ${
-              isSidebarOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none'
-            }`}>
+          {/* Logo Area */}
+          <div className="h-16 border-b border-gray-200 flex items-center px-3 sticky top-0 bg-white z-10">
+            <div className="flex items-center gap-2.5">
               {/* Mini ALPHA NOW LOGO - 缩放自登录页面 */}
-              <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="40" height="40" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
                 {/* Gradient background circle */}
                 <circle cx="22" cy="22" r="20.53" fill="url(#miniLogoGradient)"/>
 
@@ -841,11 +823,11 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
                   </linearGradient>
                 </defs>
               </svg>
-              <div className="flex flex-col items-start whitespace-nowrap">
+              <div className="flex flex-col items-start">
                 <span
                   className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent leading-tight"
                   style={{
-                    fontSize: '16px',
+                    fontSize: '15px',
                     fontWeight: 800,
                     letterSpacing: '0.02em',
                     fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
@@ -853,25 +835,33 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
                 >
                   ALPHA
                 </span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gradient-to-r from-blue-500 to-purple-500 text-white leading-tight">NOW</span>
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-gradient-to-r from-blue-500 to-purple-500 text-white leading-tight">NOW</span>
               </div>
             </div>
           </div>
 
           {/* Navigation Menu */}
-          <nav className="flex-1 overflow-y-auto p-3">
+          <nav className="flex-1 overflow-y-auto p-2.5">
             {menuItems.map((item) => renderMenuItem(item))}
           </nav>
         </div>
       </aside>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-10">
-          {/* Empty div for layout balance */}
-          <div></div>
-          
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between pl-3 pr-6 sticky top-0 z-10">
+          {/* Left side - Menu Toggle Button */}
+          <div>
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="w-10 h-10 flex items-center justify-center hover:bg-gray-200 rounded-full transition-colors"
+            >
+              <Menu className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
+
           {/* Crypto Prices & Exchange Links */}
           <div className="flex items-center gap-4">
             {/* BTC Price */}

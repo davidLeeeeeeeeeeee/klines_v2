@@ -128,13 +128,22 @@ export function TradingAccounts() {
       }
 
       // 构建请求参数
+      // 策略筛选逻辑：
+      // - "全部": 不传 strategyType 参数
+      // - "未跟随": 传空字符串 ""
+      // - 具体策略名: 传策略名称
       const request: AccountListReq = {
         exchange: filterExchange === 'all' ? '' : filterExchange,
         search: searchTerm || '',
-        strategyType: (filterStrategyFollow === 'all' || filterStrategyFollow === '未跟随')
-          ? ''
-          : filterStrategyFollow
       };
+
+      // 根据策略筛选条件决定是否传 strategyType
+      if (filterStrategyFollow === '未跟随') {
+        request.strategyType = ''; // 未跟随传空字符串
+      } else if (filterStrategyFollow !== 'all') {
+        request.strategyType = filterStrategyFollow; // 具体策略名
+      }
+      // 全部时不传 strategyType 参数
       // accType: 0=主账户，1=子账户，全部时不传
       if (filterAccountType === '主账户') {
         request.accType = 0;
@@ -158,11 +167,9 @@ export function TradingAccounts() {
     fetchAccounts();
   }, []);
 
-  // 当策略筛选变化时刷新列表（排除未跟随）
+  // 当策略筛选变化时刷新列表（包括未跟随）
   useEffect(() => {
-    if (filterStrategyFollow !== '未跟随') {
-      fetchAccounts();
-    }
+    fetchAccounts();
   }, [filterStrategyFollow]);
 
   // 当类型或交易所筛选变化时刷新列表
@@ -289,16 +296,8 @@ export function TradingAccounts() {
     }
   };
 
-  // 前端额外筛选（策略跟随状态）
-  const filteredAccounts = accounts.filter(account => {
-    if (filterStrategyFollow === '已跟随' && !account.strategyName) {
-      return false;
-    }
-    if (filterStrategyFollow === '未跟随' && account.strategyName) {
-      return false;
-    }
-    return true;
-  });
+  // 后端已经处理了筛选，直接使用 accounts
+  const filteredAccounts = accounts;
 
   return (
     <div className="flex flex-col h-full">
@@ -607,7 +606,7 @@ export function TradingAccounts() {
                     : 0;
                   return (
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-900">{account.netValue}</span>
+                      <span className="text-green-600 font-semibold">{account.netValue}</span>
                       <span className={profitRate >= 0 ? 'text-green-600' : 'text-red-600'}>
                         ({profitRate >= 0 ? '+' : ''}{profitRate.toFixed(2)}%)
                       </span>
@@ -847,7 +846,7 @@ export function TradingAccounts() {
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-500">胜率</span>
-                            <span className="text-sm font-semibold text-gray-900">{winRate}%</span>
+                            <span className="text-sm font-semibold text-green-600">{winRate}%</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-500">最大回撤</span>
