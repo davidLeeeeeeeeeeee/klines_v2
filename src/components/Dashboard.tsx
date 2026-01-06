@@ -546,7 +546,7 @@ export function Dashboard() {
                     <div className={`text-2xl ${
                       (overviewData?.unrealisedPnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {formatNumber(Math.abs(overviewData?.unrealisedPnl || 0))}
+                      {(overviewData?.unrealisedPnl || 0) < 0 ? '-' : ''}{formatNumber(Math.abs(overviewData?.unrealisedPnl || 0))}
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -563,7 +563,7 @@ export function Dashboard() {
                     <div className={`text-2xl mb-2 ${
                       (overviewData?.totalClosePnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {formatNumber(Math.abs(overviewData?.totalClosePnl || 0))}
+                      {(overviewData?.totalClosePnl || 0) < 0 ? '-' : ''}{formatNumber(Math.abs(overviewData?.totalClosePnl || 0))}
                     </div>
                     <div className={`flex items-center gap-1 text-sm ${
                       (overviewData?.totalClosePnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
@@ -575,7 +575,7 @@ export function Dashboard() {
                       )}
                       <span>
                         {overviewData?.initEquity
-                          ? `${Math.abs((overviewData.totalClosePnl / overviewData.initEquity) * 100).toFixed(2)}%`
+                          ? `${(overviewData.totalClosePnl / overviewData.initEquity) < 0 ? '-' : ''}${Math.abs((overviewData.totalClosePnl / overviewData.initEquity) * 100).toFixed(2)}%`
                           : '0%'
                         }
                       </span>
@@ -605,7 +605,7 @@ export function Dashboard() {
                       )}
                       <span>
                         {overviewData?.initEquity
-                          ? `${Math.abs(((overviewData.equity - overviewData.initEquity) / overviewData.initEquity) * 100).toFixed(2)}%`
+                          ? `${((overviewData.equity - overviewData.initEquity) / overviewData.initEquity) < 0 ? '-' : ''}${Math.abs(((overviewData.equity - overviewData.initEquity) / overviewData.initEquity) * 100).toFixed(2)}%`
                           : '0%'
                         }
                       </span>
@@ -697,8 +697,8 @@ export function Dashboard() {
                     }}
                     formatter={(value: number) =>
                       weeklyChartType === 'rate'
-                        ? `${value > 0 ? '+' : ''}${value.toFixed(2)}%`
-                        : `${value > 0 ? '+' : ''}${formatNumber(Math.abs(value))}`
+                        ? `${value > 0 ? '+' : value < 0 ? '-' : ''}${Math.abs(value).toFixed(2)}%`
+                        : `${value > 0 ? '+' : value < 0 ? '-' : ''}${formatNumber(Math.abs(value))}`
                     }
                     cursor={false}
                     content={<CustomWeeklyTooltip />}
@@ -990,7 +990,7 @@ export function Dashboard() {
                             <div className="text-lg leading-none">
                               {strategy.totalClosePnl >= 0
                                 ? formatNumber(strategy.totalClosePnl)
-                                : formatNumber(Math.abs(strategy.totalClosePnl))
+                                : `-${formatNumber(Math.abs(strategy.totalClosePnl))}`
                               }
                             </div>
                           </div>
@@ -1125,7 +1125,7 @@ export function Dashboard() {
                             ) : (
                               <TrendingDown className="w-4 h-4" />
                             )}
-                            <span>{formatNumber(Math.abs(symbol.totalClosePnl))}</span>
+                            <span>{symbol.totalClosePnl < 0 ? '-' : ''}{formatNumber(Math.abs(symbol.totalClosePnl))}</span>
                           </div>
                         </div>
                       </div>
@@ -1328,7 +1328,7 @@ export function Dashboard() {
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">亏损金额</span>
                 <span className="text-red-600">
-                  {formatNumber(Math.abs(statisticsData?.lossAmount || 0))}
+                  {(statisticsData?.lossAmount || 0) < 0 ? '-' : ''}{formatNumber(Math.abs(statisticsData?.lossAmount || 0))}
                 </span>
               </div>
             </div>

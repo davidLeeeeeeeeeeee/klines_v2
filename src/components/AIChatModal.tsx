@@ -417,23 +417,37 @@ function ClosingChatContent({
           }`}>{action.originPositionSide || selectedPositionSide || '-'}</span></div>
           <div>开仓价格: <span className="font-semibold">{action.entryPrice ?? selectedEntryPrice ?? '-'}</span></div>
           <div>平仓价格: <span className="font-semibold">{selectedClosePrice ?? '-'}</span></div>
-          {action.takeProfit !== undefined && (
-            <div>止盈价格: <span className="font-semibold text-green-600">
-              {action.takeProfit}
-              {takeProfitReturn !== null && <span className="ml-1">({takeProfitReturn}%)</span>}
-            </span></div>
-          )}
-          {action.stopLoss !== undefined && (
-            <div>止损价格: <span className="font-semibold text-red-600">
-              {action.stopLoss}
-              {stopLossReturn !== null && <span className="ml-1">({stopLossReturn}%)</span>}
-            </span></div>
-          )}
-          {action.oldTakeProfit !== undefined && (
-            <div>止盈(旧): <span className="font-semibold text-gray-500">{action.oldTakeProfit}</span></div>
-          )}
-          {action.oldStopLoss !== undefined && (
-            <div>止损(旧): <span className="font-semibold text-gray-500">{action.oldStopLoss}</span></div>
+          {/* PLMODIFY时显示新旧止盈止损价格 */}
+          {action.action?.toUpperCase() === 'PLMODIFY' ? (
+            <>
+              {action.takeProfit !== undefined && (
+                <div>止盈(旧): <span className="font-semibold text-gray-500">{action.takeProfit}</span></div>
+              )}
+              {action.stopLoss !== undefined && (
+                <div>止损(旧): <span className="font-semibold text-gray-500">{action.stopLoss}</span></div>
+              )}
+              {action.newTakeProfit !== undefined && (
+                <div>止盈(新): <span className="font-semibold text-green-600">{action.newTakeProfit}</span></div>
+              )}
+              {action.newStopLoss !== undefined && (
+                <div>止损(新): <span className="font-semibold text-red-600">{action.newStopLoss}</span></div>
+              )}
+            </>
+          ) : (
+            <>
+              {action.takeProfit !== undefined && (
+                <div>止盈价格: <span className="font-semibold text-green-600">
+                  {action.takeProfit}
+                  {takeProfitReturn !== null && <span className="ml-1">({takeProfitReturn}%)</span>}
+                </span></div>
+              )}
+              {action.stopLoss !== undefined && (
+                <div>止损价格: <span className="font-semibold text-red-600">
+                  {action.stopLoss}
+                  {stopLossReturn !== null && <span className="ml-1">({stopLossReturn}%)</span>}
+                </span></div>
+              )}
+            </>
           )}
         </div>
       </div>

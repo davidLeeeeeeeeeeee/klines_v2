@@ -3,6 +3,7 @@ import { LoginPage } from './components/LoginPage';
 import { MainLayout } from './components/MainLayout';
 import { OperationInstance } from './components/OperationInstance';
 import { StrategyDetail } from './components/StrategyDetail';
+import { StrategyConfigPage } from './components/StrategyConfigPage';
 import { ProfilePage } from './components/ProfilePage';
 import { ChangePasswordPage } from './components/ChangePasswordPage';
 import { CreateUserPage } from './components/CreateUserPage';
@@ -30,6 +31,9 @@ function getUrlParams() {
     aiModel: params.get('aiModel'),
     runDays: params.get('runDays'),
     description: params.get('description'),
+    // 策略配置页面参数
+    strategyId: params.get('strategyId'),
+    isNew: params.get('isNew'),
     // 账户相关页面参数
     accountId: params.get('accountId'),
     uid: params.get('uid'),
@@ -115,6 +119,29 @@ export default function App() {
             runDays={urlParams.runDays ? parseInt(urlParams.runDays, 10) : undefined}
             description={urlParams.description || undefined}
             onBack={() => window.close()}
+          />
+        );
+
+      // 策略配置页面
+      case 'strategy-config':
+        // 如果是新建策略（isNew=true）或者有strategyId参数
+        const strategyForConfig = urlParams.strategyId ? {
+          id: urlParams.strategyId,
+          name: urlParams.strategyName || '',
+          description: urlParams.description || '',
+          aiModel: urlParams.aiModel || '',
+          riskLevel: 'medium' as 'low' | 'medium' | 'high',
+          tags: [],
+        } : null;
+        return (
+          <StrategyConfigPage
+            strategy={strategyForConfig}
+            onBack={() => window.close()}
+            onSave={() => {
+              // 保存成功后关闭窗口
+              alert('策略已保存！');
+              window.close();
+            }}
           />
         );
 

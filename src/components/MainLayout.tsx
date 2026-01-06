@@ -851,7 +851,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between pl-3 pr-6 sticky top-0 z-10">
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between pl-3 pr-10 sticky top-0 z-10">
           {/* Left side - Menu Toggle Button */}
           <div>
             <button

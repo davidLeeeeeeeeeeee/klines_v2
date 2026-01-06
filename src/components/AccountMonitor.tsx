@@ -1003,8 +1003,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
               : (filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0) >= 0 ? 'text-green-600' : 'text-red-600')
             }`}>
             {activeTab === 'positions'
-              ? Math.abs(totalUnrealizedPnL).toFixed(2)
-              : Math.abs(filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0)).toFixed(2)
+              ? `${totalUnrealizedPnL < 0 ? '-' : ''}${Math.abs(totalUnrealizedPnL).toFixed(2)}`
+              : `${filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0) < 0 ? '-' : ''}${Math.abs(filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0)).toFixed(2)}`
             }
           </div>
         </div>
@@ -1062,8 +1062,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                   <div className={`text-right ${position.unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     <div className="text-sm text-gray-500 mb-1">浮动盈亏</div>
                     <div>
-                      <span className="text-lg">{formatNumber(Math.abs(position.unrealizedPnL))}</span>
-                      <span className="text-sm ml-1">({Math.abs(position.unrealizedPnLPercent).toFixed(1)}%)</span>
+                      <span className="text-lg">{position.unrealizedPnL < 0 ? '-' : ''}{formatNumber(Math.abs(position.unrealizedPnL))}</span>
+                      <span className="text-sm ml-1">({position.unrealizedPnLPercent < 0 ? '-' : ''}{Math.abs(position.unrealizedPnLPercent).toFixed(1)}%)</span>
                     </div>
                   </div>
                 </div>
@@ -1092,32 +1092,32 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 {/* Additional Information */}
                 <div className="grid grid-cols-1 gap-3 mb-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">止盈价格</span>
-                    <span className="text-sm text-green-600">
+                    <span className="text-base text-gray-500">止盈价格</span>
+                    <span className="text-base text-green-600">
                       {position.takeProfit ? formatNumber(position.takeProfit) : '-'}
                       {position.takeProfitRatio !== null && (
-                        <span className="text-xs ml-0.5">({(position.takeProfitRatio * 100).toFixed(2)}%)</span>
+                        <span className="text-sm ml-0.5">({(position.takeProfitRatio * 100).toFixed(2)}%)</span>
                       )}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">止损价格</span>
-                    <span className="text-sm text-red-600">
+                    <span className="text-base text-gray-500">止损价格</span>
+                    <span className="text-base text-red-600">
                       {position.stopLoss ? formatNumber(position.stopLoss) : '-'}
                       {position.stopLossRatio !== null && (
-                        <span className="text-xs ml-0.5">({(position.stopLossRatio * 100).toFixed(2)}%)</span>
+                        <span className="text-sm ml-0.5">({(position.stopLossRatio * 100).toFixed(2)}%)</span>
                       )}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">已结盈亏</span>
-                    <span className={`text-sm ${position.curRealisedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatNumber(Math.abs(position.curRealisedPnl))}
+                    <span className="text-base text-gray-500">已结盈亏</span>
+                    <span className={`text-base ${position.curRealisedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {position.curRealisedPnl < 0 ? '-' : ''}{formatNumber(Math.abs(position.curRealisedPnl))}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">持仓时长</span>
-                    <span className="text-sm text-gray-900">
+                    <span className="text-base text-gray-500">持仓时长</span>
+                    <span className="text-base text-gray-900">
                       {position.createdAt ? `${formatTime(position.createdAt)}  ${calculateDurationToNow(position.createdAt)}` : '-'}
                     </span>
                   </div>
@@ -1245,8 +1245,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       <div className={`text-right ${trade.closedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         <div className="text-sm text-gray-500 mb-1">已结盈亏</div>
                         <div>
-                          <span className="text-lg">{Math.abs(trade.closedPnl).toFixed(2)}</span>
-                          <span className="text-sm ml-1">({Math.abs(parseFloat(pnlPercent)).toFixed(2)}%)</span>
+                          <span className="text-lg">{trade.closedPnl < 0 ? '-' : ''}{Math.abs(trade.closedPnl).toFixed(2)}</span>
+                          <span className="text-sm ml-1">({parseFloat(pnlPercent) < 0 ? '-' : ''}{Math.abs(parseFloat(pnlPercent)).toFixed(2)}%)</span>
                         </div>
                       </div>
                     </div>
@@ -1467,7 +1467,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                   <span className="text-sm text-gray-500">预计盈亏</span>
                   <span className={`text-sm font-semibold ${selectedPosition.unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {selectedPosition.unrealizedPnL >= 0 ? '+' : ''}{formatNumber(Math.abs(selectedPosition.unrealizedPnL))} ({selectedPosition.unrealizedPnLPercent >= 0 ? '+' : ''}{Math.abs(selectedPosition.unrealizedPnLPercent).toFixed(2)}%)
+                    {selectedPosition.unrealizedPnL >= 0 ? '+' : '-'}{formatNumber(Math.abs(selectedPosition.unrealizedPnL))} ({selectedPosition.unrealizedPnLPercent >= 0 ? '+' : '-'}{Math.abs(selectedPosition.unrealizedPnLPercent).toFixed(2)}%)
                   </span>
                 </div>
               </div>

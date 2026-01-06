@@ -197,12 +197,25 @@ export function StrategyConfigList({ onNavigateToConfig, strategies, onUpdateStr
     e.stopPropagation();
     const strategy = displayStrategies.find(s => s.id === strategyId);
     if (strategy) {
-      onNavigateToConfig(strategy);
+      // 在新标签页中打开策略配置页面
+      const params = new URLSearchParams({
+        page: 'strategy-config',
+        strategyId: strategy.id,
+        strategyName: strategy.name,
+        aiModel: strategy.aiModel || '',
+        description: strategy.description || '',
+      });
+      window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
     }
   };
 
   const handleCreateStrategy = () => {
-    onNavigateToConfig(null);
+    // 在新标签页中打开策略配置页面（创建新策略）
+    const params = new URLSearchParams({
+      page: 'strategy-config',
+      isNew: 'true',
+    });
+    window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
   };
 
   const handleSaveStrategy = (strategyData: Partial<Strategy>) => {

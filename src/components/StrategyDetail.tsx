@@ -521,8 +521,8 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
                   }}
                   formatter={(value: number) =>
                     weeklyChartType === 'rate'
-                      ? `${value.toFixed(2)}%`
-                      : formatNumber(Math.abs(value))
+                      ? `${value < 0 ? '-' : ''}${Math.abs(value).toFixed(2)}%`
+                      : `${value < 0 ? '-' : ''}${formatNumber(Math.abs(value))}`
                   }
                   cursor={false}
                   content={<CustomWeeklyTooltip />}
@@ -708,7 +708,7 @@ export function StrategyDetail({ strategyName, aiModel, runDays, description, on
                           ) : (
                             <TrendingDown className="w-4 h-4" />
                           )}
-                          <span>{formatNumber(Math.abs(symbol.amount))}</span>
+                          <span>{symbol.amount < 0 ? '-' : ''}{formatNumber(Math.abs(symbol.amount))}</span>
                         </div>
                       </div>
                     </div>
