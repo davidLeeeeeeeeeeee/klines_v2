@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, RefreshCw, Loader2, Copy, Search } from 'lucide-react';
+import { X, RefreshCw, Loader2, Copy, Search, Pause, Play } from 'lucide-react';
 import {
   getPositionList,
   getPositionChat,
@@ -124,6 +124,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [batchCloseSymbol, setBatchCloseSymbol] = useState('BTCUSDT');
   const [batchCloseAction, setBatchCloseAction] = useState<'long' | 'short' | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false); // 自动刷新暂停状态
 
   // Refs for click outside detection
   const strategyDropdownRef = useRef<HTMLDivElement>(null);
@@ -366,6 +367,19 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       fetchClosedPositions(currentPage);
     }
   }, [currentPage]);
+
+  // 自动刷新：仓位页面每1分钟刷新一次
+  useEffect(() => {
+    if (activeTab !== 'positions' || isAutoRefreshPaused) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      fetchPositions();
+    }, 60000); // 60秒 = 1分钟
+
+    return () => clearInterval(intervalId);
+  }, [activeTab, isAutoRefreshPaused, selectedSymbol, selectedStrategy]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -682,6 +696,16 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
               >
                 <RefreshCw className="w-5 h-5" />
               </button>
+              {/* 仓位页面显示自动刷新暂停/继续按钮 */}
+              {activeTab === 'positions' && (
+                <button
+                  onClick={() => setIsAutoRefreshPaused(!isAutoRefreshPaused)}
+                  className={`p-2 transition-all ${isAutoRefreshPaused ? 'text-orange-500 hover:text-orange-600' : 'text-green-500 hover:text-green-600'}`}
+                  title={isAutoRefreshPaused ? '继续自动刷新' : '暂停自动刷新'}
+                >
+                  {isAutoRefreshPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+                </button>
+              )}
             </div>
             <p className="text-sm text-gray-500">管理交易所账户持仓</p>
           </div>
