@@ -197,6 +197,7 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
           chatData={chatData}
           onClose={() => setShowChatModal(false)}
           isChatForClosing={isChatForClosing}
+          selectedAccountId={tradeData.accountId}
         />
       )}
     </div>

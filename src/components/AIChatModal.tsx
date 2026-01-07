@@ -186,7 +186,7 @@ export function AIChatModal({
 
               {expandedReasoning && (
                 <div className="mt-2 bg-blue-50 rounded-lg p-4 border border-blue-100">
-                  <div className="text-gray-700 text-sm whitespace-pre-wrap">
+                  <div className="text-gray-700 whitespace-pre-wrap">
                     {simpleThought}
                   </div>
                 </div>

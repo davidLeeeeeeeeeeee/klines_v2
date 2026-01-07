@@ -997,14 +997,35 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             {activeTab === 'positions' ? currentPositions.length : filteredClosedPositions.length}条
           </div>
 
-          {/* Total PnL Display */}
-          <div className={`font-semibold ${activeTab === 'positions'
-              ? (totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600')
-              : (filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0) >= 0 ? 'text-green-600' : 'text-red-600')
-            }`}>
+          {/* Per-Symbol PnL Display */}
+          <div className="flex items-center gap-3 font-semibold">
             {activeTab === 'positions'
-              ? `${totalUnrealizedPnL < 0 ? '-' : ''}${Math.abs(totalUnrealizedPnL).toFixed(2)}`
-              : `${filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0) < 0 ? '-' : ''}${Math.abs(filteredClosedPositions.reduce((sum, t) => sum + t.closedPnl, 0)).toFixed(2)}`
+              ? (() => {
+                  // 按币种分组计算浮动盈亏
+                  const pnlBySymbol: Record<string, number> = {};
+                  currentPositions.forEach(p => {
+                    const symbol = p.symbol.replace('USDT', '');
+                    pnlBySymbol[symbol] = (pnlBySymbol[symbol] || 0) + p.unrealizedPnL;
+                  });
+                  return Object.entries(pnlBySymbol).map(([symbol, pnl]) => (
+                    <span key={symbol} className={pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      {symbol}: {pnl.toFixed(2)}
+                    </span>
+                  ));
+                })()
+              : (() => {
+                  // 按币种分组计算已结盈亏
+                  const pnlBySymbol: Record<string, number> = {};
+                  filteredClosedPositions.forEach(t => {
+                    const symbol = t.symbol.replace('USDT', '');
+                    pnlBySymbol[symbol] = (pnlBySymbol[symbol] || 0) + t.closedPnl;
+                  });
+                  return Object.entries(pnlBySymbol).map(([symbol, pnl]) => (
+                    <span key={symbol} className={pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      {symbol}: {pnl.toFixed(2)}
+                    </span>
+                  ));
+                })()
             }
           </div>
         </div>
@@ -1041,7 +1062,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-gray-900 font-semibold">{position.symbol}</span>
+                      <span className="text-gray-900 font-semibold">{position.symbol.replace('USDT', '')}</span>
                       <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-2xl text-sm">
                         {position.leverage}x
                       </span>
@@ -1224,7 +1245,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-gray-900 font-semibold">{trade.symbol}</span>
+                          <span className="text-gray-900 font-semibold">{trade.symbol.replace('USDT', '')}</span>
                           <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-2xl text-sm">
                             {trade.leverage}x
                           </span>
@@ -1348,10 +1369,11 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                         <button
                           className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
                           onClick={() => {
-                            // 在新标签页中打开实例页面
+                            // 在新标签页中打开实例页面，传递accountId用于Chat弹窗匹配数据
                             const params = new URLSearchParams({
                               page: 'instance',
                               id: trade.id.toString(),
+                              accountId: trade.accountId.toString(),
                               strategyType: trade.strategyType || '-',
                               exchange: trade.exchange || '-',
                               accountName: trade.accountName || '-',
