@@ -13,6 +13,9 @@ export interface AIChatModalProps {
   selectedClosePrice?: number | null;
   selectedPositionSide?: string | null;
   selectedEntryPrice?: number | null;
+  // 从上级页面传入的止盈止损百分比
+  takeProfitRatio?: number | null;
+  stopLossRatio?: number | null;
 }
 
 export function AIChatModal({
@@ -23,6 +26,8 @@ export function AIChatModal({
   selectedClosePrice = null,
   selectedPositionSide = null,
   selectedEntryPrice = null,
+  takeProfitRatio = null,
+  stopLossRatio = null,
 }: AIChatModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [expandedPrompt, setExpandedPrompt] = useState(false);
@@ -62,6 +67,8 @@ export function AIChatModal({
   let parsedResponse: any = null;
   let simpleThought = '';
   let tradeSignalArgs: any = null;
+
+  console.log('AIChatModal - isChatForClosing:', isChatForClosing, 'takeProfitRatio:', takeProfitRatio, 'stopLossRatio:', stopLossRatio);
 
   try {
     parsedResponse = JSON.parse(chatData.response);
@@ -148,7 +155,7 @@ export function AIChatModal({
                     selectedClosePrice={selectedClosePrice}
                   />
                 ) : (
-                  <OpeningChatContent tradeSignalArgs={tradeSignalArgs} />
+                  <OpeningChatContent tradeSignalArgs={tradeSignalArgs} takeProfitRatio={takeProfitRatio} stopLossRatio={stopLossRatio} />
                 )}
               </div>
               {chatData.id && (
@@ -299,21 +306,13 @@ export function AIChatModal({
 }
 
 // 开仓CHAT内容
-function OpeningChatContent({ tradeSignalArgs }: { tradeSignalArgs: any }) {
-  // 计算保证金收益率
-  const calculateMarginReturn = (targetPrice: number, entryPrice: number, leverage: number = 1) => {
-    if (!entryPrice || entryPrice === 0) return null;
-    const priceChange = (targetPrice - entryPrice) / entryPrice;
-    return (priceChange * leverage * 100).toFixed(2);
-  };
-
-  const leverage = tradeSignalArgs.leverage || 1;
-  const entryPrice = tradeSignalArgs.entryPrice;
-  const takeProfitReturn = tradeSignalArgs.takeProfit && entryPrice
-    ? calculateMarginReturn(tradeSignalArgs.takeProfit, entryPrice, leverage)
+function OpeningChatContent({ tradeSignalArgs, takeProfitRatio, stopLossRatio }: { tradeSignalArgs: any; takeProfitRatio?: number | null; stopLossRatio?: number | null }) {
+  // 直接使用传入的百分比（接口返回的是小数，需要乘以 100）
+  const takeProfitReturn = takeProfitRatio !== null && takeProfitRatio !== undefined
+    ? (takeProfitRatio * 100).toFixed(2)
     : null;
-  const stopLossReturn = tradeSignalArgs.stopLoss && entryPrice
-    ? calculateMarginReturn(tradeSignalArgs.stopLoss, entryPrice, leverage)
+  const stopLossReturn = stopLossRatio !== null && stopLossRatio !== undefined
+    ? (stopLossRatio * 100).toFixed(2)
     : null;
 
   return (

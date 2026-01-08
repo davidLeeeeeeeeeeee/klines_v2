@@ -1963,6 +1963,51 @@ export async function getStrategyModelDetail(
 }
 
 /**
+ * 获取策略模型最新版本详情
+ * @param token 认证令牌
+ * @param name 策略模型名称
+ * @returns 策略模型最新版本详情
+ */
+export async function getStrategyModelLatest(
+  token: string,
+  name: string
+): Promise<StrategyModelDetailRes> {
+  try {
+    const requestBody = { name };
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/root/strategy/model/latest`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+    }
+
+    const apiResponse: ApiResponse<StrategyModelDetailRes> = await response.json();
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取策略模型最新版本详情失败';
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
  * 更新策略模型
  * @param token 认证令牌
  * @param request 策略模型参数
@@ -2510,11 +2555,13 @@ export interface StrategyInstanceRes {
   side: string;
   status: boolean;
   stopLoss: number | null;
+  stopLossRatio: number | null;
   strategyId: number;
   strategyType: string;
   suggestEntryPrice: number | null;
   symbol: string;
   takeProfit: number | null;
+  takeProfitRatio: number | null;
   updateTime: string;
   userId: number;
 }

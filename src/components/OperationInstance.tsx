@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { getPositionStrategyInstance, getChatDetail, StrategyInstanceRes, ChatResponse, PositionInstanceRequest } from '../services/api';
 import { getToken } from '../utils/storage';
@@ -28,6 +28,11 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
   const [chatData, setChatData] = useState<ChatResponse | null>(null);
   const [loadingChatId, setLoadingChatId] = useState<number | null>(null);
   const [isChatForClosing, setIsChatForClosing] = useState(false);
+  const [selectedEntryPrice, setSelectedEntryPrice] = useState<number | null>(null);
+
+  // 用 ref 存储百分比，避免 state 异步更新问题
+  const takeProfitRatioRef = useRef<number | null>(null);
+  const stopLossRatioRef = useRef<number | null>(null);
 
   // 获取操作标签颜色
   const getActionColor = (action: string) => {
@@ -90,12 +95,16 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
 
   // 获取 CHAT 数据
   // side: PLMODIFY, CLOSE 显示平仓CHAT (AI-C)，BUY 显示开仓CHAT (AI-O)
-  const fetchChat = async (chatId: number, side: string) => {
+  const fetchChat = async (chatId: number, side: string, entryPrice: number | null, takeProfitRatio: number | null, stopLossRatio: number | null) => {
     const token = getToken();
     if (!token) return;
 
     try {
       setLoadingChatId(chatId);
+      setSelectedEntryPrice(entryPrice);
+      // 直接使用接口返回的百分比
+      takeProfitRatioRef.current = takeProfitRatio;
+      stopLossRatioRef.current = stopLossRatio;
       const data = await getChatDetail(token, chatId);
       setChatData(data);
       // 判断是否为平仓CHAT: Plmodify 或 Close 显示 AI-C 页面（不区分大小写）
@@ -103,9 +112,6 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
       const isClosingChat = sideLower === 'plmodify' || sideLower === 'close';
       setIsChatForClosing(isClosingChat);
       setShowChatModal(true);
-      setExpandedReasoning(false);
-      setExpandedPrompt(false);
-      setExpandedOutput(false);
     } catch (err) {
       console.error('获取CHAT失败:', err);
     } finally {
@@ -182,7 +188,7 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
                   getActionColor={getActionColor}
                   formatTime={formatTime}
                   formatValue={formatValue}
-                  onChatClick={() => fetchChat(instance.chatId, instance.side)}
+                  onChatClick={() => fetchChat(instance.chatId, instance.side, instance.entryPrice, instance.takeProfitRatio, instance.stopLossRatio)}
                   loadingChatId={loadingChatId}
                 />
               ))}
@@ -198,6 +204,9 @@ export function OperationInstance({ onBack, tradeData }: OperationInstanceProps)
           onClose={() => setShowChatModal(false)}
           isChatForClosing={isChatForClosing}
           selectedAccountId={tradeData.accountId}
+          selectedEntryPrice={selectedEntryPrice}
+          takeProfitRatio={takeProfitRatioRef.current}
+          stopLossRatio={stopLossRatioRef.current}
         />
       )}
     </div>
@@ -270,9 +279,19 @@ function InstanceCard({ instance, getActionColor, formatTime, formatValue, onCha
           <div className="flex items-center">
             {instance.takeProfit !== null || instance.stopLoss !== null ? (
               <>
-                <span className="text-green-600">{formatValue(instance.takeProfit)}</span>
-                <span className="text-gray-400">/</span>
-                <span className="text-red-600">{formatValue(instance.stopLoss)}</span>
+                <span className="text-green-600">
+                  {formatValue(instance.takeProfit)}
+                  {instance.takeProfitRatio !== null && (
+                    <span className="text-sm ml-0.5">({(instance.takeProfitRatio * 100).toFixed(2)}%)</span>
+                  )}
+                </span>
+                <span className="text-gray-400 mx-1">/</span>
+                <span className="text-red-600">
+                  {formatValue(instance.stopLoss)}
+                  {instance.stopLossRatio !== null && (
+                    <span className="text-sm ml-0.5">({(instance.stopLossRatio * 100).toFixed(2)}%)</span>
+                  )}
+                </span>
               </>
             ) : (
               <span className="text-gray-900">- / -</span>
