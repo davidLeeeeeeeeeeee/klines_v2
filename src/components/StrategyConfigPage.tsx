@@ -4,7 +4,6 @@ import {
   createStrategyModel,
   upgradeStrategyModel,
   getStrategyModelDetail,
-  getStrategyModelLatest,
   previewStrategyModel,
   getSystemDict,
   StrategyModelReq,
@@ -225,8 +224,8 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
           throw new Error('未找到认证令牌，请重新登录');
         }
 
-        // 使用 latest 接口获取最新版本详情（使用策略名称）
-        const detail = await getStrategyModelLatest(token, strategy.name);
+        // 使用详情接口获取最新版本详情
+        const detail = await getStrategyModelDetail(token, parseInt(strategy.id));
 
         // 更新表单数据（安全处理可能为null的字段）
         setFormData({

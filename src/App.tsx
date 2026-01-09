@@ -12,7 +12,7 @@ import { InitAccountPage } from './components/InitAccountPage';
 import { EditTradingAccountPage } from './components/EditTradingAccountPage';
 import { FundTransfer } from './components/FundTransfer';
 import { isLoggedIn as checkIsLoggedIn, clearUserInfo, getToken } from './utils/storage';
-import { logout } from './services/api';
+import { logout, setSessionExpiredCallback } from './services/api';
 
 // 解析 URL 参数
 function getUrlParams() {
@@ -59,6 +59,12 @@ export default function App() {
   useEffect(() => {
     const loggedIn = checkIsLoggedIn();
     setIsLoggedIn(loggedIn);
+
+    // 设置登录超时回调
+    setSessionExpiredCallback(() => {
+      console.log('登录超时回调被触发');
+      setIsLoggedIn(false);
+    });
   }, []);
 
   const handleLogin = () => {

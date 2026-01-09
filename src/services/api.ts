@@ -4,6 +4,18 @@
 // 开发环境默认使用测试地址，生产环境使用正式地址
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
   (import.meta.env.MODE === 'production' ? 'https://alphanow.io' : 'https://test.alphanow.io');
+
+// 登录超时回调函数
+let onSessionExpired: (() => void) | null = null;
+
+/**
+ * 设置登录超时回调函数
+ * @param callback 登录超时时的回调函数
+ */
+export function setSessionExpiredCallback(callback: () => void) {
+  onSessionExpired = callback;
+}
+
 // 通用API响应包装类型
 export interface ApiResponse<T> {
   code: number;
@@ -46,6 +58,64 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+/**
+ * 检查是否为登录超时错误
+ * @param status HTTP状态码
+ * @param responseData 响应数据
+ * @returns 是否为登录超时
+ */
+function isSessionExpired(status: number, responseData: any): boolean {
+  // 条件1: HTTP状态码为500
+  // 条件2: 响应中包含 code: 3004
+  // 条件3: data 字段包含"登录已失效"或类似信息
+  return status === 500 &&
+         responseData?.code === 3004 &&
+         typeof responseData?.data === 'string' &&
+         responseData.data.includes('登录已失效');
+}
+
+/**
+ * 处理登录超时
+ */
+function handleSessionExpired() {
+  console.warn('检测到登录超时，准备跳转到登录页面');
+
+  // 清除本地存储的用户信息
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('user_info');
+    localStorage.removeItem('auth_token');
+  }
+
+  // 调用回调函数（由 App.tsx 设置）
+  if (onSessionExpired) {
+    onSessionExpired();
+  }
+}
+
+/**
+ * 统一处理响应错误，包括登录超时检测
+ * @param response fetch响应对象
+ * @param defaultErrorMessage 默认错误消息
+ * @returns 错误数据对象
+ */
+async function handleResponseError(response: Response, defaultErrorMessage: string): Promise<never> {
+  const errorData = await response.json().catch(() => ({}));
+
+  // 检查是否为登录超时
+  if (isSessionExpired(response.status, errorData)) {
+    handleSessionExpired();
+    throw new ApiError('登录已失效，请重新登录', response.status, errorData);
+  }
+
+  // 构建详细的错误信息
+  let errorMessage = errorData.description || errorData.message || defaultErrorMessage;
+  if (errorData.data && typeof errorData.data === 'string') {
+    errorMessage += `: ${errorData.data}`;
+  }
+
+  throw new ApiError(errorMessage, response.status, errorData);
 }
 
 /**
@@ -134,9 +204,7 @@ export async function getCurrentUserInfo(token: string): Promise<UserInfoRespons
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.description || errorData.message || `Failed to fetch user info: ${response.statusText}`;
-      throw new ApiError(errorMessage, response.status, errorData);
+      await handleResponseError(response, `Failed to fetch user info: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<UserInfoResponse> = await response.json();
@@ -170,17 +238,7 @@ export async function logout(token: string): Promise<boolean> {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      // 构建详细的错误信息
-      let errorMessage = errorData.description || errorData.message || `登出失败: ${response.statusText}`;
-      if (errorData.data && typeof errorData.data === 'string') {
-        errorMessage += `: ${errorData.data}`;
-      }
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `登出失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<boolean> = await response.json();
@@ -375,17 +433,7 @@ export async function getPositionList(
     console.log('持仓列表响应状态:', response.status);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      // 构建详细的错误信息
-      let errorMessage = errorData.description || errorData.message || `获取持仓列表失败: ${response.statusText}`;
-      if (errorData.data && typeof errorData.data === 'string') {
-        errorMessage += `: ${errorData.data}`;
-      }
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `获取持仓列表失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<PositionResponse[]> = await response.json();
@@ -443,17 +491,7 @@ export async function getPositionChat(
     console.log('AI Chat响应状态:', response.status);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      // 构建详细的错误信息
-      let errorMessage = errorData.description || errorData.message || `获取AI Chat失败: ${response.statusText}`;
-      if (errorData.data && typeof errorData.data === 'string') {
-        errorMessage += `: ${errorData.data}`;
-      }
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `获取AI Chat失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<ChatResponse> = await response.json();
@@ -510,6 +548,13 @@ export async function getClosedPositionList(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+
+      // 检查是否为登录超时
+      if (isSessionExpired(response.status, errorData)) {
+        handleSessionExpired();
+        throw new ApiError('登录已失效，请重新登录', response.status, errorData);
+      }
+
       // 构建详细的错误信息
       let errorMessage = errorData.description || `HTTP错误: ${response.status}`;
       if (errorData.data && typeof errorData.data === 'string') {
@@ -574,17 +619,7 @@ export async function getChatDetail(
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      // 构建详细的错误信息
-      let errorMessage = errorData.description || `HTTP错误: ${response.status}`;
-      if (errorData.data && typeof errorData.data === 'string') {
-        errorMessage += `: ${errorData.data}`;
-      }
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<ChatResponse> = await response.json();
@@ -640,17 +675,7 @@ export async function getChatList(
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      // 构建详细的错误信息
-      let errorMessage = errorData.description || `HTTP错误: ${response.status}`;
-      if (errorData.data && typeof errorData.data === 'string') {
-        errorMessage += `: ${errorData.data}`;
-      }
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<PageResponse<ChatResVO>> = await response.json();
@@ -869,17 +894,7 @@ export async function getAccountList(
     console.log('账户列表响应状态:', response.status);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      // 构建详细的错误信息
-      let errorMessage = errorData.description || errorData.message || `获取账户列表失败: ${response.statusText}`;
-      if (errorData.data && typeof errorData.data === 'string') {
-        errorMessage += `: ${errorData.data}`;
-      }
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `获取账户列表失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<AccountRes[]> = await response.json();
@@ -938,19 +953,7 @@ export async function createMainAccount(
     console.log('创建主账号响应状态:', response.status);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      // 构建详细的错误信息
-      let errorMessage = errorData.description || errorData.message || `创建主账号失败: ${response.statusText}`;
-      if (errorData.data && typeof errorData.data === 'string') {
-        errorMessage += `: ${errorData.data}`;
-      }
-      console.log('HTTP 错误响应:', errorData);
-      console.log('构建的错误信息:', errorMessage);
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `创建主账号失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<any> = await response.json();
@@ -1006,19 +1009,7 @@ export async function modifyAccount(
     console.log('编辑账号响应状态:', response.status);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      // 构建详细的错误信息
-      let errorMessage = errorData.description || errorData.message || `编辑账号失败: ${response.statusText}`;
-      if (errorData.data && typeof errorData.data === 'string') {
-        errorMessage += `: ${errorData.data}`;
-      }
-      console.log('HTTP 错误响应:', errorData);
-      console.log('构建的错误信息:', errorMessage);
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `编辑账号失败: ${response.statusText}`);
     }
 
     const result: boolean = await response.json();
@@ -1062,19 +1053,7 @@ export async function transferAccount(
     console.log('账号资金转移响应状态:', response.status);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      // 构建详细的错误信息
-      let errorMessage = errorData.description || errorData.message || `资金转移失败: ${response.statusText}`;
-      if (errorData.data && typeof errorData.data === 'string') {
-        errorMessage += `: ${errorData.data}`;
-      }
-      console.log('HTTP 错误响应:', errorData);
-      console.log('构建的错误信息:', errorMessage);
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `资金转移失败: ${response.statusText}`);
     }
 
     const result: boolean = await response.json();
@@ -1118,17 +1097,7 @@ export async function getAccountDetail(
     console.log('获取账号详情响应状态:', response.status);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      let errorMessage = errorData.description || errorData.message || `获取账号详情失败: ${response.statusText}`;
-      if (errorData.data && typeof errorData.data === 'string') {
-        errorMessage += `: ${errorData.data}`;
-      }
-      console.log('HTTP 错误响应:', errorData);
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `获取账号详情失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<AccountRes> = await response.json();
@@ -1181,13 +1150,7 @@ export async function bindAccountStrategy(
     console.log('账号绑定策略 - 响应状态:', response.status);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      let errorMessage = errorData.description || errorData.message || `绑定策略失败: ${response.statusText}`;
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `绑定策略失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<boolean> = await response.json();
@@ -1237,19 +1200,7 @@ export async function createBybitSubAccounts(
     console.log('Bybit创建子账户响应状态:', response.status);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      // 构建详细的错误信息
-      let errorMessage = errorData.description || errorData.message || `创建子账户失败: ${response.statusText}`;
-      if (errorData.data && typeof errorData.data === 'string') {
-        errorMessage += `: ${errorData.data}`;
-      }
-      console.log('HTTP 错误响应:', errorData);
-      console.log('构建的错误信息:', errorMessage);
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `创建子账户失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<number> = await response.json();
@@ -1307,19 +1258,7 @@ export async function closeAllPositions(
     console.log('一键平仓响应状态:', response.status);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      // 构建详细的错误信息
-      let errorMessage = errorData.description || errorData.message || `一键平仓失败: ${response.statusText}`;
-      if (errorData.data && typeof errorData.data === 'string') {
-        errorMessage += `: ${errorData.data}`;
-      }
-      console.log('HTTP 错误响应:', errorData);
-      console.log('构建的错误信息:', errorMessage);
-      throw new ApiError(
-        errorMessage,
-        response.status,
-        errorData
-      );
+      await handleResponseError(response, `一键平仓失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<boolean> = await response.json();
@@ -1485,9 +1424,7 @@ export async function getPanelOverview(token: string): Promise<PanelOverviewRes>
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      let errorMessage = errorData.description || errorData.message || `获取总览数据失败: ${response.statusText}`;
-      throw new ApiError(errorMessage, response.status, errorData);
+      await handleResponseError(response, `获取总览数据失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<PanelOverviewRes> = await response.json();
@@ -1527,9 +1464,7 @@ export async function getPanelCloseStatistics(token: string, params?: { startTim
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      let errorMessage = errorData.description || errorData.message || `获取交易统计失败: ${response.statusText}`;
-      throw new ApiError(errorMessage, response.status, errorData);
+      await handleResponseError(response, `获取交易统计失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<PanelCloseStatistics> = await response.json();
@@ -1572,9 +1507,7 @@ export async function getPanelStrategyRanking(
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      let errorMessage = errorData.description || errorData.message || `获取策略排名失败: ${response.statusText}`;
-      throw new ApiError(errorMessage, response.status, errorData);
+      await handleResponseError(response, `获取策略排名失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<PanelStrategyRankingRes[]> = await response.json();
@@ -1614,9 +1547,7 @@ export async function getPanelSymbolLike(token: string, params?: { startTime?: s
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      let errorMessage = errorData.description || errorData.message || `获取交易对偏好失败: ${response.statusText}`;
-      throw new ApiError(errorMessage, response.status, errorData);
+      await handleResponseError(response, `获取交易对偏好失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<PanelSymbolLikeRes[]> = await response.json();
@@ -1659,9 +1590,7 @@ export async function getPanelSymbolRanking(
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      let errorMessage = errorData.description || errorData.message || `获取交易对排名失败: ${response.statusText}`;
-      throw new ApiError(errorMessage, response.status, errorData);
+      await handleResponseError(response, `获取交易对排名失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<PanelSymbolRankingRes[]> = await response.json();
@@ -1722,7 +1651,7 @@ export async function getPanelHistoryEquityLine(
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<HistoryLine> = await response.json();
@@ -1851,7 +1780,7 @@ export async function createStrategyModel(
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<boolean> = await response.json();
@@ -1891,7 +1820,7 @@ export async function getStrategyModelList(
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<StrategyModelListRes[]> = await response.json();
@@ -1941,58 +1870,13 @@ export async function getStrategyModelDetail(
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<StrategyModelDetailRes> = await response.json();
 
     if (!apiResponse.success || apiResponse.code !== 200) {
       let errorMessage = apiResponse.description || '获取策略模型详情失败';
-      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
-    }
-
-    return apiResponse.data;
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(
-      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
-    );
-  }
-}
-
-/**
- * 获取策略模型最新版本详情
- * @param token 认证令牌
- * @param name 策略模型名称
- * @returns 策略模型最新版本详情
- */
-export async function getStrategyModelLatest(
-  token: string,
-  name: string
-): Promise<StrategyModelDetailRes> {
-  try {
-    const requestBody = { name };
-
-    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/root/strategy/model/latest`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'alphatoken': token
-      },
-      body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
-    }
-
-    const apiResponse: ApiResponse<StrategyModelDetailRes> = await response.json();
-
-    if (!apiResponse.success || apiResponse.code !== 200) {
-      let errorMessage = apiResponse.description || '获取策略模型最新版本详情失败';
       throw new ApiError(errorMessage, apiResponse.code, apiResponse);
     }
 
@@ -2029,7 +1913,7 @@ export async function upgradeStrategyModel(
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<boolean> = await response.json();
@@ -2072,7 +1956,7 @@ export async function switchStrategyModelStatus(
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<boolean> = await response.json();
@@ -2125,7 +2009,7 @@ export async function previewStrategyModel(
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+        await handleResponseError(response, `HTTP错误: ${response.status}`);
       }
 
       const apiResponse: ApiResponse<StrategyModelPreviewRes> = await response.json();
@@ -2199,7 +2083,7 @@ export async function getSystemDict(): Promise<SystemDictData> {
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<SystemDictData> = await response.json();
@@ -2256,9 +2140,7 @@ export async function getPanelDailyProfitLoss(token: string): Promise<PanelDaily
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      let errorMessage = errorData.description || errorData.message || `获取每日盈亏失败: ${response.statusText}`;
-      throw new ApiError(errorMessage, response.status, errorData);
+      await handleResponseError(response, `获取每日盈亏失败: ${response.statusText}`);
     }
 
     const apiResponse: ApiResponse<PanelDailyProfitLossRes> = await response.json();
@@ -2343,7 +2225,7 @@ export async function getStrategyPanelOverview(
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<StrategyPanelOverviewRes> = await response.json();
@@ -2379,7 +2261,7 @@ export async function getStrategyCloseStatistics(
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<StrategyCloseStatisticsRes> = await response.json();
@@ -2415,7 +2297,7 @@ export async function getStrategyDailyProfitLoss(
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<PanelDailyProfitLossRes> = await response.json();
@@ -2452,7 +2334,7 @@ export async function getStrategyHistoryEquityLine(
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<HistoryLineRes> = await response.json();
@@ -2488,7 +2370,7 @@ export async function getStrategySymbolLike(
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<StrategySymbolLikeRes[]> = await response.json();
@@ -2524,7 +2406,7 @@ export async function getStrategySymbolRanking(
     });
 
     if (!response.ok) {
-      throw new ApiError(`HTTP错误: ${response.status}`, response.status);
+      await handleResponseError(response, `HTTP错误: ${response.status}`);
     }
 
     const apiResponse: ApiResponse<StrategySymbolRankingRes[]> = await response.json();
@@ -2555,13 +2437,11 @@ export interface StrategyInstanceRes {
   side: string;
   status: boolean;
   stopLoss: number | null;
-  stopLossRatio: number | null;
   strategyId: number;
   strategyType: string;
   suggestEntryPrice: number | null;
   symbol: string;
   takeProfit: number | null;
-  takeProfitRatio: number | null;
   updateTime: string;
   userId: number;
 }
