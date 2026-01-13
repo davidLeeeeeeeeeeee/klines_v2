@@ -85,6 +85,7 @@ function normalizePost(item) {
         tags: item.tags,
         upvotes: item.upvotes || 0,
         downvotes: item.downvotes || 0,
+        raw: item, // 保留完整的原始数据
     };
 }
 
