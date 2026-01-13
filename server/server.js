@@ -45,14 +45,34 @@ function httpsGet(url) {
     });
 }
 
+// 辅助函数：将 UTC 时间转换为北京时间字符串
+function toBeijingTime(utcTimestamp) {
+    // utcTimestamp 是 Unix 时间戳（秒）
+    const date = new Date(utcTimestamp * 1000);
+
+    // 转换为北京时间（UTC+8）
+    const beijingTime = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+
+    // 格式化为 YYYY-MM-DD HH:mm:ss
+    const year = beijingTime.getUTCFullYear();
+    const month = String(beijingTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(beijingTime.getUTCDate()).padStart(2, '0');
+    const hours = String(beijingTime.getUTCHours()).padStart(2, '0');
+    const minutes = String(beijingTime.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(beijingTime.getUTCSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 function normalizePost(item) {
     // 将 CryptoCompare 新闻格式转换为统一格式
     return {
         id: item.id || item.guid,
         title: item.title,
         url: item.url,
-        published_at: new Date(item.published_on * 1000).toISOString(), // Unix timestamp 转 ISO
-        created_at: new Date(item.published_on * 1000).toISOString(),
+        published_at: toBeijingTime(item.published_on), // 转换为北京时间
+        published_at_utc: new Date(item.published_on * 1000).toISOString(), // 保留 UTC 时间供参考
+        created_at: toBeijingTime(item.published_on), // 转换为北京时间
         domain: item.source || 'Unknown',
         source: {
             title: item.source_info?.name || item.source || 'Unknown',
@@ -65,7 +85,6 @@ function normalizePost(item) {
         tags: item.tags,
         upvotes: item.upvotes || 0,
         downvotes: item.downvotes || 0,
-        raw: item,
     };
 }
 
@@ -166,9 +185,15 @@ startPolling().catch((e) => {
 
 // 健康检查/状态
 app.get('/health', (req, res) => {
+    // 将 lastFetchAt 转换为北京时间
+    const lastFetchBeijing = lastFetchAt ?
+        toBeijingTime(new Date(lastFetchAt).getTime() / 1000) : null;
+
     res.json({
         ok: true,
-        lastFetchAt,
+        lastFetchAt: lastFetchBeijing,
+        lastFetchAt_utc: lastFetchAt,
+        timezone: 'Asia/Shanghai (UTC+8)',
         pollMs: POLL_MS,
         cached: latestList.length,
         lastError,
@@ -178,8 +203,12 @@ app.get('/health', (req, res) => {
 // 取所有新闻（最多 5 条）
 app.get('/latest', (req, res) => {
     const limit = Math.max(1, Math.min(5, Number(req.query.limit || 5)));
+    const lastFetchBeijing = lastFetchAt ?
+        toBeijingTime(new Date(lastFetchAt).getTime() / 1000) : null;
+
     res.json({
-        lastFetchAt,
+        lastFetchAt: lastFetchBeijing,
+        timezone: 'Asia/Shanghai (UTC+8)',
         count: Math.min(limit, latestList.length),
         items: latestList.slice(0, limit),
     });
@@ -189,9 +218,13 @@ app.get('/latest', (req, res) => {
 app.get('/btc/latest', (req, res) => {
     const limit = Math.max(1, Math.min(5, Number(req.query.limit || 5)));
     const btcPosts = postsByCoin.get('BTC') || [];
+    const lastFetchBeijing = lastFetchAt ?
+        toBeijingTime(new Date(lastFetchAt).getTime() / 1000) : null;
+
     res.json({
         coin: 'BTC',
-        lastFetchAt,
+        lastFetchAt: lastFetchBeijing,
+        timezone: 'Asia/Shanghai (UTC+8)',
         count: Math.min(limit, btcPosts.length),
         items: btcPosts.slice(0, limit),
     });
@@ -210,9 +243,13 @@ app.get('/coin/:symbol/latest', (req, res) => {
     }
 
     const coinPosts = postsByCoin.get(symbol) || [];
+    const lastFetchBeijing = lastFetchAt ?
+        toBeijingTime(new Date(lastFetchAt).getTime() / 1000) : null;
+
     res.json({
         coin: symbol,
-        lastFetchAt,
+        lastFetchAt: lastFetchBeijing,
+        timezone: 'Asia/Shanghai (UTC+8)',
         count: Math.min(limit, coinPosts.length),
         items: coinPosts.slice(0, limit),
     });
