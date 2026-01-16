@@ -1,0 +1,309 @@
+{
+    "coin": "BTC",
+    "lastFetchAt": "2026-01-13 21:55:29",
+    "timezone": "Asia/Shanghai (UTC+8)",
+    "count": 5,
+    "items": [
+        {
+            "id": "57128558",
+            "title": "The Calm Before the Crypto Storm: Bitcoin Preps for a Technical Twist",
+            "url": "https://news.bitcoin.com/the-calm-before-the-crypto-storm-bitcoin-preps-for-a-technical-twist/",
+            "published_at": "2026-01-13 21:45:46",
+            "published_at_utc": "2026-01-13T13:45:46.000Z",
+            "created_at": "2026-01-13 21:45:46",
+            "domain": "bitcoin.com",
+            "source": {
+                "title": "Bitcoin.com",
+                "domain": "bitcoin.com",
+                "img": "https://images.cryptocompare.com/news/default/bitcoincom.png"
+            },
+            "currencies": [
+                {
+                    "code": "BTC",
+                    "title": "BTC"
+                },
+                {
+                    "code": "MARKET",
+                    "title": "MARKET"
+                },
+                {
+                    "code": "TRADING",
+                    "title": "TRADING"
+                },
+                {
+                    "code": "CRYPTOCURRENCY",
+                    "title": "CRYPTOCURRENCY"
+                }
+            ],
+            "thumb": "https://resources.cryptocompare.com/news/14/57128558.jpeg",
+            "description": "On Tuesday morning (8:30 a.m. EST), bitcoin’s price action danced between $91,800 and $92,479 today, carving out a narrow but significant range in a broader game of “will they or won’t they” among traders. With a market cap firmly seated at $1.83 trillion and a hearty $44.68 billion in 24-hour tradi...",
+            "tags": "Markets and Prices|Bitcoin (BTC)|Bitcoin Price|markets and prices|Technical Analysis",
+            "upvotes": "0",
+            "downvotes": "0",
+            "raw": {
+                "id": "57128558",
+                "guid": "https://news.bitcoin.com/?p=783558",
+                "published_on": 1768311946,
+                "imageurl": "https://resources.cryptocompare.com/news/14/57128558.jpeg",
+                "title": "The Calm Before the Crypto Storm: Bitcoin Preps for a Technical Twist",
+                "url": "https://news.bitcoin.com/the-calm-before-the-crypto-storm-bitcoin-preps-for-a-technical-twist/",
+                "body": "On Tuesday morning (8:30 a.m. EST), bitcoin’s price action danced between $91,800 and $92,479 today, carving out a narrow but significant range in a broader game of “will they or won’t they” among traders. With a market cap firmly seated at $1.83 trillion and a hearty $44.68 billion in 24-hour trading volume, the king of",
+                "tags": "Markets and Prices|Bitcoin (BTC)|Bitcoin Price|markets and prices|Technical Analysis",
+                "lang": "EN",
+                "upvotes": "0",
+                "downvotes": "0",
+                "categories": "BTC|MARKET|TRADING|CRYPTOCURRENCY",
+                "source_info": {
+                    "name": "Bitcoin.com",
+                    "img": "https://images.cryptocompare.com/news/default/bitcoincom.png",
+                    "lang": "EN"
+                },
+                "source": "bitcoin.com"
+            }
+        },
+        {
+            "id": "57128510",
+            "title": "Over 600,000 new cryptocurrencies have been created in 2026",
+            "url": "https://finbold.com/over-600000-new-cryptocurrencies-have-been-created-in-2026/",
+            "published_at": "2026-01-13 21:43:23",
+            "published_at_utc": "2026-01-13T13:43:23.000Z",
+            "created_at": "2026-01-13 21:43:23",
+            "domain": "finbold",
+            "source": {
+                "title": "Finbold",
+                "domain": "finbold",
+                "img": "https://images.cryptocompare.com/news/default/finbold.png"
+            },
+            "currencies": [
+                {
+                    "code": "BTC",
+                    "title": "BTC"
+                },
+                {
+                    "code": "ETH",
+                    "title": "ETH"
+                },
+                {
+                    "code": "MARKET",
+                    "title": "MARKET"
+                },
+                {
+                    "code": "TRADING",
+                    "title": "TRADING"
+                },
+                {
+                    "code": "CRYPTOCURRENCY",
+                    "title": "CRYPTOCURRENCY"
+                }
+            ],
+            "thumb": "https://images.cryptocompare.com/news/default/finbold.png",
+            "description": "The cryptocurrency market has entered 2026 with an acceleration in token creation, continuing the pace seen over the past year. As of January 12, 2026, the total number of cryptocurrencies tracked by CoinMarketCap stood at 29.91 million. At the start of the year, on January 1, CoinMarketCap tracked ...",
+            "tags": "Cryptocurrency news|Bitcoin|crypto|cryptocurrency",
+            "upvotes": "0",
+            "downvotes": "0",
+            "raw": {
+                "id": "57128510",
+                "guid": "https://finbold.com/?p=260557",
+                "published_on": 1768311803,
+                "imageurl": "https://images.cryptocompare.com/news/default/finbold.png",
+                "title": "Over 600,000 new cryptocurrencies have been created in 2026",
+                "url": "https://finbold.com/over-600000-new-cryptocurrencies-have-been-created-in-2026/",
+                "body": "The cryptocurrency market has entered 2026 with an acceleration in token creation, continuing the pace seen over the past year. As of January 12, 2026, the total number of cryptocurrencies tracked by CoinMarketCap stood at 29.91 million. At the start of the year, on January 1, CoinMarketCap tracked 29.29 million cryptocurrencies, indicating that about 620,000 new assets were created in just the first days of 2026. Total tracked cryptocurrencies by CoinMarketCap: Source: CMC At the same time, over the past 30 days, more than 1.57 million new cryptocurrencies were created, with 357,773 added in the last seven days alone. In the past 24 hours, the market saw roughly 66,740 newly created tokens. Total tracked cryptocurrencies by CoinMarketCap: Source: CMC It’s worth noting that the surge highlights how easy it has become to create a cryptocurrency. Modern blockchain ecosystems allow users to launch tokens with minimal technical expertise through standardized templates on Ethereum ( ETH )-compatible networks and other smart contract platforms. No-code tools and low deployment costs mean new assets can be launched in minutes, often requiring little more than a wallet and a small transaction fee. Drivers of increased tokens created This accessibility has been reinforced by speculative activity, meme coin culture, and experimentation across decentralized finance , gaming, and community-driven projects. Many tokens are created to test ideas or capture short-term attention rather than build long-term infrastructure, pushing overall token counts higher even as adoption remains limited. However, the rapid increase in numbers has not translated into lasting success for most assets. The majority experience sharp price declines shortly after launch or fail due to limited liquidity, weak utility, or fading interest. Many are also created in attempts to emulate established networks such as Bitcoin ( BTC ) and Ethereum, often reusing familiar narratives or mechanics without meaningful innovation. As a result, the market has become increasingly crowded, with only a small share of cryptocurrencies gaining traction while most fade quickly. Featured image via Shutterstock The post Over 600,000 new cryptocurrencies have been created in 2026 appeared first on Finbold .",
+                "tags": "Cryptocurrency news|Bitcoin|crypto|cryptocurrency",
+                "lang": "EN",
+                "upvotes": "0",
+                "downvotes": "0",
+                "categories": "BTC|ETH|MARKET|TRADING|CRYPTOCURRENCY",
+                "source_info": {
+                    "name": "Finbold",
+                    "img": "https://images.cryptocompare.com/news/default/finbold.png",
+                    "lang": "EN"
+                },
+                "source": "finbold"
+            }
+        },
+        {
+            "id": "57128500",
+            "title": "Bitcoin's Four-Year Cycle Broken: VanEck",
+            "url": "https://decrypt.co/354389/bitcoins-four-year-cycle-broken-vaneck",
+            "published_at": "2026-01-13 21:42:43",
+            "published_at_utc": "2026-01-13T13:42:43.000Z",
+            "created_at": "2026-01-13 21:42:43",
+            "domain": "decrypt",
+            "source": {
+                "title": "Decrypt",
+                "domain": "decrypt",
+                "img": "https://images.cryptocompare.com/news/default/decrypt.png"
+            },
+            "currencies": [
+                {
+                    "code": "BTC",
+                    "title": "BTC"
+                },
+                {
+                    "code": "FIAT",
+                    "title": "FIAT"
+                },
+                {
+                    "code": "MARKET",
+                    "title": "MARKET"
+                },
+                {
+                    "code": "TRADING",
+                    "title": "TRADING"
+                },
+                {
+                    "code": "CRYPTOCURRENCY",
+                    "title": "CRYPTOCURRENCY"
+                }
+            ],
+            "thumb": "https://resources.cryptocompare.com/news/44/57128500.jpeg",
+            "description": "The investment manager sees a split Bitcoin outlook but is bullish on gold and AI stocks, as political risks challenge traditional market anchors....",
+            "tags": "|Coins",
+            "upvotes": "0",
+            "downvotes": "0",
+            "raw": {
+                "id": "57128500",
+                "guid": "https://decrypt.co/?p=354389",
+                "published_on": 1768311763,
+                "imageurl": "https://resources.cryptocompare.com/news/44/57128500.jpeg",
+                "title": "Bitcoin's Four-Year Cycle Broken: VanEck",
+                "url": "https://decrypt.co/354389/bitcoins-four-year-cycle-broken-vaneck",
+                "body": "The investment manager sees a split Bitcoin outlook but is bullish on gold and AI stocks, as political risks challenge traditional market anchors.",
+                "tags": "|Coins",
+                "lang": "EN",
+                "upvotes": "0",
+                "downvotes": "0",
+                "categories": "BTC|FIAT|MARKET|TRADING|CRYPTOCURRENCY",
+                "source_info": {
+                    "name": "Decrypt",
+                    "img": "https://images.cryptocompare.com/news/default/decrypt.png",
+                    "lang": "EN"
+                },
+                "source": "decrypt"
+            }
+        },
+        {
+            "id": "57128468",
+            "title": "World central banks rally behind Powell, stress Fed independence",
+            "url": "https://cointelegraph.com/news/global-central-banks-back-powell-warn-fed-independence-crypto-impact?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+            "published_at": "2026-01-13 21:40:45",
+            "published_at_utc": "2026-01-13T13:40:45.000Z",
+            "created_at": "2026-01-13 21:40:45",
+            "domain": "cointelegraph",
+            "source": {
+                "title": "Cointelegraph",
+                "domain": "cointelegraph",
+                "img": "https://images.cryptocompare.com/news/default/cointelegraph.png"
+            },
+            "currencies": [
+                {
+                    "code": "BTC",
+                    "title": "BTC"
+                },
+                {
+                    "code": "FIAT",
+                    "title": "FIAT"
+                },
+                {
+                    "code": "TRADING",
+                    "title": "TRADING"
+                },
+                {
+                    "code": "MACROECONOMICS",
+                    "title": "MACROECONOMICS"
+                },
+                {
+                    "code": "CRYPTOCURRENCY",
+                    "title": "CRYPTOCURRENCY"
+                }
+            ],
+            "thumb": "https://images.cryptocompare.com/news/default/cointelegraph.png",
+            "description": "Crypto experts say political pressure on the US Federal Reserve could drive volatility, but also shift flows toward Bitcoin and gold in the long run....",
+            "tags": "",
+            "upvotes": "0",
+            "downvotes": "0",
+            "raw": {
+                "id": "57128468",
+                "guid": "https://cointelegraph.com/news/global-central-banks-back-powell-warn-fed-independence-crypto-impact",
+                "published_on": 1768311645,
+                "imageurl": "https://images.cryptocompare.com/news/default/cointelegraph.png",
+                "title": "World central banks rally behind Powell, stress Fed independence",
+                "url": "https://cointelegraph.com/news/global-central-banks-back-powell-warn-fed-independence-crypto-impact?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+                "body": "Crypto experts say political pressure on the US Federal Reserve could drive volatility, but also shift flows toward Bitcoin and gold in the long run.",
+                "tags": "",
+                "lang": "EN",
+                "upvotes": "0",
+                "downvotes": "0",
+                "categories": "BTC|FIAT|TRADING|MACROECONOMICS|CRYPTOCURRENCY",
+                "source_info": {
+                    "name": "Cointelegraph",
+                    "img": "https://images.cryptocompare.com/news/default/cointelegraph.png",
+                    "lang": "EN"
+                },
+                "source": "cointelegraph"
+            }
+        },
+        {
+            "id": "57128355",
+            "title": "Solana Spot ETF Inflows Hit $10.67M as SOL Eyes $159 Breakout Zone",
+            "url": "https://coinpaper.com/13721/solana-spot-etf-inflows-hit-10-67-m-as-sol-eyes-159-breakout-zone",
+            "published_at": "2026-01-13 21:36:09",
+            "published_at_utc": "2026-01-13T13:36:09.000Z",
+            "created_at": "2026-01-13 21:36:09",
+            "domain": "coinpaper",
+            "source": {
+                "title": "Coinpaper",
+                "domain": "coinpaper",
+                "img": "https://resources.cryptocompare.com/news/93/default.png"
+            },
+            "currencies": [
+                {
+                    "code": "BTC",
+                    "title": "BTC"
+                },
+                {
+                    "code": "MARKET",
+                    "title": "MARKET"
+                },
+                {
+                    "code": "SOL",
+                    "title": "SOL"
+                },
+                {
+                    "code": "TRADING",
+                    "title": "TRADING"
+                },
+                {
+                    "code": "CRYPTOCURRENCY",
+                    "title": "CRYPTOCURRENCY"
+                }
+            ],
+            "thumb": "https://resources.cryptocompare.com/news/93/default.png",
+            "description": "The crypto market showed early signs of stabilization, as fresh capital returned to spot exchange-traded funds. After several days of withdrawals, investors appeared willing to reengage with digital assets. This shift occurred as broader market conditions remained uncertain and traders searched for ...",
+            "tags": "News|Crypto",
+            "upvotes": "0",
+            "downvotes": "0",
+            "raw": {
+                "id": "57128355",
+                "guid": "https://coinpaper.com/13721/solana-spot-etf-inflows-hit-10-67-m-as-sol-eyes-159-breakout-zone",
+                "published_on": 1768311369,
+                "imageurl": "https://resources.cryptocompare.com/news/93/default.png",
+                "title": "Solana Spot ETF Inflows Hit $10.67M as SOL Eyes $159 Breakout Zone",
+                "url": "https://coinpaper.com/13721/solana-spot-etf-inflows-hit-10-67-m-as-sol-eyes-159-breakout-zone",
+                "body": "The crypto market showed early signs of stabilization, as fresh capital returned to spot exchange-traded funds. After several days of withdrawals, investors appeared willing to reengage with digital assets. This shift occurred as broader market conditions remained uncertain and traders searched for relative strength among major tokens. Solana drew particular attention, as its price moved higher alongside renewed ETF inflows. The combination of improving flows and technical tension placed SOL at a critical decision point. ETF Flows Signal Cautious Risk Appetite Bitcoin spot ETFs recorded $117 million in net inflows, reversing four straight days of outflows. Consequently, this move suggested easing short-term risk aversion among institutional participants. Ethereum spot ETFs also turned positive, attracting $5.042 million and ending a three-day redemption streak. Besides that, Solana spot ETFs logged $10.67 million in inflows, while XRP products added $15.04 million. Significantly, the broad-based nature of these inflows pointed to selective confidence rather than aggressive risk-taking. Investors appeared willing to reallocate capital but remained focused on assets showing resilience. Hence, Solana’s inclusion among positive ETF flows strengthened its near-term narrative, even as market structure stayed mixed. Solana Price Holds Firm as Analysts Watch Key Levels ​​SOL U.S. Dollar Daily Chart. Source: CoinCodex Solana traded at $141.76, posting a 1.57% daily gain and a 2.20% weekly increase. Additionally, daily trading volume exceeded $6.6 billion, reflecting sustained market participation. With a circulating supply near 570 million tokens, Solana’s market capitalization stood above $80 billion. According to Ali Martinez, Solana’s technical posture turned bullish above $144.63. He indicated that a breakout above this level could open a path toward $159.10. However, the price remained below that trigger, leaving momentum unresolved. Traders continued to monitor whether buyers could reclaim higher ground convincingly. Divergence Risk Clouds the Short-Term Outlook Moreover, Umair Crypto highlighted growing tension in Solana’s structure. He observed that weakness in Ethereum relative to Bitcoin encouraged rotation toward SOL. However, he noted that the setup lacked clarity. Price pressed against the top of its range while showing daily bearish divergence. A daily close above $141.3 would confirm that divergence through follow-through. Consequently, such confirmation could increase the probability of a corrective move, potentially below $130. That scenario aligned with signs of momentum exhaustion near range highs. However, invalidation remained clear. Holding above $138 and sustaining acceptance higher would neutralize divergence risks. In that case, upside focus could return, with $150 emerging as the next structural target.",
+                "tags": "News|Crypto",
+                "lang": "EN",
+                "upvotes": "0",
+                "downvotes": "0",
+                "categories": "BTC|MARKET|SOL|TRADING|CRYPTOCURRENCY",
+                "source_info": {
+                    "name": "Coinpaper",
+                    "img": "https://resources.cryptocompare.com/news/93/default.png",
+                    "lang": "EN"
+                },
+                "source": "coinpaper"
+            }
+        }
+    ]
+}

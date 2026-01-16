@@ -91,7 +91,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
 
   const [timePeriod, setTimePeriod] = useState('m15');
   const [selectedIndicators, setSelectedIndicators] = useState<string[]>(['VOLUME', 'EMA10', 'MACD']);
-  const [klineCount] = useState(20); // 固定为20，不可编辑
+  const [klineCount, setKlineCount] = useState(20); // K线数量，可编辑
   const [showPreview, setShowPreview] = useState(false);
   const [expandedSystemPrompt, setExpandedSystemPrompt] = useState(true);
   const [expandedUserPrompt, setExpandedUserPrompt] = useState(true);
@@ -246,6 +246,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
         setSelectedPeriods(detail.intervals || []);
         setIncludePositionData(detail.needPosition ?? false);
         setSelectedSymbols(detail.symbols || []);
+        setKlineCount(detail.klineNum || 20);
         setCurrentVersion(detail.version || 1);
 
         // 更新版本历史（按版本倒序排列）
@@ -332,6 +333,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
       setSelectedPeriods(detail.intervals || []);
       setIncludePositionData(detail.needPosition ?? false);
       setSelectedSymbols(detail.symbols || []);
+      setKlineCount(detail.klineNum || 20);
       setCurrentVersion(detail.version || version);
 
       // 更新版本历史（如果返回了新的历史列表，按版本倒序排列）
@@ -718,12 +720,14 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                   <input
                     type="number"
                     value={klineCount}
-                    readOnly
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
-                    placeholder="固定为20"
+                    onChange={(e) => setKlineCount(parseInt(e.target.value) || 20)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 hide-spin-button"
+                    placeholder="请输入K线数量"
+                    min="1"
+                    required
                   />
                   <p className="text-gray-500 text-sm mt-2">
-                    K线数量已固定为 20 条
+                    设置用于分析的K线数量，建议 10-100 条
                   </p>
                 </div>
 
