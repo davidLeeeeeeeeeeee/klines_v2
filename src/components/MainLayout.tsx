@@ -153,7 +153,10 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
   const [bnbPrice, setBnbPrice] = useState<number | null>(null);
   const [zecPrice, setZecPrice] = useState<number | null>(null);
   const [hypePrice, setHypePrice] = useState<number | null>(null);
-  const [priceChangePercent, setPriceChangePercent] = useState<{ btc: number; eth: number; sol: number; bnb: number; zec: number; hype: number }>({ btc: 0, eth: 0, sol: 0, bnb: 0, zec: 0, hype: 0 });
+  const [adaPrice, setAdaPrice] = useState<number | null>(null);
+  const [xrpPrice, setXrpPrice] = useState<number | null>(null);
+  const [dogePrice, setDogePrice] = useState<number | null>(null);
+  const [priceChangePercent, setPriceChangePercent] = useState<{ btc: number; eth: number; sol: number; bnb: number; zec: number; hype: number; ada: number; xrp: number; doge: number }>({ btc: 0, eth: 0, sol: 0, bnb: 0, zec: 0, hype: 0, ada: 0, xrp: 0, doge: 0 });
 
   // User dropdown ref for click outside detection
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -211,7 +214,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
     const fetchPrices = async () => {
       try {
         console.log('正在获取 Bybit 价格...');
-        const prices = await getCryptoPrices(['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'ZECUSDT', 'HYPEUSDT']);
+        const prices = await getCryptoPrices(['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'ZECUSDT', 'HYPEUSDT', 'ADAUSDT', 'XRPUSDT', 'DOGEUSDT']);
         console.log('获取到的价格:', prices);
 
         const btc = prices.find(p => p.symbol === 'BTCUSDT');
@@ -220,6 +223,9 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
         const bnb = prices.find(p => p.symbol === 'BNBUSDT');
         const zec = prices.find(p => p.symbol === 'ZECUSDT');
         const hype = prices.find(p => p.symbol === 'HYPEUSDT');
+        const ada = prices.find(p => p.symbol === 'ADAUSDT');
+        const xrp = prices.find(p => p.symbol === 'XRPUSDT');
+        const doge = prices.find(p => p.symbol === 'DOGEUSDT');
 
         if (btc) {
           const newBtcPrice = parseFloat(btc.price);
@@ -286,6 +292,39 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
             return newHypePrice;
           });
         }
+
+        if (ada) {
+          const newAdaPrice = parseFloat(ada.price);
+          setAdaPrice(prevPrice => {
+            if (prevPrice !== null) {
+              const change = ((newAdaPrice - prevPrice) / prevPrice) * 100;
+              setPriceChangePercent(prev => ({ ...prev, ada: change }));
+            }
+            return newAdaPrice;
+          });
+        }
+
+        if (xrp) {
+          const newXrpPrice = parseFloat(xrp.price);
+          setXrpPrice(prevPrice => {
+            if (prevPrice !== null) {
+              const change = ((newXrpPrice - prevPrice) / prevPrice) * 100;
+              setPriceChangePercent(prev => ({ ...prev, xrp: change }));
+            }
+            return newXrpPrice;
+          });
+        }
+
+        if (doge) {
+          const newDogePrice = parseFloat(doge.price);
+          setDogePrice(prevPrice => {
+            if (prevPrice !== null) {
+              const change = ((newDogePrice - prevPrice) / prevPrice) * 100;
+              setPriceChangePercent(prev => ({ ...prev, doge: change }));
+            }
+            return newDogePrice;
+          });
+        }
       } catch (error) {
         console.error('获取 Bybit 价格失败，详细错误:', error);
         // 如果获取失败，使用备用数据
@@ -295,6 +334,9 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
         setBnbPrice(prev => prev === null ? 650.00 : prev);
         setZecPrice(prev => prev === null ? 55.00 : prev);
         setHypePrice(prev => prev === null ? 25.00 : prev);
+        setAdaPrice(prev => prev === null ? 1.05 : prev);
+        setXrpPrice(prev => prev === null ? 2.85 : prev);
+        setDogePrice(prev => prev === null ? 0.38 : prev);
       }
     };
 
@@ -930,6 +972,42 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
               {hypePrice !== null ? (
                 <span className={priceChangePercent.hype >= 0 ? 'text-green-600' : 'text-red-600'}>
                   {formatNumber(hypePrice)}
+                </span>
+              ) : (
+                <span className="text-gray-400">加载中...</span>
+              )}
+            </div>
+
+            {/* ADA Price */}
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600 text-sm font-semibold">ADA</span>
+              {adaPrice !== null ? (
+                <span className={priceChangePercent.ada >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {formatNumber(adaPrice)}
+                </span>
+              ) : (
+                <span className="text-gray-400">加载中...</span>
+              )}
+            </div>
+
+            {/* XRP Price */}
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600 text-sm font-semibold">XRP</span>
+              {xrpPrice !== null ? (
+                <span className={priceChangePercent.xrp >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {formatNumber(xrpPrice)}
+                </span>
+              ) : (
+                <span className="text-gray-400">加载中...</span>
+              )}
+            </div>
+
+            {/* DOGE Price */}
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600 text-sm font-semibold">DOGE</span>
+              {dogePrice !== null ? (
+                <span className={priceChangePercent.doge >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {formatNumber(dogePrice)}
                 </span>
               ) : (
                 <span className="text-gray-400">加载中...</span>
