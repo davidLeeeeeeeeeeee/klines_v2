@@ -349,6 +349,7 @@ export interface ClosePositionReq {
   accountId?: number;
   closeSide?: string; // 'Buy' 或 'Sell'，不传表示全部平仓
   symbol?: string;
+  strategyType?: string; // 策略类型，不传表示全部
 }
 
 export interface PageRequest<T> {

@@ -122,6 +122,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [showBatchCloseModal, setShowBatchCloseModal] = useState(false);
   const [batchCloseSymbol, setBatchCloseSymbol] = useState('BTCUSDT');
   const [batchCloseAction, setBatchCloseAction] = useState<'long' | 'short' | null>(null);
+  const [batchCloseStrategyType, setBatchCloseStrategyType] = useState('all'); // 一键平仓策略类型筛选
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false); // 自动刷新暂停状态
 
@@ -730,7 +731,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
               />
             </div>
             <button
-              onClick={() => {/* 搜索已实时生效，此按钮可用于刷新数据 */}}
+              onClick={() => {/* 搜索已实时生效，此按钮可用于刷新数据 */ }}
               className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors whitespace-nowrap"
             >
               &nbsp;&nbsp;搜索&nbsp;&nbsp;
@@ -738,292 +739,280 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
           </div>
         </div>
 
-      {/* Tab Navigation with Filters */}
-      <div className="mb-6 flex items-center gap-8">
-        <button
-          onClick={() => {
-            setActiveTab('positions');
-            // 切换Tab时重置所有筛选条件
-            setSelectedType('all');
-            setSelectedSymbol('all');
-            setSelectedStrategy('all');
-            setSelectedCloseType('all');
-            setSearchFilter('');
-          }}
-          className={`pb-3 text-base transition-colors relative ${activeTab === 'positions'
+        {/* Tab Navigation with Filters */}
+        <div className="mb-6 flex items-center gap-8">
+          <button
+            onClick={() => {
+              setActiveTab('positions');
+              // 切换Tab时重置所有筛选条件
+              setSelectedType('all');
+              setSelectedSymbol('all');
+              setSelectedStrategy('all');
+              setSelectedCloseType('all');
+              setSearchFilter('');
+            }}
+            className={`pb-3 text-base transition-colors relative ${activeTab === 'positions'
               ? 'text-gray-900 font-semibold'
               : 'text-gray-500 hover:text-gray-700'
-            }`}
-        >
-          仓位
-          {activeTab === 'positions' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></div>
-          )}
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab('history');
-            // 切换Tab时重置所有筛选条件
-            setSelectedType('all');
-            setSelectedSymbol('all');
-            setSelectedStrategy('all');
-            setSelectedCloseType('all');
-            setSearchFilter('');
-          }}
-          className={`pb-3 text-base transition-colors relative ${activeTab === 'history'
+              }`}
+          >
+            仓位
+            {activeTab === 'positions' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></div>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('history');
+              // 切换Tab时重置所有筛选条件
+              setSelectedType('all');
+              setSelectedSymbol('all');
+              setSelectedStrategy('all');
+              setSelectedCloseType('all');
+              setSearchFilter('');
+            }}
+            className={`pb-3 text-base transition-colors relative ${activeTab === 'history'
               ? 'text-gray-900 font-semibold'
               : 'text-gray-700 hover:text-gray-900'
-            }`}
-        >
-          历史
-          {activeTab === 'history' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></div>
-          )}
-        </button>
-
-        {/* Strategy Selector */}
-        <div className="relative" ref={strategyDropdownRef}>
-          <button
-            onClick={() => {
-              setShowStrategyDropdown(!showStrategyDropdown);
-              setShowSymbolDropdown(false);
-            }}
-            className={`flex items-center gap-1.5 pb-3 text-base hover:text-gray-900 transition-colors whitespace-nowrap ${
-              selectedStrategy === 'all' ? 'text-gray-700' : 'text-blue-600'
-            }`}
+              }`}
           >
-            <span>策略</span>
-            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className={selectedStrategy === 'all' ? 'text-gray-500' : 'text-blue-600'}>
-              <path d="M5 6L0 0h10L5 6z" />
-            </svg>
+            历史
+            {activeTab === 'history' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></div>
+            )}
           </button>
 
-          {showStrategyDropdown && (
-            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 max-h-[300px] overflow-y-auto">
-              {strategies.map((strategy) => (
-                <button
-                  key={strategy.id}
-                  onClick={() => {
-                    setSelectedStrategy(strategy.id);
-                    setShowStrategyDropdown(false);
-                  }}
-                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors whitespace-nowrap ${
-                    selectedStrategy === strategy.id ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                  }`}
-                >
-                  {strategy.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Symbol Filter */}
-        <div className="relative" ref={symbolDropdownRef}>
-          <button
-            onClick={() => {
-              setShowSymbolDropdown(!showSymbolDropdown);
-              setShowStrategyDropdown(false);
-              setShowTypeDropdown(false);
-            }}
-            className="flex items-center gap-1.5 pb-3 text-base text-gray-700 hover:text-gray-900 transition-colors"
-          >
-            <span>{selectedSymbol === 'all' ? '商品' : selectedSymbol}</span>
-            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
-              <path d="M5 6L0 0h10L5 6z" />
-            </svg>
-          </button>
-
-          {showSymbolDropdown && (
-            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
-              <button
-                onClick={() => {
-                  setSelectedSymbol('all');
-                  setShowSymbolDropdown(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedSymbol === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                全部
-              </button>
-              {symbols.map((symbol) => (
-                <button
-                  key={symbol}
-                  onClick={() => {
-                    setSelectedSymbol(symbol);
-                    setShowSymbolDropdown(false);
-                  }}
-                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                    selectedSymbol === symbol ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                  }`}
-                >
-                  {symbol}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Type Filter */}
-        <div className="relative" ref={typeDropdownRef}>
-          <button
-            onClick={() => {
-              setShowTypeDropdown(!showTypeDropdown);
-              setShowStrategyDropdown(false);
-              setShowSymbolDropdown(false);
-            }}
-            className="flex items-center gap-1.5 pb-3 text-base text-gray-700 hover:text-gray-900 transition-colors"
-          >
-            <span>
-              {selectedType === 'all'
-                ? '方向'
-                : activeTab === 'positions'
-                  ? (selectedType === 'long' ? '多单' : '空单')
-                  : (selectedType === 'closeLong' ? '平多' : '平空')
-              }
-            </span>
-            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
-              <path d="M5 6L0 0h10L5 6z" />
-            </svg>
-          </button>
-
-          {showTypeDropdown && (
-            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
-              <button
-                onClick={() => {
-                  setSelectedType('all');
-                  setShowTypeDropdown(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                  selectedType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                }`}
-              >
-                全部
-              </button>
-              {activeTab === 'positions' ? (
-                <>
-                  <button
-                    onClick={() => {
-                      setSelectedType('long');
-                      setShowTypeDropdown(false);
-                    }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                      selectedType === 'long' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                    }`}
-                  >
-                    多单
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedType('short');
-                      setShowTypeDropdown(false);
-                    }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                      selectedType === 'short' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                    }`}
-                  >
-                    空单
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => {
-                      setSelectedType('closeLong');
-                      setShowTypeDropdown(false);
-                    }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                      selectedType === 'closeLong' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                    }`}
-                  >
-                    平多
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedType('closeShort');
-                      setShowTypeDropdown(false);
-                    }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                      selectedType === 'closeShort' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                    }`}
-                  >
-                    平空
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Close Type Filter - 仅在历史标签页显示 */}
-        {activeTab === 'history' && (
-          <div className="relative" ref={closeTypeDropdownRef}>
+          {/* Strategy Selector */}
+          <div className="relative" ref={strategyDropdownRef}>
             <button
               onClick={() => {
-                setShowCloseTypeDropdown(!showCloseTypeDropdown);
-                setShowStrategyDropdown(false);
+                setShowStrategyDropdown(!showStrategyDropdown);
                 setShowSymbolDropdown(false);
-                setShowTypeDropdown(false);
               }}
-              className={`flex items-center gap-1.5 pb-3 text-base hover:text-gray-900 transition-colors whitespace-nowrap ${
-                selectedCloseType === 'all' ? 'text-gray-700' : 'text-blue-600'
-              }`}
+              className={`flex items-center gap-1.5 pb-3 text-base hover:text-gray-900 transition-colors whitespace-nowrap ${selectedStrategy === 'all' ? 'text-gray-700' : 'text-blue-600'
+                }`}
             >
-              <span>
-                {selectedCloseType === 'all'
-                  ? '平仓类型'
-                  : closeTypeList.find(item => item.code === selectedCloseType)?.message || selectedCloseType
-                }
-              </span>
-              <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className={selectedCloseType === 'all' ? 'text-gray-500' : 'text-blue-600'}>
+              <span>策略</span>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className={selectedStrategy === 'all' ? 'text-gray-500' : 'text-blue-600'}>
                 <path d="M5 6L0 0h10L5 6z" />
               </svg>
             </button>
 
-            {showCloseTypeDropdown && (
-              <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
-                <button
-                  onClick={() => {
-                    setSelectedCloseType('all');
-                    setShowCloseTypeDropdown(false);
-                  }}
-                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                    selectedCloseType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                  }`}
-                >
-                  全部
-                </button>
-                {closeTypeList.map((closeType) => (
+            {showStrategyDropdown && (
+              <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 max-h-[300px] overflow-y-auto">
+                {strategies.map((strategy) => (
                   <button
-                    key={closeType.code}
+                    key={strategy.id}
                     onClick={() => {
-                      setSelectedCloseType(closeType.code);
-                      setShowCloseTypeDropdown(false);
+                      setSelectedStrategy(strategy.id);
+                      setShowStrategyDropdown(false);
                     }}
-                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${
-                      selectedCloseType === closeType.code ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                    }`}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors whitespace-nowrap ${selectedStrategy === strategy.id ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                      }`}
                   >
-                    {closeType.message}
+                    {strategy.name}
                   </button>
                 ))}
               </div>
             )}
           </div>
-        )}
 
-        {/* Stats Display - 与筛选条件在同一行 */}
-        <div className="flex items-center gap-6 text-base pb-3 ml-auto">
-          {/* Position Count Display */}
-          <div className="text-blue-600 font-semibold">
-            {activeTab === 'positions' ? currentPositions.length : filteredClosedPositions.length}条
+          {/* Symbol Filter */}
+          <div className="relative" ref={symbolDropdownRef}>
+            <button
+              onClick={() => {
+                setShowSymbolDropdown(!showSymbolDropdown);
+                setShowStrategyDropdown(false);
+                setShowTypeDropdown(false);
+              }}
+              className="flex items-center gap-1.5 pb-3 text-base text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              <span>{selectedSymbol === 'all' ? '商品' : selectedSymbol}</span>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+                <path d="M5 6L0 0h10L5 6z" />
+              </svg>
+            </button>
+
+            {showSymbolDropdown && (
+              <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
+                <button
+                  onClick={() => {
+                    setSelectedSymbol('all');
+                    setShowSymbolDropdown(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedSymbol === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
+                >
+                  全部
+                </button>
+                {symbols.map((symbol) => (
+                  <button
+                    key={symbol}
+                    onClick={() => {
+                      setSelectedSymbol(symbol);
+                      setShowSymbolDropdown(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedSymbol === symbol ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                      }`}
+                  >
+                    {symbol}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Per-Symbol PnL Display */}
-          <div className="flex items-center gap-3 font-semibold">
-            {activeTab === 'positions'
-              ? (() => {
+          {/* Type Filter */}
+          <div className="relative" ref={typeDropdownRef}>
+            <button
+              onClick={() => {
+                setShowTypeDropdown(!showTypeDropdown);
+                setShowStrategyDropdown(false);
+                setShowSymbolDropdown(false);
+              }}
+              className="flex items-center gap-1.5 pb-3 text-base text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              <span>
+                {selectedType === 'all'
+                  ? '方向'
+                  : activeTab === 'positions'
+                    ? (selectedType === 'long' ? '多单' : '空单')
+                    : (selectedType === 'closeLong' ? '平多' : '平空')
+                }
+              </span>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className="text-gray-500">
+                <path d="M5 6L0 0h10L5 6z" />
+              </svg>
+            </button>
+
+            {showTypeDropdown && (
+              <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
+                <button
+                  onClick={() => {
+                    setSelectedType('all');
+                    setShowTypeDropdown(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                    }`}
+                >
+                  全部
+                </button>
+                {activeTab === 'positions' ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setSelectedType('long');
+                        setShowTypeDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'long' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                        }`}
+                    >
+                      多单
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedType('short');
+                        setShowTypeDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'short' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                        }`}
+                    >
+                      空单
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setSelectedType('closeLong');
+                        setShowTypeDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'closeLong' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                        }`}
+                    >
+                      平多
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedType('closeShort');
+                        setShowTypeDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedType === 'closeShort' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                        }`}
+                    >
+                      平空
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Close Type Filter - 仅在历史标签页显示 */}
+          {activeTab === 'history' && (
+            <div className="relative" ref={closeTypeDropdownRef}>
+              <button
+                onClick={() => {
+                  setShowCloseTypeDropdown(!showCloseTypeDropdown);
+                  setShowStrategyDropdown(false);
+                  setShowSymbolDropdown(false);
+                  setShowTypeDropdown(false);
+                }}
+                className={`flex items-center gap-1.5 pb-3 text-base hover:text-gray-900 transition-colors whitespace-nowrap ${selectedCloseType === 'all' ? 'text-gray-700' : 'text-blue-600'
+                  }`}
+              >
+                <span>
+                  {selectedCloseType === 'all'
+                    ? '平仓类型'
+                    : closeTypeList.find(item => item.code === selectedCloseType)?.message || selectedCloseType
+                  }
+                </span>
+                <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" className={selectedCloseType === 'all' ? 'text-gray-500' : 'text-blue-600'}>
+                  <path d="M5 6L0 0h10L5 6z" />
+                </svg>
+              </button>
+
+              {showCloseTypeDropdown && (
+                <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-20 min-w-[140px]">
+                  <button
+                    onClick={() => {
+                      setSelectedCloseType('all');
+                      setShowCloseTypeDropdown(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedCloseType === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                      }`}
+                  >
+                    全部
+                  </button>
+                  {closeTypeList.map((closeType) => (
+                    <button
+                      key={closeType.code}
+                      onClick={() => {
+                        setSelectedCloseType(closeType.code);
+                        setShowCloseTypeDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-base hover:bg-gray-50 transition-colors ${selectedCloseType === closeType.code ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                        }`}
+                    >
+                      {closeType.message}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Stats Display - 与筛选条件在同一行 */}
+          <div className="flex items-center gap-6 text-base pb-3 ml-auto">
+            {/* Position Count Display */}
+            <div className="text-blue-600 font-semibold">
+              {activeTab === 'positions' ? currentPositions.length : filteredClosedPositions.length}条
+            </div>
+
+            {/* Per-Symbol PnL Display */}
+            <div className="flex items-center gap-3 font-semibold">
+              {activeTab === 'positions'
+                ? (() => {
                   // 按币种分组计算浮动盈亏
                   const pnlBySymbol: Record<string, number> = {};
                   currentPositions.forEach(p => {
@@ -1036,7 +1025,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     </span>
                   ));
                 })()
-              : (() => {
+                : (() => {
                   // 按币种分组计算已结盈亏
                   const pnlBySymbol: Record<string, number> = {};
                   filteredClosedPositions.forEach(t => {
@@ -1049,397 +1038,397 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     </span>
                   ));
                 })()
-            }
+              }
+            </div>
           </div>
         </div>
-      </div>
       </div>
 
       {/* Scrollable List Content */}
       <div className="flex-1 overflow-y-auto">
-      {/* Current Positions */}
-      {activeTab === 'positions' && (
-        <div className="space-y-4">
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
+        {/* Current Positions */}
+        {activeTab === 'positions' && (
+          <div className="space-y-4">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
 
-          {/* Loading State */}
-          {isLoadingPositions ? (
-            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
-              <div className="text-gray-600">加载持仓数据中...</div>
-            </div>
-          ) : currentPositions.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <div className="text-gray-400 mb-2">暂无持仓</div>
-              <div className="text-sm text-gray-500">当前没有活跃的持仓</div>
-            </div>
-          ) : (
-            currentPositions.map((position) => (
-              <div key={position.id} className="bg-white rounded-lg shadow-sm p-6 pb-4">
-                {/* Header Row */}
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-gray-900 font-semibold">{position.symbol.replace('USDT', '')}</span>
-                      <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-2xl text-sm">
-                        {position.leverage}x
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded-2xl text-sm ${position.type === 'long'
+            {/* Loading State */}
+            {isLoadingPositions ? (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
+                <div className="text-gray-600">加载持仓数据中...</div>
+              </div>
+            ) : currentPositions.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <div className="text-gray-400 mb-2">暂无持仓</div>
+                <div className="text-sm text-gray-500">当前没有活跃的持仓</div>
+              </div>
+            ) : (
+              currentPositions.map((position) => (
+                <div key={position.id} className="bg-white rounded-lg shadow-sm p-6 pb-4">
+                  {/* Header Row */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-gray-900 font-semibold">{position.symbol.replace('USDT', '')}</span>
+                        <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-2xl text-sm">
+                          {position.leverage}x
+                        </span>
+                        <span
+                          className={`px-3 py-1 rounded-2xl text-sm ${position.type === 'long'
                             ? 'bg-green-100 text-green-600'
                             : 'bg-red-100 text-red-600'
-                          }`}
-                      >
-                        {position.type === 'long' ? '开多' : '开空'}
+                            }`}
+                        >
+                          {position.type === 'long' ? '开多' : '开空'}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {position.exchange}: {position.accountName}（{position.accountUid}）
+                      </div>
+                    </div>
+
+                    <div className={`text-right ${position.unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className="text-sm text-gray-500 mb-1">浮动盈亏</div>
+                      <div>
+                        <span className="text-lg">{position.unrealizedPnL}</span>
+                        <span className="text-sm ml-1">({position.unrealizedPnLPercent < 0 ? '-' : ''}{Math.abs(position.unrealizedPnLPercent).toFixed(1)}%)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Position Details Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">订单数量</div>
+                      <div className="text-gray-900">{position.quantity}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">入场价格</div>
+                      <div className="text-gray-900">{position.entryPrice}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">盈亏平衡价</div>
+                      <div className="text-gray-900">{position.breakEvenPoint}</div>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-gray-100 mb-4"></div>
+
+                  {/* Additional Information */}
+                  <div className="grid grid-cols-1 gap-3 mb-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-base text-gray-500">止盈价格</span>
+                      <span className="text-base text-green-600">
+                        {position.takeProfit ?? '-'}
+                        {position.takeProfitRatio !== null && (
+                          <span className="text-sm ml-0.5">({(position.takeProfitRatio * 100).toFixed(2)}%)</span>
+                        )}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {position.exchange}: {position.accountName}（{position.accountUid}）
+                    <div className="flex justify-between items-center">
+                      <span className="text-base text-gray-500">止损价格</span>
+                      <span className="text-base text-red-600">
+                        {position.stopLoss ?? '-'}
+                        {position.stopLossRatio !== null && (
+                          <span className="text-sm ml-0.5">({(position.stopLossRatio * 100).toFixed(2)}%)</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-base text-gray-500">已结盈亏</span>
+                      <span className={`text-base ${position.curRealisedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {position.curRealisedPnl}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-base text-gray-500">持仓时长</span>
+                      <span className="text-base text-gray-900">
+                        {position.createdAt ? `${formatTime(position.createdAt)}  ${calculateDurationToNow(position.createdAt)}` : '-'}
+                      </span>
                     </div>
                   </div>
 
-                  <div className={`text-right ${position.unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    <div className="text-sm text-gray-500 mb-1">浮动盈亏</div>
-                    <div>
-                      <span className="text-lg">{position.unrealizedPnL}</span>
-                      <span className="text-sm ml-1">({position.unrealizedPnLPercent < 0 ? '-' : ''}{Math.abs(position.unrealizedPnLPercent).toFixed(1)}%)</span>
+                  {/* Actions */}
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <div className="text-sm text-gray-900">
+                      {position.strategyType || '-'}
                     </div>
-                  </div>
-                </div>
-
-                {/* Position Details Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">订单数量</div>
-                    <div className="text-gray-900">{position.quantity}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">入场价格</div>
-                    <div className="text-gray-900">{position.entryPrice}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">盈亏平衡价</div>
-                    <div className="text-gray-900">{position.breakEvenPoint}</div>
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-gray-100 mb-4"></div>
-
-                {/* Additional Information */}
-                <div className="grid grid-cols-1 gap-3 mb-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-base text-gray-500">止盈价格</span>
-                    <span className="text-base text-green-600">
-                      {position.takeProfit ?? '-'}
-                      {position.takeProfitRatio !== null && (
-                        <span className="text-sm ml-0.5">({(position.takeProfitRatio * 100).toFixed(2)}%)</span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-base text-gray-500">止损价格</span>
-                    <span className="text-base text-red-600">
-                      {position.stopLoss ?? '-'}
-                      {position.stopLossRatio !== null && (
-                        <span className="text-sm ml-0.5">({(position.stopLossRatio * 100).toFixed(2)}%)</span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-base text-gray-500">已结盈亏</span>
-                    <span className={`text-base ${position.curRealisedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {position.curRealisedPnl}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-base text-gray-500">持仓时长</span>
-                    <span className="text-base text-gray-900">
-                      {position.createdAt ? `${formatTime(position.createdAt)}  ${calculateDurationToNow(position.createdAt)}` : '-'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <div className="text-sm text-gray-900">
-                    {position.strategyType || '-'}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                      onClick={() => {
-                        // 调用真实API
-                        const apiPosition = positions.find(p =>
-                          `${p.accountId}-${p.symbol}-${p.side}` === position.id
-                        );
-                        if (apiPosition) {
-                          fetchAIChat(
-                            position.id,
-                            apiPosition.accountId,
-                            apiPosition.symbol,
-                            apiPosition.side
+                    <div className="flex gap-2">
+                      <button
+                        className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                        onClick={() => {
+                          // 调用真实API
+                          const apiPosition = positions.find(p =>
+                            `${p.accountId}-${p.symbol}-${p.side}` === position.id
                           );
-                        }
-                      }}
-                      disabled={loadingChatId === position.id}
-                    >
-                      {loadingChatId === position.id ? (
-                        <>
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          加载中...
-                        </>
-                      ) : (
-                        'AI-O'
-                      )}
-                    </button>
-                    <button
-                      className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
-                      onClick={() => {
-                        // 在新标签页中打开实例页面（当前仓位模式）
-                        const apiPosition = positions.find(p =>
-                          `${p.accountId}-${p.symbol}-${p.side}` === position.id
-                        );
-                        if (apiPosition) {
-                          const params = new URLSearchParams({
-                            page: 'instance',
-                            accountId: apiPosition.accountId.toString(),
-                            side: apiPosition.side,
-                            symbol: apiPosition.symbol,
-                            strategyType: apiPosition.strategyType || '',
-                            exchange: position.exchange || '-',
-                            accountName: position.accountName || '-',
-                          });
-                          window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
-                        }
-                      }}
-                    >
-                      实例
-                    </button>
-                    <button
-                      className="px-3 py-1.5 text-sm border border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
-                      onClick={() => handleClosePosition(position)}
-                    >
-                      平仓
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* Historical Trades */}
-      {activeTab === 'history' && (
-        <div className="space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          {isLoadingClosedPositions ? (
-            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
-              <div className="text-gray-600">加载历史仓位数据中...</div>
-            </div>
-          ) : filteredClosedPositions.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <div className="text-gray-400 mb-2">暂无历史交易</div>
-              <div className="text-sm text-gray-500">当前没有符合筛选条件的交易记录</div>
-            </div>
-          ) : (
-            <>
-              {filteredClosedPositions.map((trade) => {
-                // 使用API返回的 marginPlRatio 作为盈亏百分比
-                const pnlPercent = ((trade.marginPlRatio ?? 0) * 100).toFixed(2);
-
-                return (
-                  <div key={trade.id} className="bg-white rounded-lg shadow-sm p-6 pb-4">
-                    {/* Header Row */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-gray-900 font-semibold">{trade.symbol.replace('USDT', '')}</span>
-                          <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-2xl text-sm">
-                            {trade.leverage}x
-                          </span>
-                          <span
-                            className={`px-3 py-1 rounded-2xl text-sm ${trade.side === 'Sell'
-                                ? 'bg-green-100 text-green-600'
-                                : 'bg-red-100 text-red-600'
-                              }`}
-                          >
-                            {trade.side === 'Sell' ? '平多' : '平空'}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {trade.exchange}: {trade.accountName}（{trade.accountUid}）
-                        </div>
-                      </div>
-
-                      <div className={`text-right ${trade.closedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        <div className="text-sm text-gray-500 mb-1">已结盈亏</div>
-                        <div>
-                          <span className="text-lg">{trade.closedPnl}</span>
-                          <span className="text-sm ml-1">({pnlPercent}%)</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Trade Details Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                      <div>
-                        <div className="text-sm text-gray-500 mb-1">订单数量</div>
-                        <div className="text-gray-900">{trade.closedQty}</div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-gray-500 mb-1">入场价格</div>
-                        <div className="text-gray-900">{trade.avgEntryPrice}</div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-gray-500 mb-1">出场价格</div>
-                        <div className="text-gray-900">{trade.avgExitPrice}</div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-gray-500 mb-1">平仓类型</div>
-                        <div className="text-gray-900">{trade.closeType || '-'}</div>
-                      </div>
-                    </div>
-
-                    {/* Divider */}
-                    <div className="border-t border-gray-100 mb-4"></div>
-
-                    {/* Fee Information */}
-                    <div className="grid grid-cols-1 gap-3 mb-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">最大盈利</span>
-                        <span className="text-sm text-green-600">
-                          {trade.maxProfit ?? 0} ({(Math.abs(trade.maxProfitRate ?? 0) * 100).toFixed(2)}%)
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">最大亏损</span>
-                        <span className="text-sm text-red-600">
-                          {trade.maxLoss ?? 0} ({(Math.abs(trade.maxLossRate ?? 0) * 100).toFixed(2)}%)
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">开仓手续费</span>
-                        <span className="text-sm text-gray-900">{Number(trade.openFee).toFixed(8)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">平仓手续费</span>
-                        <span className="text-sm text-gray-900">{Number(trade.closeFee).toFixed(8)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">持仓时长</span>
-                        <span className="text-sm text-gray-900">
-                          {formatPositionTime(trade.openTime, trade.orderCreateTime).openTimeFormatted} - {formatPositionTime(trade.openTime, trade.orderCreateTime).closeTimeFormatted}  {formatPositionTime(trade.openTime, trade.orderCreateTime).durationFormatted}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                      <div className="text-sm text-gray-500">
-                         <span className="text-gray-900">{trade.strategyType || '-'}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        {trade.openChatId && (
-                          <button
-                            className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                            onClick={() => fetchHistoryChat(trade.id, trade.openChatId, false)}
-                            disabled={loadingHistoryChatId === `${trade.id}-${trade.openChatId}`}
-                          >
-                            {loadingHistoryChatId === `${trade.id}-${trade.openChatId}` ? (
-                              <>
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                                加载中...
-                              </>
-                            ) : (
-                              'AI-O'
-                            )}
-                          </button>
+                          if (apiPosition) {
+                            fetchAIChat(
+                              position.id,
+                              apiPosition.accountId,
+                              apiPosition.symbol,
+                              apiPosition.side
+                            );
+                          }
+                        }}
+                        disabled={loadingChatId === position.id}
+                      >
+                        {loadingChatId === position.id ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            加载中...
+                          </>
+                        ) : (
+                          'AI-O'
                         )}
-                        {trade.closeChatId && (
-                          <button
-                            className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                            onClick={() => fetchHistoryChat(trade.id, trade.closeChatId, true, trade.accountId, trade.avgExitPrice, trade.side, trade.avgEntryPrice)}
-                            disabled={loadingHistoryChatId === `${trade.id}-${trade.closeChatId}`}
-                          >
-                            {loadingHistoryChatId === `${trade.id}-${trade.closeChatId}` ? (
-                              <>
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                                加载中...
-                              </>
-                            ) : (
-                              'AI-C'
-                            )}
-                          </button>
-                        )}
-                        <button
-                          className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
-                          onClick={() => {
-                            // 在新标签页中打开实例页面，传递accountId用于Chat弹窗匹配数据
+                      </button>
+                      <button
+                        className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
+                        onClick={() => {
+                          // 在新标签页中打开实例页面（当前仓位模式）
+                          const apiPosition = positions.find(p =>
+                            `${p.accountId}-${p.symbol}-${p.side}` === position.id
+                          );
+                          if (apiPosition) {
                             const params = new URLSearchParams({
                               page: 'instance',
-                              id: trade.id.toString(),
-                              accountId: trade.accountId.toString(),
-                              strategyType: trade.strategyType || '-',
-                              exchange: trade.exchange || '-',
-                              accountName: trade.accountName || '-',
+                              accountId: apiPosition.accountId.toString(),
+                              side: apiPosition.side,
+                              symbol: apiPosition.symbol,
+                              strategyType: apiPosition.strategyType || '',
+                              exchange: position.exchange || '-',
+                              accountName: position.accountName || '-',
                             });
                             window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
-                          }}
-                        >
-                          实例
-                        </button>
-                      </div>
+                          }
+                        }}
+                      >
+                        实例
+                      </button>
+                      <button
+                        className="px-3 py-1.5 text-sm border border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                        onClick={() => handleClosePosition(position)}
+                      >
+                        平仓
+                      </button>
                     </div>
                   </div>
-                );
-              })}
-
-              {/* Pagination */}
-              {totalRecords > pageSize && (
-                <div className="flex items-center justify-between bg-white rounded-lg shadow-sm p-4">
-                  <div className="text-sm text-gray-600">
-                    共 {totalRecords} 条记录，第 {currentPage} / {Math.ceil(totalRecords / pageSize)} 页
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      上一页
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalRecords / pageSize), p + 1))}
-                      disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
-                      className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      下一页
-                    </button>
-                  </div>
                 </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Historical Trades */}
+        {activeTab === 'history' && (
+          <div className="space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
+
+            {isLoadingClosedPositions ? (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
+                <div className="text-gray-600">加载历史仓位数据中...</div>
+              </div>
+            ) : filteredClosedPositions.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <div className="text-gray-400 mb-2">暂无历史交易</div>
+                <div className="text-sm text-gray-500">当前没有符合筛选条件的交易记录</div>
+              </div>
+            ) : (
+              <>
+                {filteredClosedPositions.map((trade) => {
+                  // 使用API返回的 marginPlRatio 作为盈亏百分比
+                  const pnlPercent = ((trade.marginPlRatio ?? 0) * 100).toFixed(2);
+
+                  return (
+                    <div key={trade.id} className="bg-white rounded-lg shadow-sm p-6 pb-4">
+                      {/* Header Row */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-gray-900 font-semibold">{trade.symbol.replace('USDT', '')}</span>
+                            <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-2xl text-sm">
+                              {trade.leverage}x
+                            </span>
+                            <span
+                              className={`px-3 py-1 rounded-2xl text-sm ${trade.side === 'Sell'
+                                ? 'bg-green-100 text-green-600'
+                                : 'bg-red-100 text-red-600'
+                                }`}
+                            >
+                              {trade.side === 'Sell' ? '平多' : '平空'}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {trade.exchange}: {trade.accountName}（{trade.accountUid}）
+                          </div>
+                        </div>
+
+                        <div className={`text-right ${trade.closedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <div className="text-sm text-gray-500 mb-1">已结盈亏</div>
+                          <div>
+                            <span className="text-lg">{trade.closedPnl}</span>
+                            <span className="text-sm ml-1">({pnlPercent}%)</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Trade Details Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div>
+                          <div className="text-sm text-gray-500 mb-1">订单数量</div>
+                          <div className="text-gray-900">{trade.closedQty}</div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-gray-500 mb-1">入场价格</div>
+                          <div className="text-gray-900">{trade.avgEntryPrice}</div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-gray-500 mb-1">出场价格</div>
+                          <div className="text-gray-900">{trade.avgExitPrice}</div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-gray-500 mb-1">平仓类型</div>
+                          <div className="text-gray-900">{trade.closeType || '-'}</div>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="border-t border-gray-100 mb-4"></div>
+
+                      {/* Fee Information */}
+                      <div className="grid grid-cols-1 gap-3 mb-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">最大盈利</span>
+                          <span className="text-sm text-green-600">
+                            {trade.maxProfit ?? 0} ({(Math.abs(trade.maxProfitRate ?? 0) * 100).toFixed(2)}%)
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">最大亏损</span>
+                          <span className="text-sm text-red-600">
+                            {trade.maxLoss ?? 0} ({(Math.abs(trade.maxLossRate ?? 0) * 100).toFixed(2)}%)
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">开仓手续费</span>
+                          <span className="text-sm text-gray-900">{Number(trade.openFee).toFixed(8)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">平仓手续费</span>
+                          <span className="text-sm text-gray-900">{Number(trade.closeFee).toFixed(8)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">持仓时长</span>
+                          <span className="text-sm text-gray-900">
+                            {formatPositionTime(trade.openTime, trade.orderCreateTime).openTimeFormatted} - {formatPositionTime(trade.openTime, trade.orderCreateTime).closeTimeFormatted}  {formatPositionTime(trade.openTime, trade.orderCreateTime).durationFormatted}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <div className="text-sm text-gray-500">
+                          <span className="text-gray-900">{trade.strategyType || '-'}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          {trade.openChatId && (
+                            <button
+                              className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                              onClick={() => fetchHistoryChat(trade.id, trade.openChatId, false)}
+                              disabled={loadingHistoryChatId === `${trade.id}-${trade.openChatId}`}
+                            >
+                              {loadingHistoryChatId === `${trade.id}-${trade.openChatId}` ? (
+                                <>
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  加载中...
+                                </>
+                              ) : (
+                                'AI-O'
+                              )}
+                            </button>
+                          )}
+                          {trade.closeChatId && (
+                            <button
+                              className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                              onClick={() => fetchHistoryChat(trade.id, trade.closeChatId, true, trade.accountId, trade.avgExitPrice, trade.side, trade.avgEntryPrice)}
+                              disabled={loadingHistoryChatId === `${trade.id}-${trade.closeChatId}`}
+                            >
+                              {loadingHistoryChatId === `${trade.id}-${trade.closeChatId}` ? (
+                                <>
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  加载中...
+                                </>
+                              ) : (
+                                'AI-C'
+                              )}
+                            </button>
+                          )}
+                          <button
+                            className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
+                            onClick={() => {
+                              // 在新标签页中打开实例页面，传递accountId用于Chat弹窗匹配数据
+                              const params = new URLSearchParams({
+                                page: 'instance',
+                                id: trade.id.toString(),
+                                accountId: trade.accountId.toString(),
+                                strategyType: trade.strategyType || '-',
+                                exchange: trade.exchange || '-',
+                                accountName: trade.accountName || '-',
+                              });
+                              window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
+                            }}
+                          >
+                            实例
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Pagination */}
+                {totalRecords > pageSize && (
+                  <div className="flex items-center justify-between bg-white rounded-lg shadow-sm p-4">
+                    <div className="text-sm text-gray-600">
+                      共 {totalRecords} 条记录，第 {currentPage} / {Math.ceil(totalRecords / pageSize)} 页
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        上一页
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalRecords / pageSize), p + 1))}
+                        disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                        className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        下一页
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Close Position Modal */}
@@ -1476,8 +1465,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 </span>
                 <span
                   className={`px-3 py-1 rounded-2xl text-sm ${selectedPosition.type === 'long'
-                      ? 'bg-green-100 text-green-600'
-                      : 'bg-red-100 text-red-600'
+                    ? 'bg-green-100 text-green-600'
+                    : 'bg-red-100 text-red-600'
                     }`}
                 >
                   {selectedPosition.type === 'long' ? '开多' : '开空'}
@@ -1586,6 +1575,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     setShowBatchCloseModal(false);
                     setBatchCloseSymbol('BTCUSDT');
                     setBatchCloseAction(null);
+                    setBatchCloseStrategyType('all');
                   }}
                 >
                   <X className="w-5 h-5" />
@@ -1615,11 +1605,41 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       key={symbol}
                       onClick={() => setBatchCloseSymbol(symbol)}
                       className={`px-4 py-3 rounded-lg border transition-colors ${batchCloseSymbol === symbol
-                          ? 'bg-blue-50 border-blue-500 text-blue-600'
-                          : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                        ? 'bg-blue-50 border-blue-500 text-blue-600'
+                        : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
                         }`}
                     >
                       {symbol}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Strategy Type Selector */}
+              <div className="mb-6">
+                <label className="block text-sm text-gray-700 mb-3">
+                  选择策略
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <button
+                    onClick={() => setBatchCloseStrategyType('all')}
+                    className={`px-4 py-3 rounded-lg border transition-colors ${batchCloseStrategyType === 'all'
+                      ? 'bg-blue-50 border-blue-500 text-blue-600'
+                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                      }`}
+                  >
+                    全部策略
+                  </button>
+                  {strategyModelList.map((strategy) => (
+                    <button
+                      key={strategy.code}
+                      onClick={() => setBatchCloseStrategyType(strategy.code)}
+                      className={`px-4 py-3 rounded-lg border transition-colors ${batchCloseStrategyType === strategy.code
+                        ? 'bg-blue-50 border-blue-500 text-blue-600'
+                        : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                        }`}
+                    >
+                      {strategy.name}
                     </button>
                   ))}
                 </div>
@@ -1633,22 +1653,26 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     <div className="text-sm text-gray-600 mb-2">多单持仓数量</div>
                     <div className="text-2xl text-green-600 font-semibold">
                       {currentPositions.filter(p =>
-                        p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long'
+                        p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long' &&
+                        (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
                       ).length} 个
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       浮动盈亏: <span className={
                         currentPositions.filter(p =>
-                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long'
+                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long' &&
+                          (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
                         ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0
                           ? 'text-green-600'
                           : 'text-red-600'
                       }>
                         {currentPositions.filter(p =>
-                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long'
+                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long' &&
+                          (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
                         ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0 ? '+' : ''}
                         {currentPositions.filter(p =>
-                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long'
+                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long' &&
+                          (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
                         ).reduce((sum, p) => sum + p.unrealizedPnL, 0).toFixed(2)}
                       </span>
                     </div>
@@ -1659,22 +1683,26 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     <div className="text-sm text-gray-600 mb-2">空单持仓数量</div>
                     <div className="text-2xl text-red-600 font-semibold">
                       {currentPositions.filter(p =>
-                        p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short'
+                        p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short' &&
+                        (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
                       ).length} 个
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       浮动盈亏: <span className={
                         currentPositions.filter(p =>
-                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short'
+                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short' &&
+                          (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
                         ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0
                           ? 'text-green-600'
                           : 'text-red-600'
                       }>
                         {currentPositions.filter(p =>
-                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short'
+                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short' &&
+                          (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
                         ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0 ? '+' : ''}
                         {currentPositions.filter(p =>
-                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short'
+                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short' &&
+                          (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
                         ).reduce((sum, p) => sum + p.unrealizedPnL, 0).toFixed(2)}
                       </span>
                     </div>
@@ -1695,7 +1723,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     }
 
                     const longPositions = currentPositions.filter(p =>
-                      p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long'
+                      p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long' &&
+                      (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
                     );
 
                     if (longPositions.length === 0) {
@@ -1710,6 +1739,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     const request: ClosePositionReq = {
                       symbol: batchCloseSymbol,
                       closeSide: 'Buy', // 多单对应Buy
+                      strategyType: batchCloseStrategyType === 'all' ? undefined : batchCloseStrategyType,
                     };
 
                     console.log('平多操作:', request);
@@ -1719,6 +1749,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       alert(`平多操作成功！\n商品: ${batchCloseSymbol}\n数量: ${longPositions.length} 个`);
                       setShowBatchCloseModal(false);
                       setBatchCloseSymbol('BTCUSDT');
+                      setBatchCloseStrategyType('all');
                       // 刷新持仓列表
                       fetchPositions();
                     } else {
@@ -1731,7 +1762,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 }}
                 className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={currentPositions.filter(p =>
-                  p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long'
+                  p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long' &&
+                  (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
                 ).length === 0}
               >
                 平多
@@ -1746,7 +1778,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     }
 
                     const shortPositions = currentPositions.filter(p =>
-                      p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short'
+                      p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short' &&
+                      (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
                     );
 
                     if (shortPositions.length === 0) {
@@ -1761,6 +1794,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                     const request: ClosePositionReq = {
                       symbol: batchCloseSymbol,
                       closeSide: 'Sell', // 空单对应Sell
+                      strategyType: batchCloseStrategyType === 'all' ? undefined : batchCloseStrategyType,
                     };
 
                     console.log('平空操作:', request);
@@ -1770,6 +1804,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                       alert(`平空操作成功！\n商品: ${batchCloseSymbol}\n数量: ${shortPositions.length} 个`);
                       setShowBatchCloseModal(false);
                       setBatchCloseSymbol('BTCUSDT');
+                      setBatchCloseStrategyType('all');
                       // 刷新持仓列表
                       fetchPositions();
                     } else {
@@ -1782,7 +1817,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 }}
                 className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={currentPositions.filter(p =>
-                  p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short'
+                  p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short' &&
+                  (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
                 ).length === 0}
               >
                 平空
@@ -1795,6 +1831,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 setShowBatchCloseModal(false);
                 setBatchCloseSymbol('BTCUSDT');
                 setBatchCloseAction(null);
+                setBatchCloseStrategyType('all');
               }}
               className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
