@@ -21,6 +21,7 @@ import { InitAccountPage } from './InitAccountPage';
 import { RiskManagement } from './RiskManagement';
 import { FundTransfer } from './FundTransfer';
 import { OperationInstance } from './OperationInstance';
+import { FundManagement } from './FundManagement';
 import type { TradingAccount } from './TradingAccounts';
 import { getCryptoPrices, getCurrentUserInfo } from '../services/api';
 import { getUserInfo, getToken, getUserType } from '../utils/storage';
@@ -552,7 +553,7 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
   ]);
 
   // 普通用户可见的菜单ID
-  const userMenuIds = ['dashboard', 'strategy-list', 'account-management', 'account-monitor'];
+  const userMenuIds = ['dashboard', 'strategy-list', 'account-management', 'fund-management', 'account-monitor'];
 
   // 获取用户类型
   const currentUserType = getUserType();
@@ -579,6 +580,11 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
       id: 'account-management',
       label: '账户管理',
       icon: <Wallet className="w-5 h-5" />
+    },
+    {
+      id: 'fund-management',
+      label: '资金管理',
+      icon: <TrendingUp className="w-5 h-5" />
     },
     {
       id: 'account-monitor',
@@ -770,6 +776,8 @@ export function MainLayout({ onLogout }: MainLayoutProps) {
         );
       case 'account-management':
         return <TradingAccounts />;
+      case 'fund-management':
+        return <FundManagement />;
       case 'strategy-monitor':
         return <StrategyMonitor onBack={() => setCurrentPage('dashboard')} />;
       case 'account-monitor':

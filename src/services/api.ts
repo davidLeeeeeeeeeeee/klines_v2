@@ -71,9 +71,9 @@ function isSessionExpired(status: number, responseData: any): boolean {
   // 条件2: 响应中包含 code: 3004
   // 条件3: data 字段包含"登录已失效"或类似信息
   return status === 500 &&
-         responseData?.code === 3004 &&
-         typeof responseData?.data === 'string' &&
-         responseData.data.includes('登录已失效');
+    responseData?.code === 3004 &&
+    typeof responseData?.data === 'string' &&
+    responseData.data.includes('登录已失效');
 }
 
 /**
@@ -2517,11 +2517,11 @@ export async function getPositionStrategyInstance(
     const requestBody = typeof params === 'number'
       ? { closePnlId: params }
       : {
-          accountId: params.accountId,
-          side: params.side,
-          strategyType: params.strategyType,
-          symbol: params.symbol,
-        };
+        accountId: params.accountId,
+        side: params.side,
+        strategyType: params.strategyType,
+        symbol: params.symbol,
+      };
 
     console.log('获取策略操作实例 - Token:', token);
     console.log('获取策略操作实例 - 请求参数:', requestBody);
@@ -2573,6 +2573,74 @@ export async function getPositionStrategyInstance(
     }
     throw new ApiError(
       error instanceof Error ? error.message : '获取策略操作实例失败'
+    );
+  }
+}
+
+// 资金详情相关接口类型定义
+export interface FundAccountRes {
+  name: string;           // 账户名
+  totalEquity: number;    // 总净值
+  totalInitEquity: number; // 总初始净值
+  totalProfit: number;    // 总收益
+  totalProfitRate: number; // 总收益率
+  uid: string;            // 交易所UID
+}
+
+export interface FundRes {
+  accountList: FundAccountRes[]; // 主账户列表
+  totalEquity: number;           // 总净值
+  totalInitEquity: number;       // 总初始净值
+  totalProfit: number;           // 总收益
+  totalProfitRate: number;       // 总收益率
+}
+
+/**
+ * 获取资金详情
+ * @param token 用户token
+ * @returns 资金详情数据
+ */
+export async function getFundDetail(token: string): Promise<FundRes> {
+  try {
+    console.log('获取资金详情 - Token:', token);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/fund/detail`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+    });
+
+    console.log('资金详情响应状态:', response.status);
+
+    if (!response.ok) {
+      await handleResponseError(response, `获取资金详情失败: ${response.statusText}`);
+    }
+
+    const apiResponse: ApiResponse<FundRes> = await response.json();
+    console.log('资金详情完整响应:', apiResponse);
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '获取资金详情失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
+      throw new ApiError(
+        errorMessage,
+        apiResponse.code,
+        apiResponse
+      );
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '获取资金详情失败'
     );
   }
 }

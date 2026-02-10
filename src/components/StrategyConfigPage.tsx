@@ -535,7 +535,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                 >
                   Ver: {currentVersion}
                 </button>
-                
+
                 {/* Dropdown Menu */}
                 {showVersionDropdown && (
                   <>
@@ -555,9 +555,8 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                             setShowVersionDropdown(false);
                             await loadStrategyVersion(version.version, version.id);
                           }}
-                          className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4 ${
-                            currentVersion === version.version ? 'bg-blue-50' : ''
-                          }`}
+                          className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4 ${currentVersion === version.version ? 'bg-blue-50' : ''
+                            }`}
                         >
                           <span className={`font-medium whitespace-nowrap ${currentVersion === version.version ? 'text-blue-600' : 'text-gray-700'}`}>
                             Ver: {version.version}
@@ -594,7 +593,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                 <FileText className="w-5 h-5 text-blue-600" />
                 <h2 className="text-gray-900 font-semibold">基本信息</h2>
               </div>
-              
+
               <div className="space-y-4">
                 {/* Strategy Name */}
                 <div>
@@ -645,33 +644,30 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, riskLevel: 'low' })}
-                        className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                          formData.riskLevel === 'low'
+                        className={`px-4 py-3 rounded-lg border-2 transition-all ${formData.riskLevel === 'low'
                             ? 'border-green-500 bg-green-50 text-green-700'
                             : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                        }`}
+                          }`}
                       >
                         低风险
                       </button>
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, riskLevel: 'medium' })}
-                        className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                          formData.riskLevel === 'medium'
+                        className={`px-4 py-3 rounded-lg border-2 transition-all ${formData.riskLevel === 'medium'
                             ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
                             : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                        }`}
+                          }`}
                       >
                         中风险
                       </button>
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, riskLevel: 'high' })}
-                        className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                          formData.riskLevel === 'high'
+                        className={`px-4 py-3 rounded-lg border-2 transition-all ${formData.riskLevel === 'high'
                             ? 'border-red-500 bg-red-50 text-red-700'
                             : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                        }`}
+                          }`}
                       >
                         高风险
                       </button>
@@ -710,7 +706,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                 <LineChart className="w-5 h-5 text-blue-600" />
                 <h2 className="text-gray-900 font-semibold">策略指标</h2>
               </div>
-              
+
               <div className="space-y-6">
                 {/* Kline Count */}
                 <div>
@@ -734,12 +730,12 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                 {/* Time Period */}
                 <div>
                   <label className="block text-gray-700 mb-3">
-                    时间周期(3个以内) <span className="text-red-500">*</span>
+                    时间周期 <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                     {dictIntervals.map((interval) => {
                       const isSelected = selectedPeriods.includes(interval.code);
-                      const canSelect = !isSelected && selectedPeriods.length >= 3;
+                      const canSelect = false;
 
                       return (
                         <button
@@ -748,18 +744,17 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                           onClick={() => {
                             if (isSelected) {
                               setSelectedPeriods(selectedPeriods.filter(p => p !== interval.code));
-                            } else if (selectedPeriods.length < 3) {
+                            } else {
                               setSelectedPeriods([...selectedPeriods, interval.code]);
                             }
                           }}
                           disabled={canSelect}
-                          className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                            isSelected
+                          className={`px-4 py-3 rounded-lg border-2 transition-all ${isSelected
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : canSelect
-                              ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                          }`}
+                                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                            }`}
                         >
                           {interval.name}
                         </button>
@@ -767,7 +762,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                     })}
                   </div>
                   <p className="text-gray-500 text-sm mt-3">
-                    已选择 {selectedPeriods.length}/3 个周期
+                    已选择 {selectedPeriods.length} 个周期
                   </p>
                 </div>
 
@@ -793,13 +788,12 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                             }
                           }}
                           disabled={canSelect}
-                          className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                            isSelected
+                          className={`px-4 py-3 rounded-lg border-2 transition-all ${isSelected
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : canSelect
-                              ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                          }`}
+                                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                            }`}
                         >
                           {indicator.name}
                         </button>
@@ -820,22 +814,20 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                     <button
                       type="button"
                       onClick={() => setIncludePositionData(true)}
-                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                        includePositionData
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${includePositionData
                           ? 'border-blue-500 bg-blue-50 text-blue-700'
                           : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       包含
                     </button>
                     <button
                       type="button"
                       onClick={() => setIncludePositionData(false)}
-                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                        !includePositionData
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${!includePositionData
                           ? 'border-blue-500 bg-blue-50 text-blue-700'
                           : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       不包含
                     </button>
@@ -854,7 +846,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                 <Sparkles className="w-5 h-5 text-purple-600" />
                 <h2 className="text-gray-900 font-semibold">AI CHAT 配置</h2>
               </div>
-              
+
               <div className="space-y-6">
                 {/* AI Model Selection */}
                 <div>
@@ -867,11 +859,10 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                         key={model.code}
                         type="button"
                         onClick={() => setFormData({ ...formData, aiModel: model.code })}
-                        className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                          formData.aiModel === model.code
+                        className={`px-4 py-3 rounded-lg border-2 transition-all ${formData.aiModel === model.code
                             ? 'border-blue-500 bg-blue-50 text-blue-700'
                             : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                        }`}
+                          }`}
                       >
                         {model.name}
                       </button>
@@ -907,7 +898,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
             {/* Execution Settings Section */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-gray-900 font-semibold mb-4 pb-3 border-b border-gray-200">执行设置</h2>
-              
+
               <div className="space-y-4">
                 {/* Symbols Selection */}
                 <div>
@@ -929,11 +920,10 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                               setSelectedSymbols([...selectedSymbols, symbol.name]);
                             }
                           }}
-                          className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                            isSelected
+                          className={`px-4 py-3 rounded-lg border-2 transition-all ${isSelected
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                          }`}
+                            }`}
                         >
                           {symbol.name}
                         </button>
@@ -1011,7 +1001,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
       {/* Prompt Preview Modal */}
       {showPreview && (
         <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-end justify-center z-50">
-          <div 
+          <div
             className="bg-white rounded-t-3xl shadow-xl p-6 w-full max-w-4xl h-[85vh] flex flex-col animate-slide-up"
             style={{
               animation: 'slideUp 0.3s ease-out'
@@ -1040,7 +1030,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
               {/* Divider */}
               <div className="border-t border-gray-200"></div>
             </div>
-            
+
             {/* Content - Scrollable */}
             <div className="flex-1 overflow-y-auto pr-2">
               {/* SYSTEM PROMPT - Collapsible */}
@@ -1149,7 +1139,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                 )}
               </div>
             </div>
-            
+
             {/* Bottom Run Test Button */}
             <div className="mt-4 flex-shrink-0">
               <button
@@ -1162,7 +1152,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
               </button>
             </div>
           </div>
-          
+
           <style>{`
             @keyframes slideUp {
               from {
