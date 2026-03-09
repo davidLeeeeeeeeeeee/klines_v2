@@ -352,6 +352,15 @@ export interface ClosePositionReq {
   strategyType?: string; // 策略类型，不传表示全部
 }
 
+// 手动开仓 / 止盈止损修改请求参数
+export interface OpenPositionReq {
+  side?: string;
+  stopLoss?: number;
+  strategyName?: string;
+  symbol?: string;
+  takeProfit?: number;
+}
+
 export interface PageRequest<T> {
   page: number;
   pageSize: number;
@@ -1347,6 +1356,120 @@ export async function closeOnePosition(
         apiResponse.code,
         apiResponse
       );
+    }
+
+    return apiResponse.data === true;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 手动开仓
+ * @param token 用户token
+ * @param request 开仓请求参数
+ * @returns 是否成功
+ */
+export async function openPosition(
+  token: string,
+  request: OpenPositionReq
+): Promise<boolean> {
+  try {
+    console.log('手动开仓 - Token:', token);
+    console.log('手动开仓 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/trade/position/open`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    console.log('手动开仓响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let errorMessage = errorData.description || errorData.message || `手动开仓失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
+      throw new ApiError(errorMessage, response.status, errorData);
+    }
+
+    const apiResponse: ApiResponse<boolean> = await response.json();
+    console.log('手动开仓完整响应:', apiResponse);
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '手动开仓失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
+    }
+
+    return apiResponse.data === true;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : '网络请求失败，请检查网络连接'
+    );
+  }
+}
+
+/**
+ * 止盈止损调整
+ * @param token 用户token
+ * @param request 调整请求参数
+ * @returns 是否成功
+ */
+export async function plModify(
+  token: string,
+  request: OpenPositionReq
+): Promise<boolean> {
+  try {
+    console.log('止盈止损调整 - Token:', token);
+    console.log('止盈止损调整 - 请求参数:', request);
+
+    const response = await fetch(`${API_BASE_URL}/alphanow-admin/api/trade/position/plModify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'alphatoken': token,
+      },
+      body: JSON.stringify(request),
+    });
+
+    console.log('止盈止损调整响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let errorMessage = errorData.description || errorData.message || `止盈止损调整失败: ${response.statusText}`;
+      if (errorData.data && typeof errorData.data === 'string') {
+        errorMessage += `: ${errorData.data}`;
+      }
+      throw new ApiError(errorMessage, response.status, errorData);
+    }
+
+    const apiResponse: ApiResponse<boolean> = await response.json();
+    console.log('止盈止损调整完整响应:', apiResponse);
+
+    if (!apiResponse.success || apiResponse.code !== 200) {
+      let errorMessage = apiResponse.description || '止盈止损调整失败';
+      if (apiResponse.data && typeof apiResponse.data === 'string') {
+        errorMessage += `: ${apiResponse.data}`;
+      }
+      throw new ApiError(errorMessage, apiResponse.code, apiResponse);
     }
 
     return apiResponse.data === true;

@@ -7,6 +7,8 @@ import {
   getChatDetail,
   closeAllPositions,
   closeOnePosition,
+  openPosition,
+  plModify,
   getSystemDict,
   PositionResponse,
   ChatResponse,
@@ -14,6 +16,7 @@ import {
   PageRequest,
   ClosePnlListReq,
   ClosePositionReq,
+  OpenPositionReq,
   DictItem
 } from '../services/api';
 import { getToken } from '../utils/storage';
@@ -126,15 +129,44 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false); // 自动刷新暂停状态
 
+  // 新增：手动开仓状态
+  const [showOpenPositionModal, setShowOpenPositionModal] = useState(false);
+  const [openPositionForm, setOpenPositionForm] = useState<OpenPositionReq>({
+    side: 'Buy',
+    symbol: 'BTCUSDT',
+    strategyName: '',
+    takeProfit: 0,
+    stopLoss: 0
+  });
+
+  // 新增：止盈止损修改状态
+  const [showPlModifyModal, setShowPlModifyModal] = useState(false);
+  const [plModifyForm, setPlModifyForm] = useState<OpenPositionReq>({
+    side: 'Buy',
+    symbol: 'BTCUSDT',
+    strategyName: '',
+    takeProfit: 0,
+    stopLoss: 0
+  });
+
   // Refs for click outside detection
+
   const strategyDropdownRef = useRef<HTMLDivElement>(null);
   const symbolDropdownRef = useRef<HTMLDivElement>(null);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
   const closeTypeDropdownRef = useRef<HTMLDivElement>(null);
   const closeModalRef = useRef<HTMLDivElement>(null);
   const batchCloseModalRef = useRef<HTMLDivElement>(null);
+  const openPositionModalRef = useRef<HTMLDivElement>(null);
+  const plModifyModalRef = useRef<HTMLDivElement>(null);
 
   // Click outside handlers
+  useClickOutside(openPositionModalRef, () => {
+    if (showOpenPositionModal) setShowOpenPositionModal(false);
+  });
+  useClickOutside(plModifyModalRef, () => {
+    if (showPlModifyModal) setShowPlModifyModal(false);
+  });
   useClickOutside(strategyDropdownRef, () => setShowStrategyDropdown(false));
   useClickOutside(symbolDropdownRef, () => setShowSymbolDropdown(false));
   useClickOutside(typeDropdownRef, () => setShowTypeDropdown(false));
@@ -709,12 +741,26 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             </div>
             <p className="text-sm text-gray-500">管理交易所账户持仓</p>
           </div>
-          <button
-            onClick={() => setShowBatchCloseModal(true)}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
-          >
-            一键平仓
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowOpenPositionModal(true)}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              手动开仓
+            </button>
+            <button
+              onClick={() => setShowPlModifyModal(true)}
+              className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+            >
+              止盈止损调整
+            </button>
+            <button
+              onClick={() => setShowBatchCloseModal(true)}
+              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+            >
+              一键平仓
+            </button>
+          </div>
         </div>
 
         {/* Search Filter */}
@@ -1851,6 +1897,240 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
               }
             }
           `}</style>
+        </div>
+      )}
+
+      {/* 手动开仓 Modal */}
+      {showOpenPositionModal && (
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-center justify-center z-50">
+          <div
+            ref={openPositionModalRef}
+            className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-slide-up"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">手动开仓</h2>
+              <button
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={() => setShowOpenPositionModal(false)}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="border-t border-gray-200 mb-4"></div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">交易对</label>
+                <select
+                  value={openPositionForm.symbol}
+                  onChange={(e) => setOpenPositionForm({ ...openPositionForm, symbol: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {symbols.map(symbol => (
+                    <option key={symbol} value={symbol}>{symbol}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">方向</label>
+                <select
+                  value={openPositionForm.side}
+                  onChange={(e) => setOpenPositionForm({ ...openPositionForm, side: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="Buy">做多 (Buy)</option>
+                  <option value="Sell">做空 (Sell)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">关联策略 (可选)</label>
+                <select
+                  value={openPositionForm.strategyName || ''}
+                  onChange={(e) => setOpenPositionForm({ ...openPositionForm, strategyName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">-- 无 --</option>
+                  {strategyModelList.map(s => (
+                    <option key={s.code} value={s.code}>{s.name || s.code}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">止盈价格(或比例)</label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={openPositionForm.takeProfit || ''}
+                  onChange={(e) => setOpenPositionForm({ ...openPositionForm, takeProfit: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">止损价格(或比例)</label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={openPositionForm.stopLoss || ''}
+                  onChange={(e) => setOpenPositionForm({ ...openPositionForm, stopLoss: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowOpenPositionModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const token = getToken();
+                    if (!token) {
+                      alert('请先登录');
+                      return;
+                    }
+                    const success = await openPosition(token, openPositionForm);
+                    if (success) {
+                      alert('手动开仓已发起');
+                      setShowOpenPositionModal(false);
+                      fetchPositions();
+                    }
+                  } catch (err: any) {
+                    alert(`开仓失败: ${err.message}`);
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                确认开仓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 止盈止损调整 Modal */}
+      {showPlModifyModal && (
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-center justify-center z-50">
+          <div
+            ref={plModifyModalRef}
+            className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-slide-up"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">止盈止损调整</h2>
+              <button
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={() => setShowPlModifyModal(false)}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="border-t border-gray-200 mb-4"></div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">交易对</label>
+                <select
+                  value={plModifyForm.symbol}
+                  onChange={(e) => setPlModifyForm({ ...plModifyForm, symbol: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {symbols.map(symbol => (
+                    <option key={symbol} value={symbol}>{symbol}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">方向</label>
+                <select
+                  value={plModifyForm.side}
+                  onChange={(e) => setPlModifyForm({ ...plModifyForm, side: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="Buy">多单持仓修改 (Buy)</option>
+                  <option value="Sell">空单持仓修改 (Sell)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">策略</label>
+                <select
+                  value={plModifyForm.strategyName || ''}
+                  onChange={(e) => setPlModifyForm({ ...plModifyForm, strategyName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">-- 全部 (或无) --</option>
+                  {strategyModelList.map(s => (
+                    <option key={s.code} value={s.code}>{s.name || s.code}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">新的止盈价格(或比例)</label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={plModifyForm.takeProfit || ''}
+                  onChange={(e) => setPlModifyForm({ ...plModifyForm, takeProfit: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">新的止损价格(或比例)</label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={plModifyForm.stopLoss || ''}
+                  onChange={(e) => setPlModifyForm({ ...plModifyForm, stopLoss: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowPlModifyModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const token = getToken();
+                    if (!token) {
+                      alert('请先登录');
+                      return;
+                    }
+                    const success = await plModify(token, plModifyForm);
+                    if (success) {
+                      alert('止盈止损修改已提交');
+                      setShowPlModifyModal(false);
+                      fetchPositions();
+                    }
+                  } catch (err: any) {
+                    alert(`修改失败: ${err.message}`);
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+              >
+                确认修改
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
