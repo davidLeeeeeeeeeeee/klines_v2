@@ -125,7 +125,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [showBatchCloseModal, setShowBatchCloseModal] = useState(false);
   const [batchCloseSymbol, setBatchCloseSymbol] = useState('BTCUSDT');
   const [batchCloseAction, setBatchCloseAction] = useState<'long' | 'short' | null>(null);
-  const [batchCloseStrategyType, setBatchCloseStrategyType] = useState('all'); // 一键平仓策略类型筛选
+  const [batchCloseStrategyType, setBatchCloseStrategyType] = useState('all');
+  const [batchClosePercent, setBatchClosePercent] = useState<number>(100);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false); // 自动刷新暂停状态
 
@@ -180,8 +181,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   useClickOutside(batchCloseModalRef, () => {
     if (showBatchCloseModal) {
       setShowBatchCloseModal(false);
-      setBatchCloseSymbol('BTCUSDT');
       setBatchCloseAction(null);
+      setBatchClosePercent(100);
     }
   });
 
@@ -1602,32 +1603,92 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
       )}
 
       {/* Batch Close Position Modal */}
-      {showBatchCloseModal && (
+      {showBatchCloseModal && (() => {
+        // Derive available symbols and strategies from actual (filtered) positions
+        const availableSymbols = [...new Set(currentPositions.map(p => p.symbol.replace('/', '')))];
+        const availableStrategies = [...new Set(currentPositions.map(p => p.strategyType).filter(Boolean))];
+
+        // Effective symbol: if current selection is not in available list, fall back to first
+        const effectiveSymbol = availableSymbols.includes(batchCloseSymbol) ? batchCloseSymbol : (availableSymbols[0] || '');
+
+        // Effective strategy: single strategy auto-selected; otherwise use user pick
+        const effectiveStrategy = (() => {
+          if (availableStrategies.length === 1) return availableStrategies[0];
+          if (batchCloseStrategyType !== 'all' && availableStrategies.includes(batchCloseStrategyType)) return batchCloseStrategyType;
+          return 'all';
+        })();
+
+        // Filtered positions for selected conditions
+        const filteredBatchPositions = currentPositions.filter(p => {
+          const symbolMatch = p.symbol.replace('/', '') === effectiveSymbol;
+          const strategyMatch = effectiveStrategy === 'all' || p.strategyType === effectiveStrategy;
+          return symbolMatch && strategyMatch;
+        });
+
+        const longPositions = filteredBatchPositions.filter(p => p.type === 'long');
+        const shortPositions = filteredBatchPositions.filter(p => p.type === 'short');
+        const hasLong = longPositions.length > 0;
+        const hasShort = shortPositions.length > 0;
+        const longPnL = longPositions.reduce((sum, p) => sum + p.unrealizedPnL, 0);
+        const shortPnL = shortPositions.reduce((sum, p) => sum + p.unrealizedPnL, 0);
+        const percentLabel = batchClosePercent === 34 ? '1/3' : batchClosePercent === 50 ? '1/2' : '';
+
+        const closeModal = () => {
+          setShowBatchCloseModal(false);
+          setBatchCloseAction(null);
+          setBatchClosePercent(100);
+        };
+
+        const handleBatchClose = async (side: 'Buy' | 'Sell', count: number) => {
+          try {
+            const token = getToken();
+            if (!token) { alert('未登录，请先登录'); return; }
+            const sideLabel = side === 'Buy' ? '多' : '空';
+            const pctText = percentLabel ? `（${percentLabel}）` : '';
+            if (!confirm(`确定要平掉 ${effectiveSymbol} 的 ${count} 个${sideLabel}单持仓${pctText}吗？`)) return;
+            const request: ClosePositionReq = {
+              symbol: effectiveSymbol,
+              closeSide: side,
+              percent: batchClosePercent,
+              strategyType: effectiveStrategy === 'all' ? undefined : effectiveStrategy,
+            };
+            console.log(`平${sideLabel}操作:`, request);
+            const result = await closeAllPositions(token, request);
+            if (result) {
+              alert(`平${sideLabel}操作成功！\n商品: ${effectiveSymbol}\n数量: ${count} 个${pctText ? '\n比例: ' + percentLabel : ''}`);
+              closeModal();
+              fetchPositions();
+            } else {
+              alert(`平${sideLabel}操作失败，请重试`);
+            }
+          } catch (err: any) {
+            const sideLabel = side === 'Buy' ? '多' : '空';
+            console.error(`平${sideLabel}操作失败:`, err);
+            alert(`平${sideLabel}操作失败: ${err.message || '未知错误'}`);
+          }
+        };
+
+        const percentOptions = [
+          { label: '1/3', value: 34 },
+          { label: '1/2', value: 50 },
+          { label: '全部', value: 100 },
+        ];
+
+        return (
         <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/30 flex items-end justify-center z-50">
           <div
             ref={batchCloseModalRef}
             className="bg-white rounded-t-3xl shadow-xl p-6 w-full max-w-4xl h-[85vh] flex flex-col animate-slide-up"
-            style={{
-              animation: 'slideUp 0.3s ease-out'
-            }}
+            style={{ animation: 'slideUp 0.3s ease-out' }}
           >
             {/* Modal Header */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">一键平仓</h2>
-                <button
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                  onClick={() => {
-                    setShowBatchCloseModal(false);
-                    setBatchCloseSymbol('BTCUSDT');
-                    setBatchCloseAction(null);
-                    setBatchCloseStrategyType('all');
-                  }}
-                >
+                <button className="text-gray-400 hover:text-gray-600 transition-colors" onClick={closeModal}>
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              {/* Divider */}
               <div className="border-t border-gray-200"></div>
             </div>
 
@@ -1640,245 +1701,171 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
                 </p>
               </div>
 
-              {/* Symbol Selector */}
+              {/* Symbol Selector - from actual positions */}
               <div className="mb-6">
-                <label className="block text-sm text-gray-700 mb-3">
-                  选择商品
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {symbols.map((symbol) => (
+                <label className="block text-sm text-gray-700 mb-3">选择商品</label>
+                {availableSymbols.length === 0 ? (
+                  <div className="text-sm text-gray-400">当前无持仓</div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {availableSymbols.map((symbol) => (
+                      <button
+                        key={symbol}
+                        onClick={() => setBatchCloseSymbol(symbol)}
+                        className={`px-4 py-3 rounded-lg border transition-colors ${effectiveSymbol === symbol
+                          ? 'bg-blue-50 border-blue-500 text-blue-600'
+                          : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                          }`}
+                      >
+                        {symbol}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Strategy Selector - from actual positions */}
+              <div className="mb-6">
+                <label className="block text-sm text-gray-700 mb-3">选择策略</label>
+                {availableStrategies.length === 0 ? (
+                  <div className="text-sm text-gray-400">当前无策略</div>
+                ) : availableStrategies.length === 1 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <button className="px-4 py-3 rounded-lg border bg-blue-50 border-blue-500 text-blue-600">
+                      {strategyModelList.find(s => s.code === availableStrategies[0])?.name || availableStrategies[0]}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <button
-                      key={symbol}
-                      onClick={() => setBatchCloseSymbol(symbol)}
-                      className={`px-4 py-3 rounded-lg border transition-colors ${batchCloseSymbol === symbol
+                      onClick={() => setBatchCloseStrategyType('all')}
+                      className={`px-4 py-3 rounded-lg border transition-colors ${effectiveStrategy === 'all'
                         ? 'bg-blue-50 border-blue-500 text-blue-600'
                         : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
                         }`}
                     >
-                      {symbol}
+                      全部策略
                     </button>
-                  ))}
-                </div>
+                    {availableStrategies.map((code) => {
+                      const info = strategyModelList.find(s => s.code === code);
+                      return (
+                        <button
+                          key={code}
+                          onClick={() => setBatchCloseStrategyType(code)}
+                          className={`px-4 py-3 rounded-lg border transition-colors ${effectiveStrategy === code
+                            ? 'bg-blue-50 border-blue-500 text-blue-600'
+                            : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                            }`}
+                        >
+                          {info?.name || code}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              {/* Strategy Type Selector */}
-              <div className="mb-6">
-                <label className="block text-sm text-gray-700 mb-3">
-                  选择策略
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  <button
-                    onClick={() => setBatchCloseStrategyType('all')}
-                    className={`px-4 py-3 rounded-lg border transition-colors ${batchCloseStrategyType === 'all'
-                      ? 'bg-blue-50 border-blue-500 text-blue-600'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                      }`}
-                  >
-                    全部策略
-                  </button>
-                  {strategyModelList.map((strategy) => (
-                    <button
-                      key={strategy.code}
-                      onClick={() => setBatchCloseStrategyType(strategy.code)}
-                      className={`px-4 py-3 rounded-lg border transition-colors ${batchCloseStrategyType === strategy.code
-                        ? 'bg-blue-50 border-blue-500 text-blue-600'
-                        : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                        }`}
-                    >
-                      {strategy.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Position Summary */}
+              {/* Position Summary - conditional on which sides exist */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* 多单持仓 */}
-                  <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <div className="text-sm text-gray-600 mb-2">多单持仓数量</div>
-                    <div className="text-2xl text-green-600 font-semibold">
-                      {currentPositions.filter(p =>
-                        p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long' &&
-                        (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
-                      ).length} 个
+                <div className={`grid gap-4 ${hasLong && hasShort ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  {hasLong && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="text-sm text-gray-600 mb-2">多单持仓数量</div>
+                      <div className="text-2xl text-green-600 font-semibold">{longPositions.length} 个</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        浮动盈亏: <span className={longPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          {longPnL >= 0 ? '+' : ''}{longPnL.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        {percentOptions.map(item => (
+                          <button
+                            key={item.value}
+                            onClick={() => setBatchClosePercent(item.value)}
+                            className={`flex-1 px-2 py-1.5 text-xs rounded-md border transition-colors ${batchClosePercent === item.value
+                              ? 'bg-green-50 border-green-500 text-green-600 font-medium'
+                              : 'bg-white border-gray-200 text-gray-600 hover:border-green-300'
+                              }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      浮动盈亏: <span className={
-                        currentPositions.filter(p =>
-                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long' &&
-                          (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
-                        ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
-                      }>
-                        {currentPositions.filter(p =>
-                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long' &&
-                          (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
-                        ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0 ? '+' : ''}
-                        {currentPositions.filter(p =>
-                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long' &&
-                          (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
-                        ).reduce((sum, p) => sum + p.unrealizedPnL, 0).toFixed(2)}
-                      </span>
+                  )}
+                  {hasShort && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="text-sm text-gray-600 mb-2">空单持仓数量</div>
+                      <div className="text-2xl text-red-600 font-semibold">{shortPositions.length} 个</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        浮动盈亏: <span className={shortPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          {shortPnL >= 0 ? '+' : ''}{shortPnL.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        {percentOptions.map(item => (
+                          <button
+                            key={item.value}
+                            onClick={() => setBatchClosePercent(item.value)}
+                            className={`flex-1 px-2 py-1.5 text-xs rounded-md border transition-colors ${batchClosePercent === item.value
+                              ? 'bg-red-50 border-red-500 text-red-600 font-medium'
+                              : 'bg-white border-gray-200 text-gray-600 hover:border-red-300'
+                              }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-
-                  {/* 空单持仓 */}
-                  <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <div className="text-sm text-gray-600 mb-2">空单持仓数量</div>
-                    <div className="text-2xl text-red-600 font-semibold">
-                      {currentPositions.filter(p =>
-                        p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short' &&
-                        (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
-                      ).length} 个
+                  )}
+                  {!hasLong && !hasShort && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200 text-center text-gray-400">
+                      当前选择条件下无持仓
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      浮动盈亏: <span className={
-                        currentPositions.filter(p =>
-                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short' &&
-                          (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
-                        ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
-                      }>
-                        {currentPositions.filter(p =>
-                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short' &&
-                          (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
-                        ).reduce((sum, p) => sum + p.unrealizedPnL, 0) >= 0 ? '+' : ''}
-                        {currentPositions.filter(p =>
-                          p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short' &&
-                          (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
-                        ).reduce((sum, p) => sum + p.unrealizedPnL, 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3 mb-3">
-              <button
-                onClick={async () => {
-                  try {
-                    const token = getToken();
-                    if (!token) {
-                      alert('未登录，请先登录');
-                      return;
-                    }
-
-                    const longPositions = currentPositions.filter(p =>
-                      p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long' &&
-                      (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
-                    );
-
-                    if (longPositions.length === 0) {
-                      alert(`没有${batchCloseSymbol}的多单持仓`);
-                      return;
-                    }
-
-                    if (!confirm(`确定要平掉 ${batchCloseSymbol} 的 ${longPositions.length} 个多单持仓吗？`)) {
-                      return;
-                    }
-
-                    const request: ClosePositionReq = {
-                      symbol: batchCloseSymbol,
-                      closeSide: 'Buy', // 多单对应Buy
-                      strategyType: batchCloseStrategyType === 'all' ? undefined : batchCloseStrategyType,
-                    };
-
-                    console.log('平多操作:', request);
-                    const result = await closeAllPositions(token, request);
-
-                    if (result) {
-                      alert(`平多操作成功！\n商品: ${batchCloseSymbol}\n数量: ${longPositions.length} 个`);
-                      setShowBatchCloseModal(false);
-                      setBatchCloseSymbol('BTCUSDT');
-                      setBatchCloseStrategyType('all');
-                      // 刷新持仓列表
-                      fetchPositions();
-                    } else {
-                      alert('平多操作失败，请重试');
-                    }
-                  } catch (err: any) {
-                    console.error('平多操作失败:', err);
-                    alert(`平多操作失败: ${err.message || '未知错误'}`);
-                  }
-                }}
-                className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={currentPositions.filter(p =>
-                  p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'long' &&
-                  (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
-                ).length === 0}
-              >
-                平多
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    const token = getToken();
-                    if (!token) {
-                      alert('未登录，请先登录');
-                      return;
-                    }
-
-                    const shortPositions = currentPositions.filter(p =>
-                      p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short' &&
-                      (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
-                    );
-
-                    if (shortPositions.length === 0) {
-                      alert(`没有${batchCloseSymbol}的空单持仓`);
-                      return;
-                    }
-
-                    if (!confirm(`确定要平掉 ${batchCloseSymbol} 的 ${shortPositions.length} 个空单持仓吗？`)) {
-                      return;
-                    }
-
-                    const request: ClosePositionReq = {
-                      symbol: batchCloseSymbol,
-                      closeSide: 'Sell', // 空单对应Sell
-                      strategyType: batchCloseStrategyType === 'all' ? undefined : batchCloseStrategyType,
-                    };
-
-                    console.log('平空操作:', request);
-                    const result = await closeAllPositions(token, request);
-
-                    if (result) {
-                      alert(`平空操作成功！\n商品: ${batchCloseSymbol}\n数量: ${shortPositions.length} 个`);
-                      setShowBatchCloseModal(false);
-                      setBatchCloseSymbol('BTCUSDT');
-                      setBatchCloseStrategyType('all');
-                      // 刷新持仓列表
-                      fetchPositions();
-                    } else {
-                      alert('平空操作失败，请重试');
-                    }
-                  } catch (err: any) {
-                    console.error('平空操作失败:', err);
-                    alert(`平空操作失败: ${err.message || '未知错误'}`);
-                  }
-                }}
-                className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={currentPositions.filter(p =>
-                  p.symbol.replace('/', '') === batchCloseSymbol && p.type === 'short' &&
-                  (batchCloseStrategyType === 'all' || p.strategyType === batchCloseStrategyType)
-                ).length === 0}
-              >
-                平空
-              </button>
-            </div>
+            {/* Action Buttons - dynamic based on which sides have positions */}
+            {hasLong && hasShort ? (
+              <div className="flex items-center gap-3 mb-3">
+                <button
+                  onClick={() => handleBatchClose('Buy', longPositions.length)}
+                  className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  平多{percentLabel ? `（${percentLabel}）` : ''}
+                </button>
+                <button
+                  onClick={() => handleBatchClose('Sell', shortPositions.length)}
+                  className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  平空{percentLabel ? `（${percentLabel}）` : ''}
+                </button>
+              </div>
+            ) : hasLong ? (
+              <div className="flex items-center gap-3 mb-3">
+                <button
+                  onClick={() => handleBatchClose('Buy', longPositions.length)}
+                  className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  平多{percentLabel ? `（${percentLabel}）` : ''}
+                </button>
+              </div>
+            ) : hasShort ? (
+              <div className="flex items-center gap-3 mb-3">
+                <button
+                  onClick={() => handleBatchClose('Sell', shortPositions.length)}
+                  className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  平空{percentLabel ? `（${percentLabel}）` : ''}
+                </button>
+              </div>
+            ) : null}
 
             {/* Cancel Button */}
             <button
-              onClick={() => {
-                setShowBatchCloseModal(false);
-                setBatchCloseSymbol('BTCUSDT');
-                setBatchCloseAction(null);
-                setBatchCloseStrategyType('all');
-              }}
+              onClick={closeModal}
               className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               取消
@@ -1898,7 +1885,8 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
             }
           `}</style>
         </div>
-      )}
+        );
+      })()}
 
       {/* 手动开仓 Modal */}
       {showOpenPositionModal && (

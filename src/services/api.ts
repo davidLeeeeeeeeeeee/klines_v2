@@ -348,6 +348,7 @@ export interface ClosePnlListReq {
 export interface ClosePositionReq {
   accountId?: number;
   closeSide?: string; // 'Buy' 或 'Sell'，不传表示全部平仓
+  percent?: number; // 百分比(整数)，如 34=1/3, 50=1/2, 100=全部
   symbol?: string;
   strategyType?: string; // 策略类型，不传表示全部
 }
