@@ -126,7 +126,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
   const [batchCloseSymbol, setBatchCloseSymbol] = useState('BTCUSDT');
   const [batchCloseAction, setBatchCloseAction] = useState<'long' | 'short' | null>(null);
   const [batchCloseStrategyType, setBatchCloseStrategyType] = useState('all');
-  const [batchClosePercent, setBatchClosePercent] = useState<number>(100);
+  const [batchClosePercent, setBatchClosePercent] = useState<number>(50);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false); // 自动刷新暂停状态
 
@@ -182,7 +182,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
     if (showBatchCloseModal) {
       setShowBatchCloseModal(false);
       setBatchCloseAction(null);
-      setBatchClosePercent(100);
+      setBatchClosePercent(50);
     }
   });
 
@@ -1636,7 +1636,7 @@ export function AccountMonitor({ onBack }: AccountMonitorProps) {
         const closeModal = () => {
           setShowBatchCloseModal(false);
           setBatchCloseAction(null);
-          setBatchClosePercent(100);
+          setBatchClosePercent(50);
         };
 
         const handleBatchClose = async (side: 'Buy' | 'Sell', count: number) => {
