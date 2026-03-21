@@ -1809,6 +1809,7 @@ export interface StrategyModelReq {
   indicators: string[];         // 技术指标列表
   intervals: string[];          // K线时间周期列表
   klineNum: number;             // K线数量
+  leverage: number;             // 杠杆倍数(1~25)
   name: string;                 // 策略名称
   needPosition: boolean;        // 是否提供持仓数据
   riskLevel: string;            // 风险等级
@@ -1863,6 +1864,7 @@ export interface StrategyModelDetailRes {
   indicators: string[] | null;  // 技术指标列表
   intervals: string[] | null;   // K线时间周期列表
   klineNum: number | null;      // K线数量
+  leverage: number | null;      // 杠杆倍数(1~25)
   name: string | null;          // 策略名称
   needPosition: boolean | null; // 是否提供持仓数据
   riskLevel: string | null;     // 风险等级

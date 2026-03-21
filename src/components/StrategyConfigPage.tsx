@@ -105,6 +105,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
   const [selectedPeriods, setSelectedPeriods] = useState<string[]>(['m15']);
   const [includePositionData, setIncludePositionData] = useState(false);
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(['BTCUSDT']);
+  const [leverage, setLeverage] = useState(25);
   const [currentVersion, setCurrentVersion] = useState(1);
   const [showVersionDropdown, setShowVersionDropdown] = useState(false);
   const [versionHistory, setVersionHistory] = useState<Array<{ version: number; timestamp: string; id?: number }>>([]);
@@ -247,6 +248,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
         setIncludePositionData(detail.needPosition ?? false);
         setSelectedSymbols(detail.symbols || []);
         setKlineCount(detail.klineNum || 20);
+        setLeverage(detail.leverage ?? 25);
         setCurrentVersion(detail.version || 1);
 
         // 更新版本历史（按版本倒序排列）
@@ -334,6 +336,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
       setIncludePositionData(detail.needPosition ?? false);
       setSelectedSymbols(detail.symbols || []);
       setKlineCount(detail.klineNum || 20);
+      setLeverage(detail.leverage ?? 25);
       setCurrentVersion(detail.version || version);
 
       // 更新版本历史（如果返回了新的历史列表，按版本倒序排列）
@@ -401,6 +404,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
         indicators: selectedIndicators,
         intervals: selectedPeriods,
         klineNum: klineCount,
+        leverage,
         needPosition: includePositionData,
         symbols: selectedSymbols
       };
@@ -457,6 +461,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
         indicators: selectedIndicators,
         intervals: selectedPeriods,
         klineNum: klineCount,
+        leverage,
         needPosition: includePositionData,
         symbols: selectedSymbols
       };
@@ -645,8 +650,8 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                         type="button"
                         onClick={() => setFormData({ ...formData, riskLevel: 'low' })}
                         className={`px-4 py-3 rounded-lg border-2 transition-all ${formData.riskLevel === 'low'
-                            ? 'border-green-500 bg-green-50 text-green-700'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                          ? 'border-green-500 bg-green-50 text-green-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                           }`}
                       >
                         低风险
@@ -655,8 +660,8 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                         type="button"
                         onClick={() => setFormData({ ...formData, riskLevel: 'medium' })}
                         className={`px-4 py-3 rounded-lg border-2 transition-all ${formData.riskLevel === 'medium'
-                            ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                          ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                           }`}
                       >
                         中风险
@@ -665,8 +670,8 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                         type="button"
                         onClick={() => setFormData({ ...formData, riskLevel: 'high' })}
                         className={`px-4 py-3 rounded-lg border-2 transition-all ${formData.riskLevel === 'high'
-                            ? 'border-red-500 bg-red-50 text-red-700'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                          ? 'border-red-500 bg-red-50 text-red-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                           }`}
                       >
                         高风险
@@ -696,6 +701,26 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                       例如：趋势策略, 网格交易, 套利
                     </p>
                   </div>
+                </div>
+
+                {/* Leverage */}
+                <div>
+                  <label className="block text-gray-700 mb-2">
+                    杠杆倍数 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={leverage}
+                    onChange={(e) => { const raw = e.target.value; setLeverage(raw === '' ? '' as any : parseInt(raw) || ''); }}
+                    onBlur={() => { const v = typeof leverage === 'number' ? leverage : parseInt(String(leverage)); setLeverage(isNaN(v) || v < 1 ? 25 : Math.min(25, v)); }}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 hide-spin-button"
+                    min="1"
+                    max="25"
+                    required
+                  />
+                  <p className="text-gray-500 text-sm mt-2">
+                    设置合约杠杆倍数，范围 1~25 倍
+                  </p>
                 </div>
               </div>
             </div>
@@ -750,10 +775,10 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                           }}
                           disabled={canSelect}
                           className={`px-4 py-3 rounded-lg border-2 transition-all ${isSelected
-                              ? 'border-blue-500 bg-blue-50 text-blue-700'
-                              : canSelect
-                                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : canSelect
+                              ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                             }`}
                         >
                           {interval.name}
@@ -789,10 +814,10 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                           }}
                           disabled={canSelect}
                           className={`px-4 py-3 rounded-lg border-2 transition-all ${isSelected
-                              ? 'border-blue-500 bg-blue-50 text-blue-700'
-                              : canSelect
-                                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : canSelect
+                              ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                             }`}
                         >
                           {indicator.name}
@@ -815,8 +840,8 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                       type="button"
                       onClick={() => setIncludePositionData(true)}
                       className={`px-4 py-3 rounded-lg border-2 transition-all ${includePositionData
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                         }`}
                     >
                       包含
@@ -825,8 +850,8 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                       type="button"
                       onClick={() => setIncludePositionData(false)}
                       className={`px-4 py-3 rounded-lg border-2 transition-all ${!includePositionData
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                         }`}
                     >
                       不包含
@@ -860,8 +885,8 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                         type="button"
                         onClick={() => setFormData({ ...formData, aiModel: model.code })}
                         className={`px-4 py-3 rounded-lg border-2 transition-all ${formData.aiModel === model.code
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                           }`}
                       >
                         {model.name}
@@ -921,8 +946,8 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                             }
                           }}
                           className={`px-4 py-3 rounded-lg border-2 transition-all ${isSelected
-                              ? 'border-blue-500 bg-blue-50 text-blue-700'
-                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                             }`}
                         >
                           {symbol.name}
@@ -934,6 +959,7 @@ export function StrategyConfigPage({ strategy, onBack, onSave }: StrategyConfigP
                     已选择 {selectedSymbols.length} 个商品
                   </p>
                 </div>
+
 
                 {/* Request Frequency */}
                 <div>
